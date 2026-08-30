@@ -1,0 +1,149 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function currentUserDocument() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDocument().data.active != false
+        && currentUserDocument().data.roles.admin == true;
+    }
+
+    function allowedUserFields() {
+      return [
+        "name", "email", "active", "roles", "createdAt", "updatedAt", "lastLoginAt"
+      ];
+    }
+
+    function hasOnlyAllowedUserFields() {
+      return request.resource.data.keys().hasOnly(allowedUserFields());
+    }
+
+    function allowedUserUpdateFields() {
+      return ["name", "email", "active", "roles", "updatedAt", "lastLoginAt"];
+    }
+
+    function updatesOnlyAllowedUserFields() {
+      return request.resource.data.diff(resource.data).changedKeys()
+        .hasOnly(allowedUserUpdateFields());
+    }
+
+    function preservesRoles() {
+      return (
+        resource.data.keys().hasAny(["roles"])
+        && request.resource.data.roles == resource.data.roles
+      ) || (
+        !resource.data.keys().hasAny(["roles"])
+        && request.resource.data.roles == {}
+      );
+    }
+
+    function preservesActiveFlag() {
+      return (
+        resource.data.keys().hasAny(["active"])
+        && request.resource.data.active == resource.data.active
+      ) || (
+        !resource.data.keys().hasAny(["active"])
+        && request.resource.data.active == true
+      );
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow create: if isSelf(userId)
+        && hasOnlyAllowedUserFields()
+        && request.resource.data.roles == {}
+        && request.resource.data.active == true;
+      allow update: if isSelf(userId)
+        && updatesOnlyAllowedUserFields()
+        && preservesRoles()
+        && preservesActiveFlag();
+    }
+
+    match /events/{eventId} {
+      allow read, create, update: if isAdmin();
+    }
+
+    match /events/{eventId}/leadScans/{scanId} {
+      allow read, create: if isAdmin();
+    }
+
+    match /preInscritos/{preInscritoId} {
+      allow read: if isSignedIn();
+      allow delete: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "nome", "email", "whatsapp", "empresa", "origem", "importadoEm",
+          "tokenPublico", "linkPublico", "mensagemWhatsApp", "mensagemVariante",
+          "mensagemAtualizadaEm", "statusEnvioWhatsApp", "conviteGeradoEm"
+        ]);
+      allow update: if (isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "atualizadoEm"]))
+        || (!isSignedIn()
+        && resource.data.tokenPublico is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "atualizadoEm"])
+        && request.resource.data.status == "confirmado"
+        && getAfter(/databases/$(database)/documents/linksPublicos/$(resource.data.tokenPublico)).data.preInscritoId == preInscritoId
+        && getAfter(/databases/$(database)/documents/linksPublicos/$(resource.data.tokenPublico)).data.status == "confirmado")
+        || (isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "status", "atualizadoEm", "nome", "email", "whatsapp", "empresa",
+            "origem", "importadoEm", "tokenPublico", "linkPublico",
+            "mensagemWhatsApp", "mensagemVariante", "mensagemAtualizadaEm",
+            "statusEnvioWhatsApp", "conviteGeradoEm"
+          ]));
+    }
+
+    match /whatsappEventos/{eventId} {
+      allow read: if isAdmin();
+    }
+
+    match /whatsappMensagens/{messageId} {
+      allow read: if isAdmin();
+    }
+
+    match /whatsappRecebidas/{messageId} {
+      allow read: if isAdmin();
+    }
+
+    match /configuracoes/{configuracaoId} {
+      allow read, create, update: if isSignedIn();
+    }
+
+    // O ID de cada documento é um token aleatório de 256 bits. Não permitimos
+    // listagem: somente quem recebeu o link consegue buscar o convite.
+    match /linksPublicos/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if (isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["dataSelecionada", "confirmadoEm", "status"])
+        && request.resource.data.status in ["pendente", "confirmado"])
+        || (resource.data.status == "pendente"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["dataSelecionada", "confirmadoEm", "status"])
+          && request.resource.data.dataSelecionada in [
+            "2026-09-22", "2026-09-23", "2026-09-24"
+          ]
+          && request.resource.data.status == "confirmado"
+          && request.resource.data.confirmadoEm == request.time);
+    }
+  }
+}

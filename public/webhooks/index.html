@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Eventos recebidos pelo webhook do WhatsApp" />
+    <title>Eventos WhatsApp | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/webhooks.css" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="webhooks-page">
+        <section class="dashboard-heading"><p class="eyebrow">Monitoramento</p><h1>Eventos WhatsApp</h1><p>Retornos recebidos pelo webhook desde a ativação deste acompanhamento.</p></section>
+        <section class="webhooks-card" aria-live="polite">
+          <div class="webhooks-toolbar"><strong data-total>Carregando...</strong><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><button class="back-link" type="button" data-reload>Atualizar</button></div>
+          <div class="events-list" data-list></div>
+          <p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/webhooks.js"></script>
+  </body>
+</html>

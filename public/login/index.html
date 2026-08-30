@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Acesso ao GROB Experience" /><title>Login | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" /><link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body data-auth-page="login">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><a class="back-link" href="/">Voltar ao início</a></header>
+      <main class="login-layout">
+        <section class="stage" aria-label="GROB Experience"><span class="tag">70 anos GROB no Brasil</span><img class="stage-logo" src="/img/logo_transparentehd.png" alt="GROB Experience 70 anos" /><p class="eyebrow">Acesso exclusivo</p><h1>Bem-vindo ao futuro da indústria.</h1><p class="lead">Acesse o ambiente do GROB Experience com o e-mail e a senha cadastrados.</p></section>
+        <section class="login-card" aria-labelledby="login-title"><p class="eyebrow">Entrar</p><h2 id="login-title">Login por e-mail e senha</h2>
+          <form class="login-form" data-login-form><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" placeholder="voce@empresa.com.br" required data-email /><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required data-password /><button class="button" type="submit" data-submit>Entrar</button></form>
+          <p class="feedback" data-feedback role="status" aria-live="polite">Digite suas credenciais para continuar.</p>
+        </section>
+      </main>
+    </div><script type="module" src="/js/auth.js"></script>
+  </body>
+</html>

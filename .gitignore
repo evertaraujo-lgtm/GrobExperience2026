@@ -1,0 +1,46 @@
+# Firebase: cache e logs locais, nunca necessários no repositório.
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+
+# Dependências e saída gerada.
+node_modules/
+functions/node_modules/
+functions/lib/
+
+# Variáveis de ambiente e configurações locais. Mantenha apenas exemplos sem valores reais.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.runtimeconfig.json
+.secret.local
+functions/.secret.local
+
+# Credenciais, chaves e certificados.
+service-account*.json
+serviceAccountKey*.json
+firebase-adminsdk-*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.secrets
+*.secret
+secrets.*
+
+# Dados pessoais/importações/exportações locais.
+*.xlsx
+*.xls
+*.csv
+
+# Arquivos locais de ferramentas e sistema.
+.agents/
+.codex/
+.github/copilot-instructions.md
+.DS_Store
+Thumbs.db

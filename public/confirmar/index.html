@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Confirmação de data do GROB Experience" />
+    <title>Escolha sua data | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/confirmacao.css" />
+  </head>
+  <body>
+    <main class="landing-shell confirmation-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <section class="confirmation-card" aria-live="polite">
+        <img class="event-logo confirmation-logo" src="/img/logo_transparentehd.png" alt="GROB Experience 70 anos" />
+        <div data-loading><p>Carregando seu convite...</p></div>
+        <div data-content hidden>
+          <p class="eyebrow">Confirmação de presença</p>
+          <h1>Olá, <span data-name>participante</span>.</h1>
+          <p class="confirmation-intro">Selecione a data em que você participará do GROB Experience.</p>
+          <form data-date-form>
+            <fieldset>
+              <legend>Escolha uma única data</legend>
+              <label class="date-option"><input type="radio" name="data" value="2026-09-22" required /><span>22 de setembro</span></label>
+              <label class="date-option"><input type="radio" name="data" value="2026-09-23" required /><span>23 de setembro</span></label>
+              <label class="date-option"><input type="radio" name="data" value="2026-09-24" required /><span>24 de setembro</span></label>
+            </fieldset>
+            <button class="button" type="submit" data-submit>Confirmar data</button>
+          </form>
+        </div>
+        <div data-success hidden><p class="eyebrow">Tudo certo</p><h1>Data confirmada.</h1><p class="confirmation-intro">Sua data escolhida é <strong data-success-date></strong>.</p><p class="confirmation-intro">Sua escolha foi registrada com sucesso. Obrigado!</p></div>
+        <div class="confirmation-error" data-error hidden></div>
+        <p class="privacy-link"><a href="/privacidade/">Aviso de Privacidade</a></p>
+      </section>
+    </main>
+    <script type="module" src="/js/confirmacao.js"></script>
+  </body>
+</html>

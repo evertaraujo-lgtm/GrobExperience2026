@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Teste de envio WhatsApp pelo Twilio" />
+    <title>Teste WhatsApp | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/teste-whatsapp.css" />
+  </head>
+  <body>
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><a class="back-link" href="/app/">Voltar ao painel</a></header>
+      <main class="whatsapp-test-card">
+        <p class="eyebrow">Teste local · Twilio API</p>
+        <h1>Envie uma mensagem de teste.</h1>
+        <p>A API da Twilio enviará para o número informado o texto: <strong>“Oi, tudo bem?”</strong></p>
+        <p class="test-note">Esta página usa o servidor local de teste. As credenciais da Twilio ficam somente no seu terminal e nunca são expostas ao navegador.</p>
+        <form class="whatsapp-test-form" data-whatsapp-test-form>
+          <label for="whatsapp-number">Seu WhatsApp</label>
+          <input id="whatsapp-number" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+55 11 99999-9999" required data-whatsapp-number />
+          <button class="button" type="submit" data-submit>Enviar “Oi, tudo bem?”</button>
+        </form>
+        <p class="test-feedback" role="status" aria-live="polite" data-feedback>Inicie o servidor local da Twilio para testar.</p>
+      </main>
+    </div>
+    <script type="module" src="/js/teste-whatsapp.js"></script>
+  </body>
+</html>
