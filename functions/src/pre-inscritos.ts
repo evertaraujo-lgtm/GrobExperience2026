@@ -6,6 +6,11 @@ type PreInscritoInput = {
   whatsapp?: unknown;
 };
 
+function normalizedSortName(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
+}
+
 function normalizePreInscrito(input: PreInscritoInput) {
   const nome = typeof input.nome === "string" ? input.nome.trim() : "";
   const whatsapp = typeof input.whatsapp === "string"
@@ -54,6 +59,7 @@ export const importPreInscritos = onCall(async (request) => {
     const reference = firestore.collection("preInscritos").doc(preInscrito.whatsapp);
     batch.set(reference, {
       ...preInscrito,
+      nomeOrdenacao: normalizedSortName(preInscrito.nome),
       atualizadoEm: new Date(),
       importadoPor: request.auth.uid,
     }, {merge: true});

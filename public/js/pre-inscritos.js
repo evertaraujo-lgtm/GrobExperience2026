@@ -17,7 +17,6 @@ const exportForm = document.querySelector("[data-export-form]");
 const exportCancel = document.querySelector("[data-export-cancel]");
 const exportFields = document.querySelector("[data-export-fields]");
 const exportConfirm = document.querySelector("[data-export-confirm]");
-const messageToggle = document.querySelector("[data-message-toggle]");
 const messageEditor = document.querySelector("[data-message-editor]");
 const messageForm = document.querySelector("[data-message-form]");
 const messageVariantsElement = document.querySelector("[data-message-variants]");
@@ -32,6 +31,19 @@ const importFileName = document.querySelector("[data-import-file-name]");
 const importCancel = document.querySelector("[data-import-cancel]");
 const importSubmit = document.querySelector("[data-import-submit]");
 const importFeedback = document.querySelector("[data-import-feedback]");
+const batchSendToggle = document.querySelector("[data-batch-send]");
+const batchEditor = document.querySelector("[data-batch-editor]");
+const batchPreviewForm = document.querySelector("[data-batch-preview-form]");
+const batchPreviewResult = document.querySelector("[data-batch-preview-result]");
+const batchLimit = document.querySelector("[data-batch-limit]");
+const batchPreviewButton = document.querySelector("[data-batch-preview]");
+const batchPreviewFeedback = document.querySelector("[data-batch-preview-feedback]");
+const batchRecipients = document.querySelector("[data-batch-recipients]");
+const batchSummary = document.querySelector("[data-batch-summary]");
+const batchConfirm = document.querySelector("[data-batch-confirm]");
+const batchFeedback = document.querySelector("[data-batch-feedback]");
+const batchCancelButtons = document.querySelectorAll("[data-batch-cancel]");
+const batchBack = document.querySelector("[data-batch-back]");
 const statuses = ["pendente", "contatado", "confirmado", "cancelado"];
 const defaultMessageVariants = [
   "Olá, {nome}! Notamos que você ainda não escolheu uma data para o GROB Experience. Acesse seu link exclusivo e finalize sua inscrição:\n\n{link}",
@@ -50,6 +62,7 @@ let xlsxModulePromise;
 let canImport = false;
 let loadedParticipants = [];
 let participantServices;
+let batchRecipientIds = [];
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
@@ -82,9 +95,24 @@ function setMessageModalFeedback(message, state = "neutral") {
   messageModalFeedback.dataset.state = state;
 }
 
+function setBatchFeedback(message, state = "neutral") {
+  batchFeedback.textContent = message;
+  batchFeedback.dataset.state = state;
+}
+
+function setBatchPreviewFeedback(message, state = "neutral") {
+  batchPreviewFeedback.textContent = message;
+  batchPreviewFeedback.dataset.state = state;
+}
+
 function normalizedHeader(value) {
   return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizedSortName(value) {
+  return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
 }
 
 function valueFor(row, aliases) {
@@ -148,6 +176,8 @@ function formatDateTime(value) {
 function whatsappDeliveryLabel(status) {
   const labels = {
     pendente: "Pendente",
+    processando: "Processando",
+    aceito: "Aceito pela Meta",
     enviado: "Enviado",
     entregue: "Entregue",
     lido: "Lido",
@@ -174,7 +204,11 @@ const exportColumns = {
 
 async function getParticipantsWithInvitations() {
   const {db, firestoreModule} = await getFirestoreServices();
-  const snapshots = await firestoreModule.getDocs(firestoreModule.collection(db, "preInscritos"));
+  const participantsQuery = firestoreModule.query(
+    firestoreModule.collection(db, "preInscritos"),
+    firestoreModule.orderBy("nomeOrdenacao"),
+  );
+  const snapshots = await firestoreModule.getDocs(participantsQuery);
   const participants = await Promise.all(snapshots.docs.map(async (document) => {
     const participant = {reference: document.ref, ...document.data()};
     if (participant.tokenPublico) {
@@ -183,7 +217,6 @@ async function getParticipantsWithInvitations() {
     }
     return participant;
   }));
-  participants.sort((first, second) => first.nome.localeCompare(second.nome, "pt-BR"));
   return {db, firestoreModule, participants};
 }
 
@@ -452,12 +485,88 @@ authModule.onAuthStateChanged(auth, async (user) => {
     canImport = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
     addToggle.hidden = !canImport;
     importToggle.hidden = !canImport;
+    batchSendToggle.hidden = !canImport;
     messageRandomize.hidden = !canImport;
     loadParticipants();
   }
 });
 reload.addEventListener("click", loadParticipants);
 search.addEventListener("input", renderParticipants);
+
+function resetBatchDialog() {
+  batchRecipientIds = [];
+  batchPreviewForm.hidden = false;
+  batchPreviewResult.hidden = true;
+  batchRecipients.replaceChildren();
+  setBatchFeedback("");
+  setBatchPreviewFeedback("");
+}
+
+batchSendToggle.addEventListener("click", () => {
+  if (!canImport) return;
+  resetBatchDialog();
+  batchEditor.showModal();
+  batchLimit.focus();
+});
+
+batchCancelButtons.forEach((button) => button.addEventListener("click", () => batchEditor.close()));
+batchBack.addEventListener("click", resetBatchDialog);
+
+batchPreviewForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canImport || !batchPreviewForm.reportValidity()) return;
+  const limit = Number(batchLimit.value);
+  batchPreviewButton.disabled = true;
+  batchPreviewButton.textContent = "Buscando...";
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const previewBatch = functionsModule.httpsCallable(functions, "previewWhatsAppBatch");
+    const result = await previewBatch({limit});
+    const recipients = Array.isArray(result.data.recipients) ? result.data.recipients : [];
+    if (!recipients.length) {
+      setBatchPreviewFeedback("Não há pré-inscritos pendentes para enviar.", "error");
+      return;
+    }
+    batchRecipientIds = recipients.map((recipient) => recipient.id);
+    batchRecipients.replaceChildren(...recipients.map((recipient) => {
+      const item = document.createElement("li");
+      item.textContent = `${recipient.nome} — ${recipient.whatsapp}`;
+      return item;
+    }));
+    batchSummary.textContent = `${recipients.length} mensagem(ns) será(ão) enviada(s), exatamente na ordem exibida.`;
+    batchPreviewForm.hidden = true;
+    batchPreviewResult.hidden = false;
+    setBatchFeedback("");
+  } catch (error) {
+    console.error(error);
+    setBatchPreviewFeedback(error.message || "Não foi possível gerar a prévia do lote.", "error");
+  } finally {
+    batchPreviewButton.disabled = false;
+    batchPreviewButton.textContent = "Gerar prévia";
+  }
+});
+
+batchConfirm.addEventListener("click", async () => {
+  if (!canImport || !batchRecipientIds.length) return;
+  batchConfirm.disabled = true;
+  batchConfirm.textContent = "Enviando...";
+  setBatchFeedback("O envio está em andamento. Não feche esta janela.");
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const sendBatch = functionsModule.httpsCallable(functions, "sendWhatsAppBatch");
+    const result = await sendBatch({preInscritoIds: batchRecipientIds});
+    const {sent, skipped, failures} = result.data;
+    const failureDetail = Array.isArray(failures) && failures.length ? ` ${failures.length} falha(s) registrada(s).` : "";
+    setBatchFeedback(`${sent} mensagem(ns) enviada(s); ${skipped} contato(s) ignorado(s) por já não estar(em) pendente(s).${failureDetail}`, failures?.length ? "error" : "success");
+    await loadParticipants();
+  } catch (error) {
+    console.error(error);
+    setBatchFeedback(error.message || "Não foi possível enviar o lote.", "error");
+  } finally {
+    batchConfirm.disabled = false;
+    batchConfirm.textContent = "Confirmar envio";
+  }
+});
 
 addToggle.addEventListener("click", () => {
   addForm.reset();
@@ -500,7 +609,7 @@ addForm.addEventListener("submit", async (event) => {
       .replaceAll("{nome}", nome).replaceAll("{link}", linkPublico);
     const batch = firestoreModule.writeBatch(db);
     batch.set(participantRef, {
-      nome, whatsapp, email, empresa,
+      nome, nomeOrdenacao: normalizedSortName(nome), whatsapp, email, empresa,
       origem: "cadastro-manual",
       importadoEm: firestoreModule.serverTimestamp(),
       tokenPublico: token,
@@ -569,13 +678,6 @@ exportForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const selectedFields = [...exportFields.querySelectorAll("input:checked")].map((field) => field.value);
   await downloadCsv(selectedFields);
-});
-
-messageToggle.addEventListener("click", () => {
-  renderMessageVariants();
-  setMessageModalFeedback("");
-  messageEditor.showModal();
-  messageVariantsElement.querySelector("textarea").focus();
 });
 
 messageCancel.addEventListener("click", () => {
@@ -686,6 +788,7 @@ importEditor.addEventListener("submit", async (event) => {
       const existing = await firestoreModule.getDoc(reference);
       const importedData = {
         ...participant,
+        nomeOrdenacao: normalizedSortName(participant.nome),
         origem: "importacao-excel",
         importadoEm: firestoreModule.serverTimestamp(),
       };

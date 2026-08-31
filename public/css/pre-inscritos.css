@@ -7,6 +7,8 @@
 .dashboard-toolbar,.toolbar-actions{display:flex;align-items:center;gap:10px}
 .dashboard-toolbar{justify-content:space-between;padding-bottom:12px;border-bottom:1px solid rgba(125,214,255,.15)}
 .dashboard-toolbar strong{font-family:Rajdhani,sans-serif;font-size:1.2rem;letter-spacing:.06em}
+.toolbar-actions{flex-wrap:wrap;justify-content:flex-end}
+.toolbar-actions .back-link{flex:0 0 auto}
 .participant-search{display:grid;grid-template-columns:auto minmax(260px,420px);align-items:center;gap:12px;margin:14px 0 2px;color:var(--muted);font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .participant-search input{width:100%;padding:10px 12px;border:1px solid rgba(125,214,255,.24);border-radius:10px;color:var(--ink);background:#071a3b;font:inherit;letter-spacing:normal;text-transform:none}
 .participant-search input:focus{outline:2px solid rgba(88,202,255,.72);outline-offset:2px}
@@ -30,6 +32,9 @@
 .message-modal-feedback{min-height:22px!important}
 .message-modal-feedback[data-state=error]{color:#ffe1e1}
 .message-modal-feedback[data-state=success]{color:#defff1}
+.batch-limit{display:grid;gap:7px;max-width:220px;font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.batch-limit input{width:100%;padding:11px;border:1px solid rgba(125,214,255,.24);border-radius:10px;color:var(--ink);background:#071a3b;font:inherit;letter-spacing:normal}
+.batch-recipients{display:grid;gap:7px;max-height:42vh;overflow:auto;margin:0;padding:12px 12px 12px 34px;border:1px solid rgba(125,214,255,.18);border-radius:14px;background:rgba(4,18,42,.56);color:var(--ink)}
 .participant-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .participant-form-fields label{display:grid;gap:7px;color:var(--ink);font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .participant-form-fields label span{color:var(--muted);font-family:inherit;font-size:.75rem;font-weight:500}
@@ -47,6 +52,7 @@
 .whatsapp-delivery{min-width:0}
 .whatsapp-delivery small{overflow:hidden;color:var(--muted);font-size:.68rem;text-overflow:ellipsis;white-space:nowrap}
 .whatsapp-delivery[data-status=enviado] strong{color:#ccecff}
+.whatsapp-delivery[data-status=processando] strong,.whatsapp-delivery[data-status=aceito] strong{color:#ffe5a3}
 .whatsapp-delivery[data-status=entregue] strong{color:#9cf4ce}
 .whatsapp-delivery[data-status=lido] strong{color:#77dcff}
 .whatsapp-delivery[data-status=falhou] strong{color:#ffb4b4}
@@ -60,6 +66,7 @@
 .dashboard-feedback{min-height:22px;margin:14px 0 0;color:var(--muted)}
 .dashboard-feedback[data-state=error]{color:#ffe1e1}
 .empty-state{padding:28px;color:var(--muted);text-align:center}
+@media(max-width:1180px){.dashboard-toolbar{align-items:flex-start;flex-direction:column}.toolbar-actions{width:100%;justify-content:flex-start}}
 @media(max-width:860px){.participant-row{grid-template-columns:1fr 1fr}
 .save-status,.whatsapp-link,.danger-delete{width:100%}
 .message-variants,.export-fields{grid-template-columns:1fr}

@@ -20,7 +20,7 @@
       <main class="pre-inscritos-page">
         <section class="dashboard-heading"><p class="eyebrow">Painel de inscrições</p><h1>Pré-inscritos</h1><p>Olá, <span data-user-name>usuário</span>. Acompanhe a escolha de data, o status do convite e os retornos do WhatsApp.</p></section>
         <section class="pre-inscritos-card" aria-live="polite">
-          <div class="dashboard-toolbar"><strong data-total>Carregando...</strong><div class="toolbar-actions"><a class="back-link" href="/webhooks/">Eventos WhatsApp</a><a class="back-link" href="/teste-whatsapp/">Teste WhatsApp</a><button class="back-link" type="button" data-add-toggle hidden>Novo pré-inscrito</button><button class="back-link" type="button" data-import-toggle hidden>Selecionar planilha</button><button class="back-link" type="button" data-export>Exportar CSV</button><button class="back-link" type="button" data-message-toggle>Editar mensagem</button><button class="back-link" type="button" data-reload>Atualizar lista</button></div></div>
+          <div class="dashboard-toolbar"><strong data-total>Carregando...</strong><div class="toolbar-actions"><a class="back-link" href="/webhooks/">Eventos WhatsApp</a><button class="back-link" type="button" data-add-toggle hidden>Novo pré-inscrito</button><button class="back-link" type="button" data-import-toggle hidden>Selecionar planilha</button><button class="back-link" type="button" data-batch-send hidden>Enviar mensagens</button><button class="back-link" type="button" data-export>Exportar CSV</button><button class="back-link" type="button" data-reload>Atualizar lista</button></div></div>
           <label class="participant-search"><span>Buscar pré-inscrito</span><input type="search" data-search placeholder="Nome, WhatsApp, empresa ou e-mail" autocomplete="off" /></label>
           <form class="import-editor" data-import-editor hidden>
             <label for="pre-inscritos-file">Planilha de pré-inscritos</label>
@@ -52,6 +52,22 @@
               <div class="message-modal-actions"><button class="button save-status" type="submit" data-message-save>Salvar 10 mensagens</button><button class="back-link" type="button" data-message-randomize>Distribuir aleatoriamente</button></div>
               <p class="message-modal-feedback" data-message-modal-feedback></p>
             </form>
+          </dialog>
+          <dialog class="message-modal" data-batch-editor aria-labelledby="batch-modal-title">
+            <form class="message-editor" data-batch-preview-form>
+              <div class="message-modal-heading"><div><p class="eyebrow">Envio por API</p><h2 id="batch-modal-title">Enviar próximos pendentes</h2></div><button class="modal-close" type="button" data-batch-cancel aria-label="Fechar">×</button></div>
+              <p>Escolha a quantidade. Antes de enviar, você verá todos os destinatários em ordem alfabética.</p>
+              <label class="batch-limit">Quantidade de mensagens<input type="number" min="1" max="50" value="10" required data-batch-limit /></label>
+              <div class="message-modal-actions"><button class="button save-status" type="submit" data-batch-preview>Gerar prévia</button><button class="back-link" type="button" data-batch-cancel>Cancelar</button></div>
+              <p class="message-modal-feedback" data-batch-preview-feedback></p>
+            </form>
+            <section class="message-editor" data-batch-preview-result hidden>
+              <div class="message-modal-heading"><div><p class="eyebrow">Confirmação obrigatória</p><h2>Destinatários do lote</h2></div><button class="modal-close" type="button" data-batch-cancel aria-label="Fechar">×</button></div>
+              <p data-batch-summary></p>
+              <ol class="batch-recipients" data-batch-recipients></ol>
+              <div class="message-modal-actions"><button class="button save-status" type="button" data-batch-confirm>Confirmar envio</button><button class="back-link" type="button" data-batch-back>Alterar quantidade</button><button class="back-link" type="button" data-batch-cancel>Cancelar</button></div>
+              <p class="message-modal-feedback" data-batch-feedback></p>
+            </section>
           </dialog>
           <dialog class="message-modal" data-export-editor aria-labelledby="export-modal-title">
             <form class="message-editor" method="dialog" data-export-form>

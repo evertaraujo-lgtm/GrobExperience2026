@@ -85,7 +85,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
-          "nome", "email", "whatsapp", "empresa", "origem", "importadoEm",
+          "nome", "nomeOrdenacao", "email", "whatsapp", "empresa", "origem", "importadoEm",
           "tokenPublico", "linkPublico", "mensagemWhatsApp", "mensagemVariante",
           "mensagemAtualizadaEm", "statusEnvioWhatsApp", "conviteGeradoEm"
         ]);
@@ -102,7 +102,7 @@ service cloud.firestore {
         || (isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly([
-            "status", "atualizadoEm", "nome", "email", "whatsapp", "empresa",
+            "status", "atualizadoEm", "nome", "nomeOrdenacao", "email", "whatsapp", "empresa",
             "origem", "importadoEm", "tokenPublico", "linkPublico",
             "mensagemWhatsApp", "mensagemVariante", "mensagemAtualizadaEm",
             "statusEnvioWhatsApp", "conviteGeradoEm"
