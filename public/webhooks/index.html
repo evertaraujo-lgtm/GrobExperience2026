@@ -19,8 +19,9 @@
       <main class="webhooks-page">
         <section class="dashboard-heading"><p class="eyebrow">Monitoramento</p><h1>Eventos WhatsApp</h1><p>Retornos recebidos pelo webhook desde a ativação deste acompanhamento.</p></section>
         <section class="webhooks-card" aria-live="polite">
-          <div class="webhooks-toolbar"><strong data-total>Carregando...</strong><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><button class="back-link" type="button" data-reload>Atualizar</button></div>
+          <div class="webhooks-toolbar"><strong data-total>Carregando...</strong><label class="event-filter"><span>Exibir</span><select data-type-filter aria-label="Filtrar eventos"><option value="todos">Todos os eventos</option><option value="mensagens">Mensagens recebidas</option></select></label><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><button class="back-link" type="button" data-reload>Atualizar</button></div>
           <div class="events-list" data-list></div>
+          <div class="load-more"><button class="back-link" type="button" data-load-more hidden>Carregar mais</button></div>
           <p class="dashboard-feedback" data-feedback></p>
         </section>
       </main>

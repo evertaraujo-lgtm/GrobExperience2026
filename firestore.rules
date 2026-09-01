@@ -109,8 +109,13 @@ service cloud.firestore {
           ]));
     }
 
+    match /inscritos/{inscritoId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /whatsappEventos/{eventId} {
-      allow read: if isAdmin();
+      allow read: if request.auth != null;
     }
 
     match /whatsappMensagens/{messageId} {

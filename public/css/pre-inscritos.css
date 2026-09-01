@@ -9,6 +9,7 @@
 .dashboard-toolbar strong{font-family:Rajdhani,sans-serif;font-size:1.2rem;letter-spacing:.06em}
 .toolbar-actions{flex-wrap:wrap;justify-content:flex-end}
 .toolbar-actions .back-link{flex:0 0 auto}
+.toolbar-actions .inscritos-link{border-color:rgba(86,240,177,.58);color:#e0fff0;background:rgba(11,102,62,.55)}
 .participant-search{display:grid;grid-template-columns:auto minmax(260px,420px);align-items:center;gap:12px;margin:14px 0 2px;color:var(--muted);font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .participant-search input{width:100%;padding:10px 12px;border:1px solid rgba(125,214,255,.24);border-radius:10px;color:var(--ink);background:#071a3b;font:inherit;letter-spacing:normal;text-transform:none}
 .participant-search input:focus{outline:2px solid rgba(88,202,255,.72);outline-offset:2px}

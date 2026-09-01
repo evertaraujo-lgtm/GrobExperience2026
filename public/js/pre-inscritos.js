@@ -44,6 +44,7 @@ const batchConfirm = document.querySelector("[data-batch-confirm]");
 const batchFeedback = document.querySelector("[data-batch-feedback]");
 const batchCancelButtons = document.querySelectorAll("[data-batch-cancel]");
 const batchBack = document.querySelector("[data-batch-back]");
+const inscritosLink = document.querySelector(".inscritos-link");
 const statuses = ["pendente", "contatado", "confirmado", "cancelado"];
 const defaultMessageVariants = [
   "Olá, {nome}! Notamos que você ainda não escolheu uma data para o GROB Experience. Acesse seu link exclusivo e finalize sua inscrição:\n\n{link}",
@@ -483,8 +484,13 @@ authModule.onAuthStateChanged(auth, async (user) => {
     const {db, firestoreModule} = await getFirestoreServices();
     const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
     canImport = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
+    const inscritosSettings = await firestoreModule.getDoc(firestoreModule.doc(db, "configuracoes", "inscritos"));
+    const inscritosVisibleToUsers = !inscritosSettings.exists() || inscritosSettings.data().visivelParaUsuarios !== false;
+    inscritosLink.hidden = !canImport && !inscritosVisibleToUsers;
     addToggle.hidden = !canImport;
-    importToggle.hidden = !canImport;
+    // A importação permanece implementada para eventual reativação, mas não
+    // deve ficar acessível na lista de pré-inscritos neste momento.
+    importToggle.hidden = true;
     batchSendToggle.hidden = !canImport;
     messageRandomize.hidden = !canImport;
     loadParticipants();

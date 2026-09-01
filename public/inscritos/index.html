@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Painel de inscritos GROB Experience" />
+    <title>Inscritos | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css" />
+    <link rel="stylesheet" href="/css/importacao.css" />
+    <link rel="stylesheet" href="/css/inscritos.css" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="pre-inscritos-page">
+        <section class="dashboard-heading"><p class="eyebrow">Painel de inscrições</p><h1>Inscritos</h1><p>Olá, <span data-user-name>usuário</span>. Esta lista é independente dos pré-inscritos e não realiza envios de WhatsApp.</p></section>
+        <section class="pre-inscritos-card" aria-live="polite">
+          <div class="dashboard-toolbar"><strong data-total>Carregando...</strong><div class="toolbar-actions"><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><label class="visibility-toggle" data-visibility-control hidden><input type="checkbox" data-user-visibility checked /> Exibir aos usuários</label><button class="back-link" type="button" data-add-toggle hidden>Novo inscrito</button><button class="back-link" type="button" data-import-toggle hidden>Importar planilha</button><button class="back-link danger-zone" type="button" data-delete-all-toggle hidden>Zona de perigo</button><button class="back-link" type="button" data-reload>Atualizar lista</button></div></div>
+          <label class="participant-search"><span>Buscar inscrito</span><input type="search" data-search placeholder="Nome, ID, WhatsApp, empresa ou e-mail" autocomplete="off" /></label>
+          <form class="import-editor" data-import-editor hidden>
+            <label for="inscritos-file">Planilha de inscritos</label>
+            <input id="inscritos-file" type="file" accept=".xlsx,.xls" data-import-file required />
+            <p class="selected-file" data-import-file-name>Nenhuma planilha selecionada.</p>
+            <label data-sheet-choice hidden>Escolha a aba da planilha<select data-import-sheet></select></label>
+            <p>Obrigatórias: <code>ID participante</code>, <code>Nome</code>, <code>Celular (WhatsApp)</code> e <code>QRCODE</code>. As demais colunas são opcionais.</p>
+            <div class="extra-columns" data-extra-columns hidden><strong>Colunas adicionais</strong><p>Marque apenas os dados extras que deseja importar.</p><div data-extra-fields></div></div>
+            <div><button class="button save-status" type="submit" data-import-submit disabled>Confirmar importação</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
+            <p class="import-feedback" data-import-feedback></p>
+          </form>
+          <dialog class="message-modal" data-add-editor aria-labelledby="add-modal-title">
+            <form class="message-editor participant-form" data-add-form>
+              <div class="message-modal-heading"><div><p class="eyebrow">Cadastro manual</p><h2 id="add-modal-title">Novo inscrito</h2></div><button class="modal-close" type="button" data-add-cancel aria-label="Fechar">×</button></div>
+              <div class="participant-form-fields inscritos-form-fields">
+                <label>ID participante<input name="idParticipante" required /></label><label>Nome<input name="nome" autocomplete="name" required /></label><label>Celular (WhatsApp)<input name="whatsapp" type="tel" inputmode="numeric" required /></label><label>E-mail <span>(opcional)</span><input name="email" type="email" /></label><label>Empresa <span>(opcional)</span><input name="empresa" autocomplete="organization" /></label><label>QRCODE<input name="qrcode" required /></label><label>Estado <span>(opcional)</span><input name="estado" /></label><label>Cidade <span>(opcional)</span><input name="cidade" /></label><label>Data de participação <span>(opcional)</span><input name="dataParticipacao" /></label>
+              </div>
+              <div class="message-modal-actions"><button class="button save-status" type="submit" data-add-save>Criar inscrito</button><button class="back-link" type="button" data-add-cancel>Cancelar</button></div><p class="message-modal-feedback" data-add-feedback></p>
+            </form>
+          </dialog>
+          <dialog class="message-modal" data-delete-all-editor aria-labelledby="delete-all-title">
+            <form class="message-editor" data-delete-all-form>
+              <div class="message-modal-heading"><div><p class="eyebrow">Acesso restrito</p><h2 id="delete-all-title">Excluir todos os inscritos</h2></div><button class="modal-close" type="button" data-delete-all-cancel aria-label="Fechar">×</button></div>
+              <p>Deseja mesmo excluir todos os inscritos? Esta ação será irreversível.</p><label class="danger-confirm"><input type="checkbox" data-delete-all-check required /> Confirmo que desejo excluir toda a lista de inscritos.</label>
+              <div class="message-modal-actions"><button class="danger-delete" type="submit" data-delete-all-confirm>Excluir todos permanentemente</button><button class="back-link" type="button" data-delete-all-cancel>Cancelar</button></div><p class="message-modal-feedback" data-delete-all-feedback></p>
+            </form>
+          </dialog>
+          <div data-list class="pre-inscritos-list inscritos-list"></div><div class="load-more"><button class="back-link" type="button" data-load-more hidden>Carregar mais</button></div><p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script><script type="module" src="/js/inscritos.js"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "whatsappEventos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "tipo", "order": "ASCENDING"},
+        {"fieldPath": "registradoEm", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
