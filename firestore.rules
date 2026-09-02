@@ -120,6 +120,10 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /visitantes4Events/{visitanteId} {
+      allow read: if isSignedIn();
+    }
+
     match /whatsappEventos/{eventId} {
       allow read: if request.auth != null;
     }

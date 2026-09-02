@@ -11,6 +11,24 @@ const phoneNumberId = "1289110394284226";
 const graphVersion = "v23.0";
 const templateName = "otificacao_presenca_wpp";
 
+type ApiAttendee = {
+  id4Events: string | null;
+  qrCode: string;
+  email: string;
+  nome: string | null;
+  dataParticipacao: string | null;
+  presente: boolean | null;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function firstText(data: Record<string, unknown>, keys: string[]) {
+  const value = keys.map((key) => data[key]).find((item) => typeof item === "string" || typeof item === "number");
+  return value === undefined ? null : String(value);
+}
+
 function attendance(value: unknown): boolean | undefined {
   if (!value || typeof value !== "object") return undefined;
   if (Array.isArray(value)) {
@@ -24,12 +42,25 @@ function attendance(value: unknown): boolean | undefined {
   return undefined;
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+function recordsWithQrCode(value: unknown, found: Record<string, unknown>[] = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => recordsWithQrCode(item, found));
+    return found;
+  }
+  if (!value || typeof value !== "object") return found;
+  const data = value as Record<string, unknown>;
+  const qrCode = firstText(data, ["qrcode", "qr_code", "qrCode", "attendee_qrcode", "attendee_qr_code"]);
+  if (qrCode) found.push(data);
+  Object.values(data).forEach((item) => recordsWithQrCode(item, found));
+  return found;
+}
+
+function normalizeEmail(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
 function phoneWithoutCountry(value: unknown) {
-  let phone = typeof value === "string" ? value.replace(/\D/g, "") : "";
+  let phone = typeof value === "string" ? value.replace(/D/g, "") : "";
   if (phone.startsWith("55") && (phone.length === 12 || phone.length === 13)) phone = phone.slice(2);
   return phone;
 }
@@ -39,36 +70,41 @@ function coordinatorDestination(value: unknown) {
   return phone.length === 10 || phone.length === 11 ? `55${phone}` : "";
 }
 
+function documentId(values: string[]) {
+  return createHash("sha256").update(values.join("|")).digest("hex");
+}
+
 function eventId(messageId: string) {
   return `envio_${createHash("sha256").update(messageId).digest("hex")}`;
 }
 
-function firstText(data: Record<string, unknown>, keys: string[]) {
-  const value = keys.map((key) => data[key]).find((item) => typeof item === "string" || typeof item === "number");
-  return value === undefined ? null : String(value);
-}
-
-function occurrences(value: unknown, found: Record<string, unknown>[] = []) {
-  if (Array.isArray(value)) {
-    value.forEach((item) => occurrences(item, found));
-    return found;
+function apiAttendees(payload: unknown, referenceEmail: string): ApiAttendee[] {
+  const unique = new Map<string, ApiAttendee>();
+  for (const data of recordsWithQrCode(payload)) {
+    const qrCode = firstText(data, ["qrcode", "qr_code", "qrCode", "attendee_qrcode", "attendee_qr_code"]);
+    if (!qrCode) continue;
+    const email = normalizeEmail(firstText(data, ["email", "attendee_email", "attendeeEmail"])) || referenceEmail;
+    const attendee: ApiAttendee = {
+      id4Events: firstText(data, ["id", "attendee_id", "attendeeId"]),
+      qrCode,
+      email,
+      nome: firstText(data, ["name", "nome", "attendee_name", "attendee_full_name"]),
+      dataParticipacao: firstText(data, ["date", "event_date", "attendee_date", "attendee_event_date", "date_event", "eventDate"]),
+      presente: attendance(data) ?? null,
+    };
+    unique.set(documentId([attendee.email, attendee.qrCode, attendee.dataParticipacao ?? ""]), attendee);
   }
-  if (!value || typeof value !== "object") return found;
-  const data = value as Record<string, unknown>;
-  const email = firstText(data, ["email", "attendee_email", "attendeeEmail"]);
-  const qrCode = firstText(data, ["qrcode", "qr_code", "qrCode", "attendee_qrcode", "attendee_qr_code"]);
-  const id = firstText(data, ["id", "attendee_id", "attendeeId"]);
-  if (email || qrCode || id || attendance(data) !== undefined) found.push(data);
-  Object.values(data).forEach((item) => occurrences(item, found));
-  return found;
+  return [...unique.values()];
 }
 
-function presenceSearch(email: string) {
-  return fetch(endpoint, {
+async function query4EventsByEmail(email: string) {
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {Authorization: `Bearer ${fourEventsToken.value()}`, "Content-Type": "application/x-www-form-urlencoded"},
     body: new URLSearchParams({search_by: email, page_size: "100", page: "1", get_type: "", status: ""}),
   });
+  if (!response.ok) throw new HttpsError("internal", `A 4 Events retornou erro ${response.status}.`);
+  return response.json();
 }
 
 async function sendPresenceTemplate(to: string, coordinator: string, visitor: string, company: string, visitorPhone: string) {
@@ -99,38 +135,49 @@ async function sendPresenceTemplate(to: string, coordinator: string, visitor: st
   return {messageId, status: typeof message.message_status === "string" ? message.message_status : "accepted"};
 }
 
+async function getAdminFirestore(request: {auth?: {uid: string}}) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para consultar a 4 Events.");
+  const firestore = getFirestore();
+  const user = await firestore.doc(`users/${request.auth.uid}`).get();
+  if (!user.exists || user.data()?.active === false || user.data()?.roles?.admin !== true) throw new HttpsError("permission-denied", "Somente administradores podem consultar a 4 Events.");
+  return firestore;
+}
+
 export const check4EventsPresence = onCall(
   {secrets: [fourEventsToken, metaWhatsAppAccessToken], timeoutSeconds: 540},
   async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para consultar a presença.");
-    const firestore = getFirestore();
-    const user = await firestore.doc(`users/${request.auth.uid}`).get();
-    if (!user.exists || user.data()?.active === false || user.data()?.roles?.admin !== true) throw new HttpsError("permission-denied", "Somente administradores podem consultar a 4 Events.");
-
-    const visitors = await firestore.collection("visitantesEstrategicos").get();
-    const presenceByQrCode = new Map<string, boolean>();
-    let checked = 0; let attending = 0; let notificationsSent = 0; let notificationsSkipped = 0;
+    const firestore = await getAdminFirestore(request);
+    const references = await firestore.collection("visitantesEstrategicos").get();
+    const attendeesByEmail = new Map<string, ApiAttendee[]>();
+    let checked = 0; let attendeesSaved = 0; let notificationsSent = 0; let notificationsSkipped = 0;
     const notificationFailures: {id: string; message: string}[] = [];
 
-    for (const visitor of visitors.docs) {
-      const data = visitor.data();
-      const qrCode = typeof data.qrCode === "string" ? data.qrCode.trim() : "";
-      if (!qrCode) continue;
-      let present = presenceByQrCode.get(qrCode);
-      if (present === undefined) {
-        const response = await fetch(endpoint, {method: "POST", headers: {Authorization: `Bearer ${fourEventsToken.value()}`, "Content-Type": "application/x-www-form-urlencoded"}, body: new URLSearchParams({search_by: qrCode, page_size: "100", page: "1", get_type: "", status: ""})});
-        if (!response.ok) throw new HttpsError("internal", `A 4 Events retornou erro ${response.status}.`);
-        present = attendance(await response.json()) ?? false;
-        presenceByQrCode.set(qrCode, present);
+    for (const reference of references.docs) {
+      const email = normalizeEmail(reference.data().email);
+      if (!email || attendeesByEmail.has(email)) continue;
+      const attendees = apiAttendees(await query4EventsByEmail(email), email);
+      attendeesByEmail.set(email, attendees);
+      for (const attendee of attendees) {
+        const attendeeRef = firestore.collection("visitantes4Events").doc(documentId([attendee.email, attendee.qrCode, attendee.dataParticipacao ?? ""]));
+        await attendeeRef.set({...attendee, consultadoEm: FieldValue.serverTimestamp()}, {merge: true});
+        attendeesSaved += 1;
       }
-      await visitor.ref.set({attendeeAttendingEvent: present, presenceCheckedAt: FieldValue.serverTimestamp()}, {merge: true});
+    }
+
+    for (const reference of references.docs) {
+      const data = reference.data();
+      const email = normalizeEmail(data.email);
+      const attendees = attendeesByEmail.get(email) ?? [];
+      const presentAttendeeIds = attendees.filter((attendee) => attendee.presente === true)
+        .map((attendee) => documentId([attendee.email, attendee.qrCode, attendee.dataParticipacao ?? ""]));
+      const present = presentAttendeeIds.length > 0;
+      await reference.ref.set({attendeeAttendingEvent: present, presenceCheckedAt: FieldValue.serverTimestamp()}, {merge: true});
       checked += 1;
       if (!present) continue;
-      attending += 1;
 
       const reservationId = randomUUID();
       const notification = await firestore.runTransaction(async (transaction) => {
-        const current = await transaction.get(visitor.ref);
+        const current = await transaction.get(reference.ref);
         const currentData = current.data() ?? {};
         if (currentData.presenceNotificationSentAt || currentData.presenceNotificationReservationId) return null;
         const coordinatorPhone = coordinatorDestination(currentData.whatsappCoordenador);
@@ -139,7 +186,7 @@ export const check4EventsPresence = onCall(
         const company = typeof currentData.empresa === "string" ? currentData.empresa.trim() : "";
         const visitorPhone = phoneWithoutCountry(currentData.whatsapp);
         if (!coordinatorPhone || !coordinator || !visitorName || !company || !visitorPhone) return null;
-        transaction.update(visitor.ref, {presenceNotificationReservationId: reservationId, presenceNotificationReservedAt: FieldValue.serverTimestamp()});
+        transaction.update(reference.ref, {presenceNotificationReservationId: reservationId, presenceNotificationReservedAt: FieldValue.serverTimestamp()});
         return {coordinatorPhone, coordinator, visitorName, company, visitorPhone};
       });
       if (!notification) { notificationsSkipped += 1; continue; }
@@ -147,46 +194,29 @@ export const check4EventsPresence = onCall(
         const result = await sendPresenceTemplate(notification.coordinatorPhone, notification.coordinator, notification.visitorName, notification.company, notification.visitorPhone);
         const now = FieldValue.serverTimestamp();
         const batch = firestore.batch();
-        batch.set(firestore.collection("whatsappMensagens").doc(result.messageId), {preInscritoId: null, destinatarioWhatsApp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", status: "aceito", statusMeta: result.status, visitanteEstrategicoId: visitor.id, solicitadoEm: now});
-        batch.set(firestore.collection("whatsappEventos").doc(eventId(result.messageId)), {tipo: "envio", messageId: result.messageId, preInscritoId: null, whatsapp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", visitanteEstrategicoId: visitor.id, ocorridoEm: now, registradoEm: FieldValue.serverTimestamp()});
-        batch.set(visitor.ref, {presenceNotificationSentAt: now, presenceNotificationMessageId: result.messageId, presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()}, {merge: true});
+        batch.set(firestore.collection("whatsappMensagens").doc(result.messageId), {preInscritoId: null, destinatarioWhatsApp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", status: "aceito", statusMeta: result.status, visitanteEstrategicoId: reference.id, visitantes4EventsIds: presentAttendeeIds, solicitadoEm: now});
+        batch.set(firestore.collection("whatsappEventos").doc(eventId(result.messageId)), {tipo: "envio", messageId: result.messageId, preInscritoId: null, whatsapp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", visitanteEstrategicoId: reference.id, ocorridoEm: now, registradoEm: FieldValue.serverTimestamp()});
+        batch.set(reference.ref, {presenceNotificationSentAt: now, presenceNotificationMessageId: result.messageId, presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()}, {merge: true});
+        presentAttendeeIds.forEach((attendeeId) => batch.set(firestore.collection("visitantes4Events").doc(attendeeId), {notificacaoWhatsAppStatus: "aceito", notificacaoWhatsAppMensagemId: result.messageId, notificacaoWhatsAppAtualizadoEm: now}, {merge: true}));
         await batch.commit();
         notificationsSent += 1;
       } catch (error) {
         await firestore.runTransaction(async (transaction) => {
-          const current = await transaction.get(visitor.ref);
-          if (current.data()?.presenceNotificationReservationId === reservationId) {
-            transaction.update(visitor.ref, {presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()});
-          }
+          const current = await transaction.get(reference.ref);
+          if (current.data()?.presenceNotificationReservationId === reservationId) transaction.update(reference.ref, {presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()});
         });
-        notificationFailures.push({id: visitor.id, message: error instanceof Error ? error.message : "Não foi possível enviar a notificação."});
+        await Promise.all(presentAttendeeIds.map((attendeeId) => firestore.collection("visitantes4Events").doc(attendeeId).set({notificacaoWhatsAppStatus: "falhou", notificacaoWhatsAppErro: error instanceof Error ? error.message : "Não foi possível enviar a notificação.", notificacaoWhatsAppAtualizadoEm: FieldValue.serverTimestamp()}, {merge: true})));
+        notificationFailures.push({id: reference.id, message: error instanceof Error ? error.message : "Não foi possível enviar a notificação."});
       }
     }
-    return {checked, attending, notificationsSent, notificationsSkipped, notificationFailures};
+    return {checked, attendeesSaved, notificationsSent, notificationsSkipped, notificationFailures};
   },
 );
 
 export const search4Events = onCall({secrets: [fourEventsToken]}, async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para consultar a 4 Events.");
-  const firestore = getFirestore();
-  const user = await firestore.doc(`users/${request.auth.uid}`).get();
-  if (!user.exists || user.data()?.active === false || user.data()?.roles?.admin !== true) throw new HttpsError("permission-denied", "Somente administradores podem consultar a 4 Events.");
-  const requestData = asRecord(request.data);
-  const type = requestData.type === "qrCode" ? "qrCode" : "email";
-  const query = typeof requestData.query === "string" ? requestData.query.trim() : "";
-  if (!query) throw new HttpsError("invalid-argument", "Informe um valor para busca.");
-  if (type === "email" && !/^\S+@\S+\.\S+$/.test(query)) throw new HttpsError("invalid-argument", "Informe um e-mail válido.");
-  const response = await presenceSearch(type === "email" ? query.toLowerCase() : query);
-  if (!response.ok) throw new HttpsError("internal", `A 4 Events retornou erro ${response.status}.`);
-  const rawOccurrences = occurrences(await response.json());
-  const unique = new Map<string, Record<string, unknown>>();
-  rawOccurrences.forEach((item) => unique.set(JSON.stringify(item), item));
-  const results = [...unique.values()].map((item) => ({
-    id: firstText(item, ["id", "attendee_id", "attendeeId"]),
-    qrCode: firstText(item, ["qrcode", "qr_code", "qrCode", "attendee_qrcode", "attendee_qr_code"]),
-    nome: firstText(item, ["name", "nome", "attendee_name", "attendee_full_name"]),
-    email: firstText(item, ["email", "attendee_email", "attendeeEmail"]),
-    presente: attendance(item) ?? null,
-  }));
-  return {query, type, occurrences: results};
+  const firestore = await getAdminFirestore(request);
+  void firestore;
+  const email = typeof asRecord(request.data).email === "string" ? String(asRecord(request.data).email).trim().toLowerCase() : "";
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw new HttpsError("invalid-argument", "Informe um e-mail válido.");
+  return {email, occurrences: apiAttendees(await query4EventsByEmail(email), email)};
 });

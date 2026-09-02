@@ -35,22 +35,24 @@
             <label for="visitors-file">Planilha de visitantes estratégicos</label>
             <input id="visitors-file" data-import-file type="file" accept=".xlsx,.xls" required />
             <p class="selected-file" data-file-name>Nenhuma planilha selecionada.</p>
-            <p>Colunas obrigatórias: <code>ID</code>, <code>QRCode</code>, <code>Nome</code>, <code>E-mail</code>, <code>Celular (WhatsApp)</code>, <code>Empresa</code>, <code>Coordenador</code> e <code>Whatsapp Coordenador</code>.</p>
+            <p>Colunas obrigatórias: <code>Nome</code>, <code>E-mail</code>, <code>Celular (WhatsApp)</code>, <code>Empresa</code>, <code>Coordenador</code> e <code>Whatsapp Coordenador</code>.</p>
             <div><button class="button save-status" data-import-submit>Importar</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
             <p class="import-feedback" data-import-feedback></p>
           </form>
           <dialog class="message-modal" data-search-4events-modal aria-labelledby="search-4events-title">
             <form class="message-editor" data-search-4events-form>
               <div class="message-modal-heading"><div><p class="eyebrow">Consulta direta</p><h2 id="search-4events-title">Buscar ocorrências na 4 Events</h2></div><button class="modal-close" type="button" data-search-4events-cancel aria-label="Fechar">×</button></div>
-              <p>Escolha a busca por e-mail ou QR Code para listar todas as ocorrências retornadas pela API da 4 Events.</p>
-              <label class="batch-limit">Buscar por<select data-search-4events-type><option value="email">E-mail</option><option value="qrCode">QRCode</option></select></label>
-              <label class="batch-limit"><span data-search-4events-label>E-mail</span><input type="email" data-search-4events-value required placeholder="nome@empresa.com" /></label>
+              <p>Informe o e-mail para listar todos os QR Codes e datas retornados pela API da 4 Events.</p>
+              <label class="batch-limit">E-mail<input type="email" data-search-4events-value required placeholder="nome@empresa.com" /></label>
               <div class="message-modal-actions"><button class="button save-status" type="submit" data-search-4events-submit>Buscar</button><button class="back-link" type="button" data-search-4events-cancel>Cancelar</button></div>
               <p class="message-modal-feedback" data-search-4events-feedback></p>
               <div class="batch-recipients" data-search-4events-results hidden></div>
             </form>
           </dialog>
+          <h2 class="four-events-list-title">Lista de referência</h2>
           <div class="pre-inscritos-list" data-list></div>
+          <h2 class="four-events-list-title">Retorno da API 4 Events <small data-api-total></small></h2>
+          <div class="pre-inscritos-list" data-api-list></div>
           <div class="load-more"><button class="back-link" data-load-more hidden>Carregar mais</button></div>
           <p class="dashboard-feedback" data-feedback></p>
         </section>

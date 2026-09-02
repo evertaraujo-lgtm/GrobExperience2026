@@ -142,6 +142,17 @@ async function saveStatus(status: Record<string, unknown>) {
       }
       transaction.set(participantRef, participantUpdate, {merge: true});
     }
+    const attendeeValues: unknown[] = message.exists && Array.isArray(message.data()?.visitantes4EventsIds)
+      ? message.data()?.visitantes4EventsIds as unknown[]
+      : [];
+    const attendees = attendeeValues.filter((id): id is string => typeof id === "string");
+    for (const attendeeId of attendees) {
+      transaction.set(firestore.collection("visitantes4Events").doc(attendeeId), {
+        notificacaoWhatsAppStatus: translatedStatus,
+        notificacaoWhatsAppMensagemId: messageId,
+        notificacaoWhatsAppAtualizadoEm: occurredAt,
+      }, {merge: true});
+    }
   });
 }
 

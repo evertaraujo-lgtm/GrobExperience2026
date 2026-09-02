@@ -1,6 +1,8 @@
 import {getAuthServices, getFirestoreServices, getFunctionsServices} from "/js/firebase-client.js";
 
 const list = document.querySelector("[data-list]");
+const apiList = document.querySelector("[data-api-list]");
+const apiTotal = document.querySelector("[data-api-total]");
 const total = document.querySelector("[data-total]");
 const feedback = document.querySelector("[data-feedback]");
 const search = document.querySelector("[data-search]");
@@ -16,9 +18,7 @@ const submit = document.querySelector("[data-import-submit]");
 const search4Events = document.querySelector("[data-search-4events]");
 const search4EventsModal = document.querySelector("[data-search-4events-modal]");
 const search4EventsForm = document.querySelector("[data-search-4events-form]");
-const search4EventsType = document.querySelector("[data-search-4events-type]");
 const search4EventsValue = document.querySelector("[data-search-4events-value]");
-const search4EventsLabel = document.querySelector("[data-search-4events-label]");
 const search4EventsSubmit = document.querySelector("[data-search-4events-submit]");
 const search4EventsFeedback = document.querySelector("[data-search-4events-feedback]");
 const search4EventsResults = document.querySelector("[data-search-4events-results]");
@@ -49,37 +49,30 @@ function setSearch4EventsFeedback(message, state = "neutral") {
   search4EventsFeedback.dataset.state = state;
 }
 
-function updateSearch4EventsField() {
-  const byQrCode = search4EventsType.value === "qrCode";
-  search4EventsLabel.textContent = byQrCode ? "QRCode" : "E-mail";
-  search4EventsValue.type = byQrCode ? "text" : "email";
-  search4EventsValue.placeholder = byQrCode ? "Informe o QR Code" : "nome@empresa.com";
-  search4EventsValue.value = "";
-}
-
 function searchResultElement(occurrence) {
   const item = document.createElement("article");
   item.className = "participant-row";
-  item.innerHTML = '<div class="participant-meta"><strong></strong><span>E-mail</span></div><div class="participant-meta"><strong></strong><span>ID</span></div><div class="participant-meta"><strong></strong><span>QRCode</span></div><div class="participant-meta"><strong></strong><span>Presença</span></div>';
+  item.innerHTML = '<div class="participant-meta"><strong></strong><span>E-mail</span></div><div class="participant-meta"><strong></strong><span>ID</span></div><div class="participant-meta"><strong></strong><span>QRCode</span></div><div class="participant-meta"><strong></strong><span>Data</span></div><div class="participant-meta"><strong></strong><span>Presença</span></div><div class="participant-meta whatsapp-delivery"><strong></strong><span>WhatsApp</span></div>';
   const values = item.querySelectorAll("strong");
   values[0].textContent = occurrence.nome || occurrence.email || "Nome não informado";
   item.querySelectorAll("span")[0].textContent = occurrence.email || "E-mail não informado";
-  values[1].textContent = occurrence.id || "Não informado";
+  values[1].textContent = occurrence.id4Events || occurrence.id || "Não informado";
   values[2].textContent = occurrence.qrCode || "Não informado";
-  values[3].textContent = occurrence.presente === true ? "Presente" : occurrence.presente === false ? "Não presente" : "Não informado";
+  values[3].textContent = occurrence.dataParticipacao || "Não informada";
+  values[4].textContent = occurrence.presente === true ? "Presente" : occurrence.presente === false ? "Não presente" : "Não informado";
+  values[5].textContent = occurrence.notificacaoWhatsAppStatus || (occurrence.presente === true ? "Aguardando notificação" : "Aguardando presença");
   return item;
 }
 
 function row(visitor, firestore) {
   const element = document.createElement("article");
   element.className = "participant-row";
-  element.innerHTML = '<div class="participant-meta"><strong></strong><span></span></div><div class="participant-meta"><strong></strong><span>ID</span></div><div class="participant-meta"><strong></strong><span>QRCode</span></div><div class="participant-meta"><strong></strong><span>Coordenador</span></div><div class="participant-meta"><strong></strong><span>4 Events</span></div><div class="participant-actions"><button class="danger-delete" type="button" hidden>Excluir</button></div>';
+  element.innerHTML = '<div class="participant-meta"><strong></strong><span></span></div><div class="participant-meta"><strong></strong><span>Empresa</span></div><div class="participant-meta"><strong></strong><span>Coordenador</span></div><div class="participant-meta"><strong></strong><span>4 Events</span></div><div class="participant-actions"><button class="danger-delete" type="button" hidden>Excluir</button></div>';
   element.querySelectorAll("strong")[0].textContent = visitor.nome || "Nome não informado";
   element.querySelectorAll("span")[0].textContent = visitor.email || "E-mail não informado";
-  element.querySelectorAll("strong")[1].textContent = visitor.id4Events || "Não informado";
-  element.querySelectorAll("strong")[2].textContent = visitor.qrCode || "Não informado";
-  element.querySelectorAll("strong")[3].textContent = visitor.coordenador || "Coordenador não informado";
-  element.querySelectorAll("strong")[4].textContent = visitor.attendeeAttendingEvent === true ? "Presente" : visitor.attendeeAttendingEvent === false ? "Não presente" : "Ainda não consultado";
+  element.querySelectorAll("strong")[1].textContent = visitor.empresa || "Não informada";
+  element.querySelectorAll("strong")[2].textContent = visitor.coordenador || "Coordenador não informado";
+  element.querySelectorAll("strong")[3].textContent = visitor.attendeeAttendingEvent === true ? "Presente" : visitor.attendeeAttendingEvent === false ? "Não presente" : "Ainda não consultado";
   const remove = element.querySelector(".danger-delete");
   if (admin) {
     remove.hidden = false;
@@ -103,7 +96,7 @@ async function load(reset = true) {
   if (loading || (!reset && !hasMore)) return;
   loading = true;
   if (reset) {
-    list.replaceChildren(); lastDoc = undefined; total.textContent = "Carregando..."; more.hidden = true;
+    list.replaceChildren(); apiList.replaceChildren(); lastDoc = undefined; total.textContent = "Carregando..."; apiTotal.textContent = ""; more.hidden = true;
   }
   try {
     const {db, firestoreModule: firestore} = await getFirestoreServices();
@@ -111,15 +104,21 @@ async function load(reset = true) {
     if (lastDoc) constraints.splice(-1, 0, firestore.startAfter(lastDoc));
     const snapshot = await firestore.getDocs(firestore.query(firestore.collection(db, "visitantesEstrategicos"), ...constraints));
     if (snapshot.empty) {
-      if (reset) list.innerHTML = '<p class="empty-state">Nenhum visitante estratégico.</p>';
+      if (reset) list.innerHTML = '<p class="empty-state">Nenhuma linha de referência.</p>';
       hasMore = false;
-      return;
+    } else {
+      snapshot.docs.forEach((document) => list.append(row({reference: document.ref, ...document.data()}, firestore)));
+      lastDoc = snapshot.docs.at(-1);
+      hasMore = snapshot.size === 100;
+      more.hidden = !hasMore;
+      total.textContent = `${list.children.length} linha(s) de referência carregada(s)`;
     }
-    snapshot.docs.forEach((document) => list.append(row({reference: document.ref, ...document.data()}, firestore)));
-    lastDoc = snapshot.docs.at(-1);
-    hasMore = snapshot.size === 100;
-    more.hidden = !hasMore;
-    total.textContent = `${list.children.length} linha(s) carregada(s)`;
+    if (reset) {
+      const apiSnapshot = await firestore.getDocs(firestore.query(firestore.collection(db, "visitantes4Events"), firestore.orderBy("email"), firestore.limit(100)));
+      if (apiSnapshot.empty) apiList.innerHTML = '<p class="empty-state">Nenhum retorno da API salvo ainda.</p>';
+      else apiSnapshot.docs.forEach((document) => apiList.append(searchResultElement(document.data())));
+      apiTotal.textContent = `${apiSnapshot.size} registro(s)`;
+    }
   } catch (error) {
     console.error(error);
     setFeedback("Não foi possível carregar os visitantes.", "error");
@@ -146,17 +145,15 @@ editor.addEventListener("submit", async (event) => {
     const matrix = xlsx.utils.sheet_to_json(sheet, {header: 1, defval: "", raw: true});
     const headerIndex = matrix.findIndex((values) => {
       const found = headers(values);
-      return ["id", "qrcode", "nome", "e-mail", "celular (whatsapp)", "empresa", "coordenador", "whatsapp coordenador"].every((column) => found.includes(column));
+      return ["nome", "e-mail", "celular (whatsapp)", "empresa", "coordenador", "whatsapp coordenador"].every((column) => found.includes(column));
     });
-    if (headerIndex < 0) throw new Error("A planilha precisa ter as colunas ID, QRCode, Nome, E-mail, Celular (WhatsApp), Empresa, Coordenador e Whatsapp Coordenador.");
+    if (headerIndex < 0) throw new Error("A planilha precisa ter as colunas Nome, E-mail, Celular (WhatsApp), Empresa, Coordenador e Whatsapp Coordenador.");
     const sheetHeaders = headers(matrix[headerIndex]);
     const rows = matrix.slice(headerIndex + 1).filter((values) => values.some((item) => String(item).trim()))
       .map((values) => Object.fromEntries(sheetHeaders.map((key, index) => [key, values[index]])));
     const invalidRows = [];
     const valid = rows.map((rowData, index) => {
       const visitor = {
-        id4Events: value(rowData, ["id"]),
-        qrCode: value(rowData, ["qrcode"]),
         nome: value(rowData, ["nome"]),
         email: normalizedEmail(value(rowData, ["e-mail"])),
         whatsapp: normalizedPhone(value(rowData, ["celular (whatsapp)"])),
@@ -164,16 +161,16 @@ editor.addEventListener("submit", async (event) => {
         coordenador: value(rowData, ["coordenador"]),
         whatsappCoordenador: normalizedPhone(value(rowData, ["whatsapp coordenador"])),
       };
-      if (!visitor.id4Events || !visitor.qrCode || !visitor.nome || !visitor.email || !visitor.whatsapp || !visitor.empresa || !visitor.coordenador || !visitor.whatsappCoordenador) invalidRows.push(index + headerIndex + 2);
+      if (!visitor.nome || !visitor.email || !visitor.whatsapp || !visitor.empresa || !visitor.coordenador || !visitor.whatsappCoordenador) invalidRows.push(index + headerIndex + 2);
       return visitor;
-    }).filter((visitor) => visitor.id4Events && visitor.qrCode && visitor.nome && visitor.email && visitor.whatsapp && visitor.empresa && visitor.coordenador && visitor.whatsappCoordenador);
+    }).filter((visitor) => visitor.nome && visitor.email && visitor.whatsapp && visitor.empresa && visitor.coordenador && visitor.whatsappCoordenador);
     if (!valid.length) throw new Error("Nenhuma linha válida encontrada.");
 
     const {db, firestoreModule: firestore} = await getFirestoreServices();
     let batch = firestore.writeBatch(db);
     let operations = 0;
     for (const visitor of valid) {
-      const id = encodeURIComponent(`${visitor.id4Events}__${visitor.qrCode}__${visitor.whatsappCoordenador}`);
+      const id = encodeURIComponent(`${visitor.email}__${visitor.whatsappCoordenador}`);
       batch.set(firestore.doc(db, "visitantesEstrategicos", id), {
         ...visitor,
         nomeOrdenacao: normalize(visitor.nome),
@@ -207,12 +204,10 @@ search4Events.addEventListener("click", () => {
   search4EventsResults.hidden = true;
   setSearch4EventsFeedback("");
   search4EventsModal.showModal();
-  updateSearch4EventsField();
   search4EventsValue.focus();
 });
 
 search4EventsCancel.forEach((button) => button.addEventListener("click", () => search4EventsModal.close()));
-search4EventsType.addEventListener("change", updateSearch4EventsField);
 
 search4EventsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -224,11 +219,11 @@ search4EventsForm.addEventListener("submit", async (event) => {
   try {
     const {functions, functionsModule} = await getFunctionsServices();
     const search4EventsApi = functionsModule.httpsCallable(functions, "search4Events");
-    const result = await search4EventsApi({type: search4EventsType.value, query: search4EventsValue.value});
+    const result = await search4EventsApi({email: search4EventsValue.value});
     const occurrences = Array.isArray(result.data.occurrences) ? result.data.occurrences : [];
     search4EventsResults.append(...occurrences.map(searchResultElement));
     search4EventsResults.hidden = false;
-    setSearch4EventsFeedback(`${occurrences.length} ocorrência(s) encontrada(s) para ${result.data.query}.`, occurrences.length ? "success" : "neutral");
+    setSearch4EventsFeedback(`${occurrences.length} ocorrência(s) encontrada(s) para ${result.data.email}.`, occurrences.length ? "success" : "neutral");
   } catch (error) {
     console.error(error);
     setSearch4EventsFeedback(error.message || "Não foi possível consultar a 4 Events.", "error");
