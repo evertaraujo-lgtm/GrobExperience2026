@@ -44,16 +44,27 @@ function signatureIsValid(request: RequestWithRawBody) {
 }
 
 function dateFromButtonPayload(value: unknown) {
-  const match = typeof value === "string" && value.match(/^data_(\d{4})_(\d{2})_(\d{2})$/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
+  if (typeof value !== "string") return undefined;
+  const match = value.match(/^data_(\d{4})_(\d{2})_(\d{2})$/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  if (/^2026-09-(22|23|24)$/.test(value)) return value;
+
+  // Templates de resposta rápida podem devolver o ID configurado no botão ou
+  // somente o título visível para a pessoa (por exemplo, "22 de setembro").
+  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\b22\b.*setembro/.test(normalized)) return "2026-09-22";
+  if (/\b23\b.*setembro/.test(normalized)) return "2026-09-23";
+  if (/\b24\b.*setembro/.test(normalized)) return "2026-09-24";
+  return undefined;
 }
 
-function buttonPayload(message: Record<string, unknown>) {
+function buttonPayloads(message: Record<string, unknown>) {
   const button = message.button as Record<string, unknown> | undefined;
   const interactive = message.interactive as Record<string, unknown> | undefined;
   const buttonReply = interactive?.button_reply as Record<string, unknown> | undefined;
   const listReply = interactive?.list_reply as Record<string, unknown> | undefined;
-  return button?.payload ?? buttonReply?.id ?? listReply?.id;
+  return [button?.payload, button?.text, buttonReply?.id, buttonReply?.title, listReply?.id, listReply?.title]
+    .filter((value): value is string => typeof value === "string");
 }
 
 function eventId(prefix: string, values: unknown[]) {
@@ -139,8 +150,9 @@ async function saveIncomingMessage(message: Record<string, unknown>, contacts: R
   if (!messageId) return;
 
   const participantId = normalizedParticipantId(message.from);
-  const payload = buttonPayload(message);
-  const chosenDate = dateFromButtonPayload(payload);
+  const payloads = buttonPayloads(message);
+  const payload = payloads[0];
+  const chosenDate = payloads.map(dateFromButtonPayload).find((date): date is string => Boolean(date));
   const messageType = typeof message.type === "string" ? message.type : "desconhecido";
   const contact = contacts.find((item) => normalizedParticipantId(item.wa_id) === participantId);
   const profile = contact?.profile as Record<string, unknown> | undefined;

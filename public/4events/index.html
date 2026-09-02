@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>4 Events | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css" />
+    <link rel="stylesheet" href="/css/importacao.css" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="pre-inscritos-page">
+        <section class="dashboard-heading"><p class="eyebrow">Integração</p><h1>4 Events</h1><p>Importe visitantes estratégicos, consulte a presença e notifique os respectivos coordenadores.</p></section>
+        <section class="pre-inscritos-card">
+          <div class="dashboard-toolbar">
+            <strong data-total>Carregando...</strong>
+            <div class="toolbar-actions">
+              <a class="back-link" href="/app/">Voltar aos pré-inscritos</a>
+              <button class="back-link" data-import-toggle hidden>Importar visitantes</button>
+              <button class="back-link" data-check-presence hidden>Checar presença</button>
+              <button class="back-link" data-search-4events hidden>Buscar na 4 Events</button>
+              <button class="back-link danger-zone" data-delete-all hidden>Excluir lista</button>
+              <button class="back-link" data-reload>Atualizar</button>
+            </div>
+          </div>
+          <label class="participant-search"><span>Buscar visitante</span><input data-search type="search" placeholder="Nome, e-mail ou coordenador" /></label>
+          <form class="import-editor" data-import-editor hidden>
+            <label for="visitors-file">Planilha de visitantes estratégicos</label>
+            <input id="visitors-file" data-import-file type="file" accept=".xlsx,.xls" required />
+            <p class="selected-file" data-file-name>Nenhuma planilha selecionada.</p>
+            <p>Colunas obrigatórias: <code>ID</code>, <code>QRCode</code>, <code>Nome</code>, <code>E-mail</code>, <code>Celular (WhatsApp)</code>, <code>Empresa</code>, <code>Coordenador</code> e <code>Whatsapp Coordenador</code>.</p>
+            <div><button class="button save-status" data-import-submit>Importar</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
+            <p class="import-feedback" data-import-feedback></p>
+          </form>
+          <dialog class="message-modal" data-search-4events-modal aria-labelledby="search-4events-title">
+            <form class="message-editor" data-search-4events-form>
+              <div class="message-modal-heading"><div><p class="eyebrow">Consulta direta</p><h2 id="search-4events-title">Buscar ocorrências na 4 Events</h2></div><button class="modal-close" type="button" data-search-4events-cancel aria-label="Fechar">×</button></div>
+              <p>Escolha a busca por e-mail ou QR Code para listar todas as ocorrências retornadas pela API da 4 Events.</p>
+              <label class="batch-limit">Buscar por<select data-search-4events-type><option value="email">E-mail</option><option value="qrCode">QRCode</option></select></label>
+              <label class="batch-limit"><span data-search-4events-label>E-mail</span><input type="email" data-search-4events-value required placeholder="nome@empresa.com" /></label>
+              <div class="message-modal-actions"><button class="button save-status" type="submit" data-search-4events-submit>Buscar</button><button class="back-link" type="button" data-search-4events-cancel>Cancelar</button></div>
+              <p class="message-modal-feedback" data-search-4events-feedback></p>
+              <div class="batch-recipients" data-search-4events-results hidden></div>
+            </form>
+          </dialog>
+          <div class="pre-inscritos-list" data-list></div>
+          <div class="load-more"><button class="back-link" data-load-more hidden>Carregar mais</button></div>
+          <p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/4events.js"></script>
+  </body>
+</html>

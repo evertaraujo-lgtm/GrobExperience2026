@@ -34,7 +34,7 @@
 .message-modal-feedback[data-state=error]{color:#ffe1e1}
 .message-modal-feedback[data-state=success]{color:#defff1}
 .batch-limit{display:grid;gap:7px;max-width:220px;font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.batch-limit input{width:100%;padding:11px;border:1px solid rgba(125,214,255,.24);border-radius:10px;color:var(--ink);background:#071a3b;font:inherit;letter-spacing:normal}
+.batch-limit input,.batch-limit select{width:100%;padding:11px;border:1px solid rgba(125,214,255,.24);border-radius:10px;color:var(--ink);background:#071a3b;font:inherit;letter-spacing:normal}
 .batch-recipients{display:grid;gap:7px;max-height:42vh;overflow:auto;margin:0;padding:12px 12px 12px 34px;border:1px solid rgba(125,214,255,.18);border-radius:14px;background:rgba(4,18,42,.56);color:var(--ink)}
 .participant-form-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .participant-form-fields label{display:grid;gap:7px;color:var(--ink);font-family:Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}

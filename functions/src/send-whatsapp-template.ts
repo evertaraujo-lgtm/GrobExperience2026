@@ -115,6 +115,7 @@ export const sendWhatsAppTemplate = onCall(
       ultimoEnvioWhatsAppPorNome: senderName,
       ultimoEnvioWhatsAppPorEmail: senderEmail,
       ultimoEnvioWhatsAppEm: sentAt,
+      primeiroEnvioWhatsAppEm: participantData.primeiroEnvioWhatsAppEm ?? sentAt,
       templateWhatsApp: templateName,
     }, {merge: true});
     await batch.commit();

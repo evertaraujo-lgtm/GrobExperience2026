@@ -64,6 +64,7 @@ if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
           });
           batch.update(firestoreModule.doc(db, "preInscritos", snapshot.data().preInscritoId), {
             status: "confirmado",
+            dataSelecionada: date,
             atualizadoEm: firestoreModule.serverTimestamp(),
           });
           await batch.commit();

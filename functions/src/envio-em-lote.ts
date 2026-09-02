@@ -195,6 +195,7 @@ async function saveAcceptedMessage(id: string, messageId: string, metaStatus: st
     ultimoEnvioWhatsAppPorNome: sender.name,
     ultimoEnvioWhatsAppPorEmail: sender.email,
     ultimoEnvioWhatsAppEm: sentAt,
+    primeiroEnvioWhatsAppEm: sentAt,
     statusEnvioWhatsAppEm: sentAt,
     templateWhatsApp: templateName,
   }, {merge: true});

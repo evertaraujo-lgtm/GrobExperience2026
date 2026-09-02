@@ -394,7 +394,7 @@ function participantElement(participant, db, firestore) {
       };
       if (canImport && select.value === "pendente" && participant.tokenPublico) {
         const batch = firestore.writeBatch(db);
-        batch.update(participant.reference, statusData);
+        batch.update(participant.reference, {...statusData, dataSelecionada: firestore.deleteField()});
         batch.update(firestore.doc(db, "linksPublicos", participant.tokenPublico), {
           status: "pendente",
           dataSelecionada: firestore.deleteField(),
