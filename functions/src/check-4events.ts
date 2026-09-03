@@ -9,7 +9,7 @@ const metaWhatsAppAccessToken = defineSecret("META_WHATSAPP_ACCESS_TOKEN");
 const endpoint = "https://api.4.events/attendees/2/search";
 const phoneNumberId = "1289110394284226";
 const graphVersion = "v23.0";
-const templateName = "otificacao_presenca_wpp";
+const templateName = "notificacao_presenca_wpp";
 
 type ApiAttendee = {
   id4Events: string | null;
