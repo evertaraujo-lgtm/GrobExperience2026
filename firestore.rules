@@ -129,6 +129,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && !isCollectionAssistant();
     }
 
+    match /participantes4Events/{participanteId} {
+      allow read: if isAdmin();
+    }
+
     match /coletaAtividadesAssistentes/{assistenteId} {
       allow read: if isAdmin() || isSelf(assistenteId);
     }

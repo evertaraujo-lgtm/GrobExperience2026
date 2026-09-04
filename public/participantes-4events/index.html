@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>4 Events | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" /><link rel="stylesheet" href="/css/app.css" /><link rel="stylesheet" href="/css/pre-inscritos.css" /><link rel="stylesheet" href="/css/gestao-evento.css" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="pre-inscritos-page"><section class="dashboard-heading"><p class="eyebrow">Integração</p><h1>4 Events</h1><p>Importe e consulte os participantes retornados pela API da 4 Events.</p></section>
+        <section class="pre-inscritos-card"><div class="dashboard-toolbar"><strong data-total>Carregando...</strong><div class="toolbar-actions"><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><a class="back-link" href="/4events/">Notificações de chegada</a><button class="back-link" type="button" data-import>Importar pela API</button><button class="back-link" type="button" data-columns>Colunas</button><button class="back-link" type="button" data-export>Exportar CSV</button><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
+          <label class="participant-search"><span>Buscar participante</span><input type="search" data-search placeholder="Nome, e-mail, empresa ou QR Code" /></label>
+          <div class="four-events-participants" data-list></div><button class="back-link" type="button" data-load-more hidden>Carregar mais</button><p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+    <dialog class="message-modal" data-import-modal><form class="message-editor" data-import-form><div class="message-modal-heading"><div><p class="eyebrow">Importação por API</p><h2>Participantes da 4 Events</h2></div><button class="modal-close" type="button" data-import-cancel aria-label="Fechar">×</button></div><p>A consulta usa <code>POST /attendees/{eid}/search</code>, sem filtros, e percorre as páginas retornadas. Registros existentes serão atualizados, sem duplicação.</p><label class="batch-limit">EID do evento<input name="eid" inputmode="numeric" pattern="[0-9]+" required /></label><div class="message-modal-actions"><button class="button save-status" type="submit" data-import-submit>Importar participantes</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div><p class="message-modal-feedback" data-import-feedback></p></form></dialog>
+    <dialog class="message-modal" data-columns-modal><form class="message-editor" data-columns-form><div class="message-modal-heading"><div><p class="eyebrow">Visualização e exportação</p><h2>Colunas</h2></div><button class="modal-close" type="button" data-columns-cancel aria-label="Fechar">×</button></div><fieldset class="assistant-selection" data-column-options><legend>Selecione as informações da lista e do CSV</legend></fieldset><div class="message-modal-actions"><button class="back-link" type="button" data-columns-select-all>Marcar tudo</button><button class="back-link" type="button" data-columns-clear-all>Desmarcar tudo</button><button class="button save-status" type="submit">Aplicar</button><button class="back-link" type="button" data-columns-cancel>Cancelar</button></div></form></dialog>
+    <script type="module" src="/js/auth.js"></script><script type="module" src="/js/participantes-4events.js"></script>
+  </body>
+</html>

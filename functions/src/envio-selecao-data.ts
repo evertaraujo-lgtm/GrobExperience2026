@@ -33,7 +33,9 @@ async function admin(uid: string, email: string | undefined): Promise<Sender> {
 function eligible(data: Record<string, unknown>, id: string): Recipient | null {
   const nome = typeof data.nome === "string" ? data.nome.trim() : "";
   const whatsapp = typeof data.whatsapp === "string" ? data.whatsapp.replace(/\D/g, "") : id;
-  const receivedFirstMessage = Boolean(data.primeiroEnvioWhatsAppEm || data.ultimoEnvioWhatsAppEm);
+  const deliveryStatuses = ["enviado", "entregue", "lido"];
+  const receivedFirstMessage = Boolean(data.primeiroEnvioWhatsAppEm || data.ultimoEnvioWhatsAppEm)
+    || deliveryStatuses.includes(typeof data.statusEnvioWhatsApp === "string" ? data.statusEnvioWhatsApp : "");
   const hasSelectedDate = typeof data.dataSelecionada === "string" && data.dataSelecionada.length > 0;
   if (!receivedFirstMessage || hasSelectedDate || data.marketingSelecaoDataEnviadoEm || data.marketingSelecaoDataReservaId || !nome || whatsapp.length < 10 || whatsapp.length > 11) return null;
   return {id, nome, whatsapp};

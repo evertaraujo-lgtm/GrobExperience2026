@@ -7,6 +7,7 @@
 .dashboard-toolbar,.toolbar-actions{display:flex;align-items:center;gap:10px}
 .dashboard-toolbar{justify-content:space-between;padding-bottom:12px;border-bottom:1px solid rgba(125,214,255,.15)}
 .dashboard-toolbar strong{font-family:Rajdhani,sans-serif;font-size:1.2rem;letter-spacing:.06em}
+.dashboard-totals{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.dashboard-total{padding:6px 9px;border:1px solid rgba(125,214,255,.22);border-radius:99px;color:var(--muted);font-size:.73rem;white-space:nowrap}.dashboard-total b{margin-right:3px;font-size:.95rem}.dashboard-total-confirmed{border-color:rgba(86,240,177,.45);color:#bff8d8}.dashboard-total-failed{border-color:rgba(255,142,142,.48);color:#ffc5c5}
 .toolbar-actions{flex-wrap:wrap;justify-content:flex-end}
 .toolbar-actions .back-link{flex:0 0 auto}
 .toolbar-actions .toolbar-icon-button{display:grid;place-items:center;width:44px;min-width:44px;height:44px;padding:0;border-radius:50%}.toolbar-icon-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -50,6 +51,7 @@
 .participant-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px}
 .participant-actions .button,.participant-actions .danger-delete{min-height:34px;margin:0;white-space:nowrap}
 .participant-actions .api-send{background:linear-gradient(135deg,#5cd5ff,#3ea9e8);color:#04203a}
+.participant-actions .api2-send{background:linear-gradient(135deg,#ffe197,#f0ad3f);color:#382000}
 .participant-meta{display:grid;gap:2px;color:var(--muted);font-size:.72rem}
 .participant-meta strong{color:var(--ink);font-size:.9rem}
 .whatsapp-delivery{min-width:0}
@@ -78,6 +80,7 @@
 @media(max-width:540px){.participant-row{grid-template-columns:1fr}
 .pre-inscritos-card{padding:16px}
 .dashboard-toolbar{align-items:flex-start;flex-direction:column}
+.dashboard-totals{width:100%}
 .participant-search{grid-template-columns:1fr;width:100%}
 .toolbar-actions,.message-modal-actions{width:100%;flex-direction:column}
 .participant-actions{width:100%}

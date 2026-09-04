@@ -2,6 +2,8 @@ import {getAuthServices, getFirestoreServices, getFunctionsServices} from "/js/f
 
 const list = document.querySelector("[data-list]");
 const total = document.querySelector("[data-total]");
+const confirmedTotal = document.querySelector("[data-confirmed-total]");
+const failedTotal = document.querySelector("[data-failed-total]");
 const feedback = document.querySelector("[data-feedback]");
 const reload = document.querySelector("[data-reload]");
 const search = document.querySelector("[data-search]");
@@ -46,6 +48,7 @@ const batchCancelButtons = document.querySelectorAll("[data-batch-cancel]");
 const batchBack = document.querySelector("[data-batch-back]");
 const inscritosLink = document.querySelector(".inscritos-link");
 const eventManagementLink = document.querySelector('a[href="/gestao-evento/"]');
+const arrivalNotificationsLink = document.querySelector('a[href="/4events/"]');
 const statuses = ["pendente", "contatado", "confirmado", "cancelado"];
 const defaultMessageVariants = [
   "Olá, {nome}! Notamos que você ainda não escolheu uma data para o GROB Experience. Acesse seu link exclusivo e finalize sua inscrição:\n\n{link}",
@@ -189,6 +192,44 @@ function whatsappDeliveryLabel(status) {
   return labels[status] || "Pendente";
 }
 
+function eligibleForDateSelectionMarketing(participant) {
+  const deliveryStatuses = ["enviado", "entregue", "lido"];
+  const receivedFirstMessage = Boolean(participant.primeiroEnvioWhatsAppEm || participant.ultimoEnvioWhatsAppEm)
+    || deliveryStatuses.includes(participant.statusEnvioWhatsApp);
+  return receivedFirstMessage
+    && !participant.dataSelecionada
+    && !participant.marketingSelecaoDataEnviadoEm
+    && !participant.marketingSelecaoDataReservaId;
+}
+
+async function sendDateSelectionMarketing(participant, button) {
+  const confirmed = window.confirm(
+    `Enviar o template de seleção de data para ${participant.nome} (${participant.whatsapp})?\n\n` +
+    "Esta é uma mensagem de marketing, com custo de R$ 0,34, e deve ser usada somente em último caso. " +
+    "O envio é manual e não haverá repetição automática.",
+  );
+  if (!confirmed) return;
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const sendSelectionTemplate = functionsModule.httpsCallable(functions, "sendSelecaoDataMarketing");
+    const result = await sendSelectionTemplate({preInscritoId: participant.whatsapp});
+    setFeedback(`${participant.nome}: template de marketing aceito pela Meta (${result.data.messageId}). Custo: R$ 0,34.`);
+    await loadParticipants();
+  } catch (error) {
+    console.error(error);
+    const reason = error.message || "Este pré-inscrito não está elegível para o template de seleção de data.";
+    if (["functions/failed-precondition", "functions/permission-denied", "functions/invalid-argument"].includes(error.code)) {
+      window.alert(`Envio não permitido\n\n${reason}`);
+    } else {
+      setFeedback(reason, "error");
+    }
+    button.disabled = false;
+    button.textContent = "API2";
+  }
+}
+
 function csvValue(value) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
@@ -211,14 +252,7 @@ async function getParticipantsWithInvitations() {
     firestoreModule.orderBy("nomeOrdenacao"),
   );
   const snapshots = await firestoreModule.getDocs(participantsQuery);
-  const participants = await Promise.all(snapshots.docs.map(async (document) => {
-    const participant = {reference: document.ref, ...document.data()};
-    if (participant.tokenPublico) {
-      const invite = await firestoreModule.getDoc(firestoreModule.doc(db, "linksPublicos", participant.tokenPublico));
-      if (invite.exists()) Object.assign(participant, {dataSelecionada: invite.data().dataSelecionada, inviteStatus: invite.data().status});
-    }
-    return participant;
-  }));
+  const participants = snapshots.docs.map((document) => ({reference: document.ref, ...document.data()}));
   return {db, firestoreModule, participants};
 }
 
@@ -335,6 +369,7 @@ function participantElement(participant, db, firestore) {
     <div class="participant-actions">
       <button class="button save-status" type="button">Salvar</button>
       <button class="button api-send" type="button" ${canImport ? "" : "hidden"}>API</button>
+      <button class="button api2-send" type="button" data-api2-send data-pre-inscrito-id="${participant.whatsapp}" ${canImport && eligibleForDateSelectionMarketing(participant) ? "" : "hidden"}>API2</button>
       <a class="button whatsapp-link" target="_blank" rel="noreferrer">WhatsApp</a>
       <button class="danger-delete" type="button" ${canImport ? "" : "hidden"}>Excluir</button>
     </div>`;
@@ -462,6 +497,9 @@ function searchValue(value) {
 
 function renderParticipants() {
   list.replaceChildren();
+  confirmedTotal.textContent = loadedParticipants.filter((participant) =>
+    participant.status === "confirmado" || participant.inviteStatus === "confirmado").length;
+  failedTotal.textContent = loadedParticipants.filter((participant) => participant.statusEnvioWhatsApp === "falhou").length;
   const term = searchValue(search.value).trim();
   const visible = term
     ? loadedParticipants.filter((participant) => [participant.nome, participant.whatsapp, participant.empresa, participant.email]
@@ -487,6 +525,11 @@ authModule.onAuthStateChanged(auth, async (user) => {
     canImport = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
     const inscritosSettings = await firestoreModule.getDoc(firestoreModule.doc(db, "configuracoes", "inscritos"));
     const inscritosVisibleToUsers = !inscritosSettings.exists() || inscritosSettings.data().visivelParaUsuarios !== false;
+    inscritosLink.href = "/participantes-4events/";
+    inscritosLink.setAttribute("aria-label", "4 Events");
+    inscritosLink.title = "4 Events";
+    arrivalNotificationsLink.setAttribute("aria-label", "Notificações de chegada");
+    arrivalNotificationsLink.title = "Notificações de chegada";
     inscritosLink.hidden = !canImport && !inscritosVisibleToUsers;
     eventManagementLink.hidden = !canImport;
     addToggle.hidden = !canImport;
@@ -500,6 +543,16 @@ authModule.onAuthStateChanged(auth, async (user) => {
 });
 reload.addEventListener("click", loadParticipants);
 search.addEventListener("input", renderParticipants);
+list.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-api2-send]");
+  if (!button || button.hidden || !canImport) return;
+  const participant = loadedParticipants.find((item) => item.whatsapp === button.dataset.preInscritoId);
+  if (!participant) {
+    window.alert("Envio não permitido\n\nNão encontrei este pré-inscrito na lista atual.");
+    return;
+  }
+  void sendDateSelectionMarketing(participant, button);
+});
 
 function resetBatchDialog() {
   batchRecipientIds = [];
