@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Coleta de atividades | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" /><link rel="manifest" href="/coleta-atividades/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/app.css" /><link rel="stylesheet" href="/css/pre-inscritos.css" /><link rel="stylesheet" href="/css/gestao-evento.css" />
+  </head>
+  <body data-auth-page="protected" data-assistant-page="true">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page">
+        <section class="dashboard-heading"><p class="eyebrow">Área do assistente</p><h1>Coleta de participantes</h1></section>
+        <section class="pre-inscritos-card"><div class="management-title"><h2>Minhas atividades</h2><small data-total></small></div><p class="collection-sync-status" data-sync-status aria-live="polite">Preparando coleta offline...</p><div class="management-list" data-list></div><p class="dashboard-feedback" data-feedback></p></section>
+      </main>
+    </div>
+    <dialog class="message-modal" data-collect-modal aria-labelledby="collect-title">
+      <section class="message-editor">
+        <div class="message-modal-heading"><div><p class="eyebrow">Registro de presença</p><h2 id="collect-title">Coletar participante</h2></div><button class="modal-close" type="button" data-collect-cancel aria-label="Fechar">×</button></div>
+        <p data-collect-activity></p>
+        <div class="qr-scanner"><div class="qr-camera-wrap"><div id="qr-reader" data-qr-reader></div><div class="scan-success" data-scan-success hidden aria-live="polite"><span aria-hidden="true">✓</span><small data-scan-success-message></small><strong data-scan-success-code></strong></div></div><button class="back-link" type="button" data-start-qr-reader>Ler QRCode pela câmera</button></div>
+        <p>Após a leitura, a participação será registrada neste aparelho e sincronizada automaticamente.</p>
+        <div class="message-modal-actions"><button class="back-link" type="button" data-collect-cancel>Cancelar</button></div>
+        <p class="message-modal-feedback" data-collect-feedback></p>
+      </section>
+    </dialog>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script type="module" src="/js/auth.js"></script><script type="module" src="/js/coleta-atividades.js"></script>
+  </body>
+</html>

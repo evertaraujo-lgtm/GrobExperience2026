@@ -21,6 +21,11 @@ service cloud.firestore {
         && currentUserDocument().data.roles.admin == true;
     }
 
+    function isCollectionAssistant() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/coletaAtividadesAssistentes/$(request.auth.uid));
+    }
+
     function allowedUserFields() {
       return [
         "name", "email", "active", "roles", "createdAt", "updatedAt", "lastLoginAt"
@@ -81,7 +86,7 @@ service cloud.firestore {
     }
 
     match /preInscritos/{preInscritoId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && !isCollectionAssistant();
       allow delete: if isAdmin();
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
@@ -89,7 +94,7 @@ service cloud.firestore {
           "tokenPublico", "linkPublico", "mensagemWhatsApp", "mensagemVariante",
           "mensagemAtualizadaEm", "statusEnvioWhatsApp", "conviteGeradoEm"
         ]);
-      allow update: if (isSignedIn()
+      allow update: if (isSignedIn() && !isCollectionAssistant()
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["status", "dataSelecionada", "atualizadoEm"]))
         || (!isSignedIn()
@@ -111,21 +116,46 @@ service cloud.firestore {
     }
 
     match /inscritos/{inscritoId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && !isCollectionAssistant();
       allow create, update, delete: if isAdmin();
     }
 
     match /visitantesEstrategicos/{visitanteId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && !isCollectionAssistant();
       allow create, update, delete: if isAdmin();
     }
 
     match /visitantes4Events/{visitanteId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && !isCollectionAssistant();
+    }
+
+    match /coletaAtividadesAssistentes/{assistenteId} {
+      allow read: if isAdmin() || isSelf(assistenteId);
+    }
+
+    match /coletaAtividades/{atividadeId} {
+      allow read: if isAdmin()
+        || (isCollectionAssistant()
+          && resource.data.responsavelIds.hasAny([request.auth.uid]));
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /coletaAtividadesRegistros/{registroId} {
+      allow read: if isAdmin()
+        || (isCollectionAssistant() && resource.data.assistenteId == request.auth.uid);
+      allow create: if isCollectionAssistant()
+        && !exists(/databases/$(database)/documents/coletaAtividadesRegistros/$(registroId))
+        && request.resource.data.assistenteId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "atividadeId", "assistenteId", "qrcode", "registradoEm"
+        ])
+        && request.resource.data.qrcode is string
+        && get(/databases/$(database)/documents/coletaAtividades/$(request.resource.data.atividadeId)).data.responsavelIds.hasAny([request.auth.uid]);
+      allow update, delete: if isAdmin();
     }
 
     match /whatsappEventos/{eventId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && !isCollectionAssistant();
     }
 
     match /whatsappMensagens/{messageId} {
@@ -137,7 +167,7 @@ service cloud.firestore {
     }
 
     match /configuracoes/{configuracaoId} {
-      allow read, create, update: if isSignedIn();
+      allow read, create, update: if isSignedIn() && !isCollectionAssistant();
     }
 
     // O ID de cada documento é um token aleatório de 256 bits. Não permitimos

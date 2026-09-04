@@ -1,0 +1,9 @@
+{
+  "name": "Coleta de atividades | GROB Experience",
+  "short_name": "Coleta GROB",
+  "start_url": "/coleta-atividades/",
+  "display": "standalone",
+  "background_color": "#041738",
+  "theme_color": "#041738",
+  "icons": [{"src": "/img/LogoPNG.png", "sizes": "512x512", "type": "image/png"}]
+}

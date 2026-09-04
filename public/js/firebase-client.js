@@ -35,7 +35,22 @@ export function getFirestoreServices() {
       const app = appModule.getApps().length
         ? appModule.getApp()
         : appModule.initializeApp(firebaseConfig);
-      return {db: firestoreModule.getFirestore(app), firestoreModule};
+      // Mantém os dados e as gravações pendentes no aparelho. Assim, telas de
+      // operação em campo continuam funcionando mesmo com sinal instável.
+      let db;
+      try {
+        db = firestoreModule.initializeFirestore(app, {
+          localCache: firestoreModule.persistentLocalCache({
+            tabManager: firestoreModule.persistentMultipleTabManager(),
+          }),
+        });
+      } catch (error) {
+        // Alguns navegadores privados não oferecem IndexedDB. Neles, o
+        // Firestore continua funcional, apenas sem persistência entre recargas.
+        console.warn("Não foi possível ativar o armazenamento offline do Firestore.", error);
+        db = firestoreModule.getFirestore(app);
+      }
+      return {db, firestoreModule};
     });
   }
   return firestorePromise;

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Dashboard de participação nas atividades" />
+    <title>Participação nas atividades | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" /><link rel="stylesheet" href="/css/pre-inscritos.css" /><link rel="stylesheet" href="/css/gestao-evento.css" />
+  </head>
+  <body data-auth-page="protected" data-event-management-page="true">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page">
+        <section class="dashboard-heading"><p class="eyebrow">Administração</p><h1>Participação nas atividades</h1><p>Acompanhe em tempo real as presenças registradas pelos assistentes.</p></section>
+        <section class="pre-inscritos-card">
+          <div class="dashboard-toolbar"><strong>Visão geral</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
+          <div class="participation-metrics" data-metrics aria-live="polite">
+            <article><small>Leituras registradas</small><strong data-total-readings>—</strong></article>
+            <article><small>Atividades com presença</small><strong data-active-activities>—</strong></article>
+            <article><small>Última leitura</small><strong data-last-reading>—</strong></article>
+          </div>
+          <div class="participation-dashboard">
+            <section><div class="management-title"><h2>Por atividade</h2><small data-activities-summary></small></div><div class="participation-activities" data-participation-activities></div></section>
+            <section><div class="management-title"><h2>Últimas leituras</h2><small data-recent-summary></small></div><div class="participation-recent" data-participation-recent></div></section>
+          </div>
+          <p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script><script type="module" src="/js/participacao-atividades.js"></script>
+  </body>
+</html>

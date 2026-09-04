@@ -7,6 +7,7 @@ import {importPreInscritos} from "./pre-inscritos.js";
 import {repopulatePreInscritoMessages} from "./mensagens.js";
 import {backfillPreInscritoSortOrder} from "./ordenacao.js";
 import {check4EventsPresence, search4Events} from "./check-4events.js";
+import {createCollectionAssistant, removeCollectionAssistant} from "./gestao-atividades.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
 import {whatsappWebhook} from "./whatsapp-webhook.js";
 
@@ -19,10 +20,12 @@ export const health = onRequest((_request, response) => {
 export {
   backfillPreInscritoSortOrder,
   check4EventsPresence,
+  createCollectionAssistant,
   importPreInscritos,
   marketingMessageStats,
   previewWhatsAppBatch,
   repopulatePreInscritoMessages,
+  removeCollectionAssistant,
   sendWhatsAppBatch,
   sendSelecaoDataMarketing,
   search4Events,

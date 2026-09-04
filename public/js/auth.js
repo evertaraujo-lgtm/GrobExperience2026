@@ -1,4 +1,4 @@
-import {getAuthServices} from "/js/firebase-client.js";
+import {getAuthServices, getFirestoreServices} from "/js/firebase-client.js";
 
 const page = document.body.dataset.authPage;
 const form = document.querySelector("[data-login-form]");
@@ -7,6 +7,7 @@ const password = document.querySelector("[data-password]");
 const submit = document.querySelector("[data-submit]");
 const feedback = document.querySelector("[data-feedback]");
 const logout = document.querySelector("[data-logout]");
+const assistantPage = document.body.dataset.assistantPage === "true";
 
 function setFeedback(message, state = "neutral") {
   if (!feedback) return;
@@ -29,13 +30,21 @@ function errorMessage(error) {
 try {
   const {auth, authModule} = await getAuthServices();
 
-  authModule.onAuthStateChanged(auth, (user) => {
+  authModule.onAuthStateChanged(auth, async (user) => {
+    let isAssistant = false;
+    if (user) {
+      const {db, firestoreModule} = await getFirestoreServices();
+      const assistant = await firestoreModule.getDoc(firestoreModule.doc(db, "coletaAtividadesAssistentes", user.uid));
+      isAssistant = assistant.exists() && assistant.data().ativo === true;
+    }
     if (page === "gate") {
-      window.location.replace(user ? "/app/" : "/login/");
+      window.location.replace(user ? (isAssistant ? "/coleta-atividades/" : "/app/") : "/login/");
       return;
     }
-    if (page === "login" && user) window.location.replace("/app/");
+    if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : "/app/");
     if (page === "protected" && !user) window.location.replace("/login/");
+    if (page === "protected" && user && isAssistant && !assistantPage) window.location.replace("/coleta-atividades/");
+    if (page === "protected" && user && !isAssistant && assistantPage) window.location.replace("/app/");
     const name = document.querySelector("[data-user-name]");
     if (page === "protected" && user && name) {
       name.textContent = user.displayName || user.email || "participante";
