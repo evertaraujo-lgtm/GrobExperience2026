@@ -150,12 +150,34 @@ function renderActivities() {
     remove.type = "button";
     remove.textContent = "Remover";
     remove.addEventListener("click", async () => {
-      if (!window.confirm("Remover a atividade “" + activity.nome + "”?")) return;
       remove.disabled = true;
       try {
         const {db, firestoreModule} = await getFirestoreServices();
+        const readingsReference = firestoreModule.collection(db, "coletaAtividadesRegistros");
+        const countSnapshot = await firestoreModule.getDocs(firestoreModule.query(
+          readingsReference,
+          firestoreModule.where("atividadeId", "==", activity.id),
+        ));
+        const readingsCount = countSnapshot.size;
+        if (!window.confirm(`Remover a atividade “${activity.nome}” e excluir permanentemente ${readingsCount} leitura(s) vinculada(s)?`)) {
+          remove.disabled = false;
+          return;
+        }
+        let deletedReadings = 0;
+        while (true) {
+          const readingsSnapshot = await firestoreModule.getDocs(firestoreModule.query(
+            readingsReference,
+            firestoreModule.where("atividadeId", "==", activity.id),
+            firestoreModule.limit(400),
+          ));
+          if (readingsSnapshot.empty) break;
+          const batch = firestoreModule.writeBatch(db);
+          readingsSnapshot.docs.forEach((document) => batch.delete(document.ref));
+          await batch.commit();
+          deletedReadings += readingsSnapshot.size;
+        }
         await firestoreModule.deleteDoc(firestoreModule.doc(db, "coletaAtividades", activity.id));
-        setFeedback("Atividade “" + activity.nome + "” removida.");
+        setFeedback(`Atividade “${activity.nome}” e ${deletedReadings} leitura(s) removidas.`);
         await load();
       } catch (error) {
         console.error(error);

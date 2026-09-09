@@ -94,10 +94,7 @@ service cloud.firestore {
           "tokenPublico", "linkPublico", "mensagemWhatsApp", "mensagemVariante",
           "mensagemAtualizadaEm", "statusEnvioWhatsApp", "conviteGeradoEm"
         ]);
-      allow update: if (isSignedIn() && !isCollectionAssistant()
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["status", "dataSelecionada", "atualizadoEm"]))
-        || (!isSignedIn()
+      allow update: if (!isSignedIn()
         && resource.data.tokenPublico is string
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["status", "dataSelecionada", "atualizadoEm"])
@@ -171,7 +168,8 @@ service cloud.firestore {
     }
 
     match /configuracoes/{configuracaoId} {
-      allow read, create, update: if isSignedIn() && !isCollectionAssistant();
+      allow read: if isSignedIn() && !isCollectionAssistant();
+      allow create, update: if isAdmin();
     }
 
     // O ID de cada documento é um token aleatório de 256 bits. Não permitimos
@@ -185,7 +183,8 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["dataSelecionada", "confirmadoEm", "status"])
         && request.resource.data.status in ["pendente", "confirmado"])
-        || (resource.data.status == "pendente"
+        || (!isSignedIn()
+          && resource.data.status == "pendente"
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["dataSelecionada", "confirmadoEm", "status"])
           && request.resource.data.dataSelecionada in [

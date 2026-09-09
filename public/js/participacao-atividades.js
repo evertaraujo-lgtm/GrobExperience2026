@@ -8,10 +8,63 @@ const lastReading = document.querySelector("[data-last-reading]");
 const activitiesSummary = document.querySelector("[data-activities-summary]");
 const recentSummary = document.querySelector("[data-recent-summary]");
 const feedback = document.querySelector("[data-feedback]");
+const qrModal = document.querySelector("[data-qr-modal]");
+const qrGenerate = document.querySelector("[data-qr-generate]");
+const qrResult = document.querySelector("[data-qr-result]");
+const qrImage = document.querySelector("[data-qr-image]");
+const qrCode = document.querySelector("[data-qr-code]");
+const qrDownload = document.querySelector("[data-qr-download]");
+const qrFeedback = document.querySelector("[data-qr-feedback]");
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
   feedback.dataset.state = state;
+}
+
+function setQrFeedback(message, state = "neutral") {
+  qrFeedback.textContent = message;
+  qrFeedback.dataset.state = state;
+}
+
+async function nextQrCode() {
+  const {db, firestoreModule} = await getFirestoreServices();
+  const sequenceRef = firestoreModule.doc(db, "configuracoes", "qrcodesTe");
+  const sequence = await firestoreModule.runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(sequenceRef);
+    const current = Number(snapshot.data()?.ultimaSequencia ?? 0);
+    if (!Number.isSafeInteger(current) || current < 0 || current >= 9999999999) throw new Error("A sequência de QR Codes atingiu um valor inválido ou seu limite.");
+    const next = current + 1;
+    transaction.set(sequenceRef, {ultimaSequencia: next, atualizadoEm: firestoreModule.serverTimestamp()}, {merge: true});
+    return next;
+  });
+  return `Te-${String(sequence).padStart(10, "0")}`;
+}
+
+async function generateQrCode() {
+  qrGenerate.disabled = true;
+  qrGenerate.textContent = "Gerando...";
+  qrDownload.hidden = true;
+  setQrFeedback("");
+  try {
+    const qrLibrary = await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm");
+    const toDataURL = qrLibrary.toDataURL || qrLibrary.default?.toDataURL;
+    if (!toDataURL) throw new Error("O gerador de QR Code não foi carregado. Verifique sua conexão e tente novamente.");
+    const code = await nextQrCode();
+    const imageUrl = await toDataURL(code, {width: 640, margin: 2, errorCorrectionLevel: "M"});
+    qrImage.src = imageUrl;
+    qrCode.textContent = code;
+    qrDownload.href = imageUrl;
+    qrDownload.download = `${code}.png`;
+    qrResult.hidden = false;
+    qrDownload.hidden = false;
+    setQrFeedback(`${code} foi reservado e está pronto para uso.`, "success");
+  } catch (error) {
+    console.error(error);
+    setQrFeedback(error.message || "Não foi possível gerar o QR Code.", "error");
+  } finally {
+    qrGenerate.disabled = false;
+    qrGenerate.textContent = "Gerar próximo código";
+  }
 }
 
 function timestampValue(timestamp) {
@@ -103,6 +156,14 @@ async function load() {
 }
 
 document.querySelector("[data-reload]").addEventListener("click", load);
+document.querySelector("[data-generate-qr]").addEventListener("click", () => {
+  qrResult.hidden = true;
+  qrDownload.hidden = true;
+  setQrFeedback("");
+  qrModal.showModal();
+});
+document.querySelectorAll("[data-qr-cancel]").forEach((button) => button.addEventListener("click", () => qrModal.close()));
+qrGenerate.addEventListener("click", generateQrCode);
 
 const {auth, authModule} = await getAuthServices();
 authModule.onAuthStateChanged(auth, async (user) => {

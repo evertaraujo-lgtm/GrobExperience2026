@@ -17,7 +17,7 @@
       <main class="event-management-page">
         <section class="dashboard-heading"><p class="eyebrow">Administração</p><h1>Participação nas atividades</h1><p>Acompanhe em tempo real as presenças registradas pelos assistentes.</p></section>
         <section class="pre-inscritos-card">
-          <div class="dashboard-toolbar"><strong>Visão geral</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
+          <div class="dashboard-toolbar"><strong>Visão geral</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-generate-qr>Gerar QR Code</button><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
           <div class="participation-metrics" data-metrics aria-live="polite">
             <article><small>Leituras registradas</small><strong data-total-readings>—</strong></article>
             <article><small>Atividades com presença</small><strong data-active-activities>—</strong></article>
@@ -29,6 +29,7 @@
           </div>
           <p class="dashboard-feedback" data-feedback></p>
         </section>
+        <dialog class="message-modal" data-qr-modal aria-labelledby="qr-modal-title"><div class="message-editor"><div class="message-modal-heading"><div><p class="eyebrow">Código de participação</p><h2 id="qr-modal-title">Gerar QR Code</h2></div><button class="modal-close" type="button" data-qr-cancel aria-label="Fechar">×</button></div><p>O próximo código sequencial será reservado no formato <code>Te-0000000001</code>.</p><div class="qr-code-result" data-qr-result hidden><img data-qr-image alt="QR Code gerado" /><strong data-qr-code></strong></div><div class="message-modal-actions"><button class="button save-status" type="button" data-qr-generate>Gerar próximo código</button><a class="back-link" data-qr-download hidden>Baixar PNG</a><button class="back-link" type="button" data-qr-cancel>Fechar</button></div><p class="message-modal-feedback" data-qr-feedback></p></div></dialog>
       </main>
     </div>
     <script type="module" src="/js/auth.js"></script><script type="module" src="/js/participacao-atividades.js"></script>

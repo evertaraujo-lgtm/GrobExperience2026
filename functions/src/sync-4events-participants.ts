@@ -1,6 +1,6 @@
 import {createHash} from "node:crypto";
 
-import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {FieldValue, Timestamp, getFirestore} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {HttpsError, onCall} from "firebase-functions/https";
 
@@ -43,6 +43,44 @@ async function requireAdmin(uid: string) {
   return firestore;
 }
 
+async function requireParticipantViewer(uid: string) {
+  const firestore = getFirestore();
+  const [user, assistant] = await Promise.all([
+    firestore.doc(`users/${uid}`).get(),
+    firestore.doc(`coletaAtividadesAssistentes/${uid}`).get(),
+  ]);
+  const isAdmin = user.exists && user.data()?.active !== false && user.data()?.roles?.admin === true;
+  const isActiveUser = !user.exists || user.data()?.active !== false;
+  const isActiveAssistant = assistant.exists && assistant.data()?.ativo === true;
+  if (!isActiveUser || (isActiveAssistant && !isAdmin)) {
+    throw new HttpsError("permission-denied", "Você não tem permissão para consultar os participantes da 4 Events.");
+  }
+  return {firestore, isAdmin};
+}
+
+const cpfFields = new Set([
+  "attendeedoc", "attendeedocument", "document", "documentnumber", "documento",
+  "numerodocumento", "participantdocument", "taxid",
+]);
+
+function maskedCpf(value: unknown) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  return digits ? `***.***.***-${digits.slice(-2).padStart(2, "*")}` : "Oculto";
+}
+
+function participantResponseValue(value: unknown, maskCpf: boolean): unknown {
+  if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (Array.isArray(value)) return value.map((item) => participantResponseValue(item, maskCpf));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isCpfField = normalizedKey.includes("cpf") || cpfFields.has(normalizedKey);
+      return [key, maskCpf && isCpfField ? maskedCpf(item) : participantResponseValue(item, maskCpf)];
+    }));
+  }
+  return value ?? null;
+}
+
 async function searchAttendees(eid: string, page: number) {
   const form = new FormData();
   form.append("search_by", "");
@@ -61,6 +99,7 @@ async function searchAttendees(eid: string, page: number) {
 
 export const sync4EventsParticipants = onCall({secrets: [fourEventsToken], timeoutSeconds: 540}, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para importar participantes.");
+  const firestore = await requireAdmin(request.auth.uid);
   const suppliedEid = asRecord(request.data).eid;
   const eid = typeof suppliedEid === "string" || typeof suppliedEid === "number" ? String(suppliedEid).trim() : "";
   if (!/^\d+$/.test(eid)) throw new HttpsError("invalid-argument", "Informe um EID numérico válido.");
@@ -70,7 +109,6 @@ export const sync4EventsParticipants = onCall({secrets: [fourEventsToken], timeo
     participants.push(...pageParticipants);
     if (pageParticipants.length < 100) break;
   }
-  const firestore = await requireAdmin(request.auth.uid);
   let batch = firestore.batch(); let operations = 0;
   for (const source of participants) {
     const record = {
@@ -92,4 +130,32 @@ export const sync4EventsParticipants = onCall({secrets: [fourEventsToken], timeo
   }
   if (operations) await batch.commit();
   return {eid, imported: participants.length};
+});
+
+export const list4EventsParticipants = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para consultar os participantes.");
+  const {firestore, isAdmin} = await requireParticipantViewer(request.auth.uid);
+  const data = asRecord(request.data);
+  const requestedPageSize = Number(data.pageSize);
+  const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 200) : 200;
+  const afterId = typeof data.afterId === "string" ? data.afterId.trim() : "";
+  const includeTotal = data.includeTotal === true;
+  if (afterId.length > 200 || afterId.includes("/")) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
+
+  const collection = firestore.collection("participantes4Events");
+  const ordered = collection.orderBy("nome");
+  let snapshot;
+  if (afterId) {
+    const cursor = await collection.doc(afterId).get();
+    if (!cursor.exists) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
+    snapshot = await ordered.startAfter(cursor).limit(pageSize).get();
+  } else {
+    snapshot = await ordered.limit(pageSize).get();
+  }
+
+  return {
+    participants: snapshot.docs.map((document) => participantResponseValue(document.data(), !isAdmin)),
+    nextCursor: snapshot.size === pageSize ? snapshot.docs.at(-1)?.id ?? null : null,
+    total: includeTotal ? (await collection.count().get()).data().count : null,
+  };
 });

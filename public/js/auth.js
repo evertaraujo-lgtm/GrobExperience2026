@@ -38,10 +38,10 @@ try {
       isAssistant = assistant.exists() && assistant.data().ativo === true;
     }
     if (page === "gate") {
-      window.location.replace(user ? (isAssistant ? "/coleta-atividades/" : "/app/") : "/login/");
+      window.location.replace(user ? (isAssistant ? "/coleta-atividades/" : "/participantes-4events/") : "/login/");
       return;
     }
-    if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : "/app/");
+    if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : "/participantes-4events/");
     if (page === "protected" && !user) window.location.replace("/login/");
     if (page === "protected" && user && isAssistant && !assistantPage) window.location.replace("/coleta-atividades/");
     if (page === "protected" && user && !isAssistant && assistantPage) window.location.replace("/app/");

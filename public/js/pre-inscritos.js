@@ -252,7 +252,15 @@ async function getParticipantsWithInvitations() {
     firestoreModule.orderBy("nomeOrdenacao"),
   );
   const snapshots = await firestoreModule.getDocs(participantsQuery);
-  const participants = snapshots.docs.map((document) => ({reference: document.ref, ...document.data()}));
+  const participants = await Promise.all(snapshots.docs.map(async (document) => {
+    const participant = {reference: document.ref, ...document.data()};
+    if (!participant.tokenPublico) return participant;
+    const invitation = await firestoreModule.getDoc(firestoreModule.doc(db, "linksPublicos", participant.tokenPublico));
+    if (invitation.exists() && invitation.data().dataSelecionada) {
+      participant.dataSelecionada = invitation.data().dataSelecionada;
+    }
+    return participant;
+  }));
   return {db, firestoreModule, participants};
 }
 
@@ -365,12 +373,12 @@ function participantElement(participant, db, firestore) {
     <div class="participant-meta"><strong></strong><span>WhatsApp</span></div>
     <div class="participant-meta"><strong></strong><span>Data escolhida</span></div>
     <div class="participant-meta whatsapp-delivery"><strong></strong><span>Envio WhatsApp</span><small></small></div>
-    <label class="participant-meta"><span>Status</span><select class="status-control"></select></label>
+    <label class="participant-meta"><span>Status</span><select class="status-control" ${canImport ? "" : "disabled"}></select></label>
     <div class="participant-actions">
-      <button class="button save-status" type="button">Salvar</button>
+      <button class="button save-status" type="button" ${canImport ? "" : "hidden"}>Salvar</button>
       <button class="button api-send" type="button" ${canImport ? "" : "hidden"}>API</button>
       <button class="button api2-send" type="button" data-api2-send data-pre-inscrito-id="${participant.whatsapp}" ${canImport && eligibleForDateSelectionMarketing(participant) ? "" : "hidden"}>API2</button>
-      <a class="button whatsapp-link" target="_blank" rel="noreferrer">WhatsApp</a>
+      <a class="button whatsapp-link" target="_blank" rel="noreferrer" ${canImport ? "" : "hidden"}>WhatsApp</a>
       <button class="danger-delete" type="button" ${canImport ? "" : "hidden"}>Excluir</button>
     </div>`;
   row.querySelector(".participant-name").textContent = participant.nome;
@@ -391,7 +399,7 @@ function participantElement(participant, db, firestore) {
   delivery.querySelector("small").textContent = participant.erroEnvioWhatsApp || deliveryDetail;
   const select = row.querySelector("select");
   const sendLink = row.querySelector(".whatsapp-link");
-  sendLink.href = whatsappLink(participant);
+  if (canImport) sendLink.href = whatsappLink(participant);
   const apiSend = row.querySelector(".api-send");
   if (canImport) {
     apiSend.addEventListener("click", async () => {
@@ -419,7 +427,8 @@ function participantElement(participant, db, firestore) {
   }
   applyStatusStyle(select);
   select.addEventListener("change", () => applyStatusStyle(select));
-  row.querySelector("button").addEventListener("click", async (event) => {
+  const saveStatus = row.querySelector(".save-status");
+  if (canImport) saveStatus.addEventListener("click", async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
     button.textContent = "Salvando...";
@@ -523,14 +532,13 @@ authModule.onAuthStateChanged(auth, async (user) => {
     const {db, firestoreModule} = await getFirestoreServices();
     const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
     canImport = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
-    const inscritosSettings = await firestoreModule.getDoc(firestoreModule.doc(db, "configuracoes", "inscritos"));
-    const inscritosVisibleToUsers = !inscritosSettings.exists() || inscritosSettings.data().visivelParaUsuarios !== false;
     inscritosLink.href = "/participantes-4events/";
     inscritosLink.setAttribute("aria-label", "4 Events");
     inscritosLink.title = "4 Events";
     arrivalNotificationsLink.setAttribute("aria-label", "Notificações de chegada");
     arrivalNotificationsLink.title = "Notificações de chegada";
-    inscritosLink.hidden = !canImport && !inscritosVisibleToUsers;
+    inscritosLink.hidden = false;
+    arrivalNotificationsLink.hidden = !canImport;
     eventManagementLink.hidden = !canImport;
     addToggle.hidden = !canImport;
     // A importação permanece implementada para eventual reativação, mas não
@@ -747,6 +755,7 @@ messageCancel.addEventListener("click", () => {
 
 messageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!canImport) return;
   messageSave.disabled = true;
   messageSave.textContent = "Salvando mensagens...";
   try {
