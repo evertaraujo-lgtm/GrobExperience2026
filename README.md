@@ -1,795 +1,178 @@
 # GROB Experience 2026
 
-Sistema web para gerenciamento de pré-inscritos do **GROB Experience 2026**, confirmação de participação por data e integração com a **WhatsApp Cloud API da Meta**.
+Sistema operacional do **GROB Experience 2026**.
 
-O projeto centraliza o fluxo de confirmação dos participantes, permitindo acompanhar o status das mensagens enviadas pelo WhatsApp, respostas recebidas e confirmações realizadas pelo link público ou diretamente pelos botões da mensagem.
+Ele organiza a jornada completa do visitante: pré-inscrição, confirmação de data pelo WhatsApp, inscrição no 4Events, acompanhamento da participação no evento e coleta presencial de leads.
 
----
+> Projeto interno e específico do evento. Não é uma plataforma genérica de gestão de eventos.
 
-## Visão geral
+## O que o sistema faz
 
-O sistema foi criado para resolver o fluxo de participantes que já realizaram uma pré-inscrição no evento, mas ainda precisam selecionar uma das datas disponíveis.
+- importa e organiza pré-inscritos;
+- cria links individuais de confirmação de data;
+- dispara templates aprovados pela WhatsApp Cloud API;
+- acompanha aceitação, entrega, leitura e falha de mensagens;
+- processa respostas e botões recebidos pelo WhatsApp;
+- sincroniza e consulta participantes do 4Events;
+- apoia o acompanhamento de visitantes estratégicos;
+- registra presença por QR Code;
+- permite coleta de leads em modo offline;
+- organiza vendedores, assistentes e atividades do evento.
 
-O processo funciona assim:
+## Fluxo principal
+
+```mermaid
+flowchart TD
+  A["Pré-inscrito"] --> B["Painel administrativo"]
+  B --> C["WhatsApp Cloud API"]
+  C --> D["Link ou resposta no WhatsApp"]
+  D --> E["Confirmação da data"]
+  E --> F["4Events e operação do evento"]
+  F --> G["QR Code, presença e leads"]
+```
+
+## Áreas da aplicação
+
+| Área | Finalidade |
+| --- | --- |
+| `/app/` | Painel administrativo de pré-inscritos, confirmações e mensagens |
+| `/confirmar/` | Página pública para seleção da data pelo convidado |
+| `/participantes-4events/` | Consulta dos participantes sincronizados do 4Events |
+| `/gestao-evento/` | Gestão de atividades e equipe de coleta |
+| `/coleta-atividades/` | Leitura de QR Codes para atividades presenciais |
+| `/coleta-leads/` | Captação de leads, inclusive sem conexão |
+| `/webhooks/` | Monitoramento dos eventos recebidos do WhatsApp |
+| `/login/` | Acesso da equipe interna |
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+  H["Firebase Hosting<br/>HTML, CSS e JS"] --> A["Firebase Auth"]
+  H --> F["Cloud Functions<br/>TypeScript"]
+  H --> D["Cloud Firestore"]
+  F --> D
+  F --> W["WhatsApp Cloud API"]
+  W --> F
+  F --> E["4Events API"]
+```
+
+### Tecnologias
+
+- Frontend: HTML, CSS e JavaScript com ES Modules
+- Backend: Node.js 20, TypeScript e Firebase Functions
+- Dados e autenticação: Cloud Firestore e Firebase Authentication
+- Integrações: WhatsApp Cloud API (Meta) e 4Events
+- Infraestrutura: Firebase Hosting e Google Secret Manager
+
+## WhatsApp
+
+Os envios são realizados exclusivamente pelo backend. O navegador nunca recebe o token da Meta.
+
+O sistema registra o ciclo de uma mensagem:
 
 ```text
-Pré-inscrito
-    │
-    ▼
-Painel administrativo
-    │
-    ├── gera link individual de confirmação
-    │
-    └── envia template pela WhatsApp Cloud API
-                     │
-                     ▼
-               WhatsApp / Meta
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-       Status               Resposta
- sent / delivered        botão / mensagem
- read / failed                 │
-          │                     │
-          └──────────┬──────────┘
-                     ▼
-              Firebase Webhook
-                     │
-                     ▼
-                 Firestore
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-   Monitoramento          Confirmação
-                          da inscrição
+aceito → enviado → entregue → lido
+                    └──────→ falhou
 ```
 
----
-
-# Funcionalidades
-
-## Painel administrativo
-
-O painel permite gerenciar os participantes pré-inscritos e acompanhar o andamento das confirmações.
-
-Entre as funcionalidades atuais:
-
-* visualização dos pré-inscritos;
-* importação de participantes;
-* acompanhamento do status de confirmação;
-* geração de links públicos individuais;
-* envio de mensagens pelo WhatsApp;
-* acompanhamento de envio, entrega e leitura;
-* visualização de falhas retornadas pela Meta;
-* monitoramento das mensagens recebidas;
-* confirmação automática por botão do WhatsApp.
-
----
-
-## Confirmação pública
-
-Cada participante pode receber um link individual semelhante a:
-
-```text
-https://grobexperience.web.app/confirmar/?token=...
-```
-
-O token identifica exclusivamente o convite.
-
-A página pública permite selecionar uma das datas disponíveis:
-
-* 22 de setembro de 2026
-* 23 de setembro de 2026
-* 24 de setembro de 2026
-
-Após a escolha, o sistema atualiza simultaneamente:
-
-```text
-linksPublicos/{token}
-preInscritos/{whatsapp}
-```
-
-evitando inconsistência entre o convite público e o registro administrativo.
-
-Os links usam tokens aleatórios de alta entropia e não podem ser enumerados através do Firestore.
-
----
-
-# WhatsApp Cloud API
-
-A integração utiliza diretamente a API oficial da Meta.
-
-Não existe Twilio ou outro intermediário.
-
-O envio acontece através da API:
-
-```text
-POST /{PHONE_NUMBER_ID}/messages
-```
-
-O backend envia um template previamente aprovado pela Meta contendo informações como:
-
-```text
-nome do participante
-nome do evento
-link de confirmação
-```
-
-O access token utilizado para enviar mensagens fica armazenado no **Secret Manager**, nunca no frontend.
-
----
-
-## Fluxo de envio
-
-```text
-Browser
-   │
-   ▼
-Firebase Callable Function
-   │
-   ├── valida autenticação
-   ├── verifica permissão administrativa
-   └── carrega participante no Firestore
-             │
-             ▼
-       WhatsApp Cloud API
-             │
-             ▼
-       mensagem aceita
-             │
-             ▼
-         Firestore
-```
-
-Uma resposta `accepted` da API significa apenas que a Meta aceitou a solicitação.
-
-Os estados posteriores chegam através do webhook.
-
----
-
-# Webhook do WhatsApp
-
-A Cloud Function responsável pelos callbacks da Meta recebe:
-
-* status das mensagens;
-* mensagens recebidas;
-* respostas a botões;
-* respostas a listas interativas.
-
-Estados monitorados:
-
-```text
-sent        → enviado
-delivered   → entregue
-read        → lido
-failed      → falhou
-deleted     → apagado
-```
-
-Cada atualização gera um evento independente no Firestore.
-
-Isso permite acompanhar a sequência completa:
-
-```text
-aceito
-  ↓
-enviado
-  ↓
-entregue
-  ↓
-lido
-```
-
----
-
-## Segurança do webhook
-
-Os `POST` recebidos da Meta são validados através da assinatura:
-
-```text
-X-Hub-Signature-256
-```
-
-O backend calcula:
-
-```text
-HMAC-SHA256(rawBody, META_APP_SECRET)
-```
-
-e compara o valor usando comparação segura contra ataques de timing.
-
-Requisições com assinatura inválida recebem:
-
-```text
-HTTP 401
-```
-
----
-
-# Confirmação pelo WhatsApp
-
-Além do link público, o sistema pode reconhecer respostas através de botões.
-
-Payload esperado:
-
-```text
-data_YYYY_MM_DD
-```
-
-Exemplo:
-
-```text
-data_2026_09_22
-```
-
-Quando um botão válido é recebido, o webhook identifica o participante pelo número do WhatsApp e atualiza automaticamente:
-
-```text
-dataSelecionada
-status
-origemConfirmacao
-confirmacaoWhatsAppEm
-```
-
-O convite público relacionado também passa para o estado confirmado.
-
----
-
-# Arquitetura
-
-A aplicação utiliza uma arquitetura serverless baseada no ecossistema Firebase.
-
-```text
-┌─────────────────────────────┐
-│      Firebase Hosting       │
-│                             │
-│  /                          │
-│  /login/                    │
-│  /app/                      │
-│  /confirmar/                │
-│  /webhooks/                 │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────┐
-│       Firebase Auth         │
-└─────────────┬───────────────┘
-              │
-       ┌──────┴───────┐
-       │              │
-       ▼              ▼
-┌───────────────┐ ┌────────────────┐
-│   Firestore   │ │ Cloud Functions│
-└───────────────┘ └───────┬────────┘
-                           │
-                           ▼
-                 ┌─────────────────┐
-                 │ WhatsApp Cloud  │
-                 │      API        │
-                 └────────┬────────┘
-                          │
-                          ▼
-                    Meta Webhook
-```
-
----
-
-# Tecnologias
-
-## Frontend
-
-* HTML5
-* CSS
-* JavaScript ES Modules
-* Firebase Web SDK
-
-## Backend
-
-* Node.js 20
-* TypeScript
-* Firebase Functions
-* Firebase Admin SDK
-
-## Infraestrutura
-
-* Firebase Hosting
-* Firebase Authentication
-* Cloud Firestore
-* Google Secret Manager
-* WhatsApp Cloud API
-* Meta Graph API
-
----
-
-# Estrutura do projeto
-
-```text
-GrobExperience2026/
-│
-├── public/
-│   ├── app/
-│   │   └── index.html
-│   │
-│   ├── confirmar/
-│   │   └── index.html
-│   │
-│   ├── login/
-│   │   └── index.html
-│   │
-│   ├── privacidade/
-│   │   └── index.html
-│   │
-│   ├── webhooks/
-│   │   └── index.html
-│   │
-│   ├── teste-whatsapp/
-│   │   └── index.html
-│   │
-│   ├── css/
-│   ├── img/
-│   │
-│   └── js/
-│       ├── auth.js
-│       ├── firebase-client.js
-│       ├── confirmacao.js
-│       ├── pre-inscritos.js
-│       ├── teste-whatsapp.js
-│       └── webhooks.js
-│
-├── functions/
-│   ├── src/
-│   │   ├── index.ts
-│   │   ├── mensagens.ts
-│   │   ├── pre-inscritos.ts
-│   │   ├── send-whatsapp-template.ts
-│   │   └── whatsapp-webhook.ts
-│   │
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── firestore.rules
-├── firebase.json
-├── .firebaserc
-├── .gitignore
-└── agent.md
-```
-
----
-
-# Principais coleções do Firestore
-
-## `preInscritos`
-
-Armazena os participantes.
-
-Exemplo conceitual:
-
-```text
-preInscritos/{whatsapp}
-```
-
-Campos possíveis:
-
-```text
-nome
-email
-empresa
-whatsapp
-status
-dataSelecionada
-tokenPublico
-linkPublico
-statusEnvioWhatsApp
-ultimaMensagemWhatsAppId
-whatsappEnviadoEm
-whatsappEntregueEm
-whatsappLidoEm
-```
-
----
-
-## `linksPublicos`
-
-Relaciona o token público ao participante.
-
-```text
-linksPublicos/{token}
-```
-
-A consulta pública permite apenas acesso direto ao documento.
-
-Listagem da coleção é bloqueada pelas Firestore Rules.
-
----
-
-## `whatsappMensagens`
-
-Mantém o estado atual conhecido de cada mensagem enviada.
-
-```text
-whatsappMensagens/{wamid}
-```
-
----
-
-## `whatsappEventos`
-
-Funciona como histórico de eventos do WhatsApp.
-
-Pode conter:
-
-```text
-envio
-status
-mensagem
-```
-
-Uma mesma mensagem pode possuir diversos eventos:
-
-```text
-enviado
-entregue
-lido
-```
-
----
-
-## `whatsappRecebidas`
-
-Armazena mensagens enviadas pelos participantes ao número do evento.
-
----
-
-## `users`
-
-Contém informações e permissões dos usuários internos.
-
-Exemplo:
-
-```json
-{
-  "active": true,
-  "roles": {
-    "admin": true
-  }
-}
-```
-
----
-
-# Secrets
-
-Os seguintes valores não devem ser armazenados no Git:
-
-```text
-META_WHATSAPP_ACCESS_TOKEN
-META_APP_SECRET
-META_WEBHOOK_VERIFY_TOKEN
-```
-
-Eles devem ser cadastrados usando Firebase Secrets:
-
-```bash
-firebase functions:secrets:set META_WHATSAPP_ACCESS_TOKEN
-firebase functions:secrets:set META_APP_SECRET
-firebase functions:secrets:set META_WEBHOOK_VERIFY_TOKEN
-```
-
-Nunca inclua tokens reais em:
-
-```text
-Git
-README
-issues
-logs
-prints
-scripts versionados
-arquivos .env públicos
-```
-
----
-
-# Instalação
-
-Clone o projeto:
+O webhook recebe status e respostas dos participantes. Requisições `POST` da Meta são verificadas pela assinatura `X-Hub-Signature-256`, com HMAC SHA-256 e comparação segura.
+
+## Dados no Firestore
+
+| Coleção | Conteúdo |
+| --- | --- |
+| `preInscritos` | Pré-inscritos, convites, confirmação e histórico de envio |
+| `linksPublicos` | Convites por token para confirmação pública |
+| `inscritos` | Registros internos de inscrição |
+| `participantes4Events` | Participantes sincronizados do 4Events |
+| `visitantesEstrategicos` | Visitantes que exigem acompanhamento especial |
+| `whatsappMensagens` | Estado atual das mensagens enviadas |
+| `whatsappEventos` | Histórico de eventos do WhatsApp |
+| `whatsappRecebidas` | Mensagens recebidas dos participantes |
+| `coletaAtividades` | Atividades presenciais e responsáveis |
+| `coletaAtividadesRegistros` | Leituras de QR Code por atividade |
+| `coletaLeads` | Leads coletados pela equipe |
+| `users` | Perfis e papéis internos |
+
+## Papéis internos
+
+| Papel | Acesso principal |
+| --- | --- |
+| Administrador | Gestão do evento, mensagens, equipe, dados e integrações |
+| Assistente de coleta | Atividades presenciais sob sua responsabilidade |
+| Vendedor | Coleta e consulta dos próprios leads |
+
+As regras do Firestore protegem o acesso direto do cliente; operações privilegiadas são concentradas nas Cloud Functions.
+
+## Desenvolvimento local
+
+Pré-requisitos:
+
+- Node.js 20
+- Firebase CLI
+- acesso ao projeto Firebase correspondente
 
 ```bash
 git clone https://github.com/evertaraujo-lgtm/GrobExperience2026.git
-
-cd GrobExperience2026
-```
-
-Instale as dependências das Functions:
-
-```bash
-cd functions
+cd GrobExperience2026/functions
 npm install
-```
-
-Compile o TypeScript:
-
-```bash
 npm run build
 ```
 
----
-
-# Firebase CLI
-
-Caso necessário:
+Para iniciar os emuladores:
 
 ```bash
-npm install -g firebase-tools
-```
-
-Faça login:
-
-```bash
-firebase login
-```
-
-Confira o projeto:
-
-```bash
-firebase use
-```
-
----
-
-# Execução local
-
-Para iniciar o emulador das Functions:
-
-```bash
-cd functions
 npm run serve
 ```
 
-Também é possível iniciar os emuladores diretamente:
-
-```bash
-firebase emulators:start
-```
-
----
-
-# Deploy
-
-## Hosting
+## Deploy
 
 ```bash
 firebase deploy --only hosting
-```
-
-## Firestore Rules
-
-```bash
 firebase deploy --only firestore:rules
-```
-
-## Functions
-
-```bash
 firebase deploy --only functions
 ```
 
-## Projeto completo
+Para publicar tudo:
 
 ```bash
 firebase deploy
 ```
 
----
+## Secrets necessários
 
-# Build das Functions
-
-Antes de cada deploy das Functions, o Firebase executa:
-
-```bash
-npm run build
-```
-
-O TypeScript compilado é gerado em:
+As credenciais devem existir apenas no Firebase Secret Manager:
 
 ```text
-functions/lib/
+META_WHATSAPP_ACCESS_TOKEN
+META_APP_SECRET
+META_WEBHOOK_VERIFY_TOKEN
+FOUR_EVENTS_TOKEN
 ```
 
-Essa pasta não deve ser versionada.
+Nunca versione tokens, contas de serviço, planilhas de participantes, exportações ou arquivos `.env`.
 
----
+## Segurança e privacidade
 
-# Configuração do webhook na Meta
+- Tokens de confirmação são aleatórios e a listagem pública de convites é bloqueada.
+- O painel requer autenticação.
+- As mensagens são enviadas pelo backend.
+- O webhook valida a assinatura da Meta.
+- Dados de participantes devem permanecer no Firestore e nas fontes autorizadas — não no Git.
+- Arquivos de importação e exportação são locais e descartáveis.
 
-O funcionamento completo do webhook depende de duas configurações diferentes.
-
-## 1. Callback do aplicativo
-
-No painel Meta Developers:
+## Estrutura resumida
 
 ```text
-WhatsApp
-→ Configuration
-→ Webhooks
+public/                 interfaces web
+functions/src/          Cloud Functions em TypeScript
+firestore.rules         regras de acesso
+firestore.indexes.json  índices do Firestore
+firebase.json           configuração de deploy
+agent.md                runbook técnico e operacional
 ```
 
-Configure:
+## Status
 
-```text
-Callback URL
-Verify Token
-```
-
-e assine o campo:
-
-```text
-messages
-```
-
----
-
-## 2. Inscrição da WABA
-
-O aplicativo também precisa estar inscrito na **WhatsApp Business Account que realmente possui o número usado no envio**.
-
-A inscrição pode ser conferida através de:
-
-```text
-GET /{WABA_ID}/subscribed_apps
-```
-
-e criada através de:
-
-```text
-POST /{WABA_ID}/subscribed_apps
-```
-
-O teste de webhook do painel da Meta não garante que esta configuração esteja correta.
-
-Ele apenas verifica se a Callback URL responde.
-
----
-
-# Monitoramento
-
-A página:
-
-```text
-/webhooks/
-```
-
-apresenta os eventos recebidos da Meta.
-
-Ela pode ser utilizada para conferir:
-
-* envio;
-* entrega;
-* leitura;
-* falhas;
-* mensagens recebidas;
-* respostas aos botões.
-
-Eventos reais usam identificadores `wamid`.
-
-Testes locais devem usar identificadores claramente artificiais.
-
----
-
-# Segurança
-
-O projeto possui algumas medidas importantes de proteção:
-
-* access token da Meta armazenado em Secret Manager;
-* webhook validado com HMAC SHA-256;
-* comparação de assinatura com `timingSafeEqual`;
-* envio realizado pelo backend;
-* painel protegido por Firebase Authentication;
-* ações administrativas protegidas por perfil;
-* regras específicas para Firestore;
-* links públicos não enumeráveis;
-* tokens públicos aleatórios;
-* arquivos CSV/XLS/XLSX ignorados pelo Git;
-* arquivos `.env` e credenciais ignorados;
-* service accounts não devem ser versionadas.
-
----
-
-# Dados pessoais
-
-O repositório não deve conter arquivos com dados reais de participantes.
-
-O `.gitignore` bloqueia por padrão:
-
-```text
-*.csv
-*.xls
-*.xlsx
-```
-
-Dados pessoais devem permanecer exclusivamente nos ambientes adequados, como o Firestore e fontes autorizadas para importação.
-
----
-
-# Observações sobre status do WhatsApp
-
-Um envio aceito pela API não significa que a mensagem chegou ao aparelho.
-
-Fluxo possível:
-
-```text
-accepted
-   ↓
-sent
-   ↓
-delivered
-   ↓
-read
-```
-
-Nem sempre todos os estados aparecerão.
-
-Por exemplo, se o usuário desativar recibos de leitura, o último estado observado poderá ser:
-
-```text
-delivered
-```
-
----
-
-# Documentação operacional
-
-O arquivo:
-
-```text
-agent.md
-```
-
-contém informações mais aprofundadas sobre:
-
-* configuração da Meta;
-* WABA;
-* Phone Number ID;
-* webhook;
-* diagnóstico;
-* consultas na Graph API;
-* funcionamento dos status;
-* testes locais;
-* decisões técnicas já tomadas.
-
-Ele funciona como um runbook técnico para manutenção do sistema.
-
----
-
-# Objetivo do projeto
-
-O objetivo do GROB Experience 2026 não é ser uma plataforma genérica de eventos.
-
-Ele foi desenvolvido para resolver de forma simples e confiável um fluxo específico:
-
-```text
-pré-inscrição
-      ↓
-seleção de data
-      ↓
-confirmação
-      ↓
-acompanhamento
-```
-
-A arquitetura privilegia:
-
-* simplicidade;
-* rastreabilidade;
-* baixo custo operacional;
-* segurança;
-* facilidade de manutenção.
-
-Sem microserviços para confirmar se alguém prefere terça, quarta ou quinta. A civilização ainda pode ser salva.
-
----
-
-## Projeto
-
-**GROB Experience 2026**
-
-Firebase + TypeScript + WhatsApp Cloud API
+O sistema foi construído para apoiar a operação real do GROB Experience 2026, reduzindo trabalho manual em confirmações, mensagens, presença e captação de oportunidades no evento.
