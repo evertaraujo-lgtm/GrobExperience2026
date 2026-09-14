@@ -252,8 +252,8 @@ authModule.onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   userId = user.uid;
   const {db, firestoreModule} = await getFirestoreServices();
-  const assistant = await firestoreModule.getDoc(firestoreModule.doc(db, "coletaAtividadesAssistentes", user.uid));
-  if (!assistant.exists() || assistant.data().ativo !== true) {
+  const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
+  if (!profile.exists() || profile.data().active === false || profile.data().roles?.assistenteColeta !== true) {
     window.location.replace("/app/");
     return;
   }

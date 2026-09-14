@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Coleta de leads do GROB Experience" />
+    <title>Coleta de leads | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css" />
+    <link rel="stylesheet" href="/css/gestao-evento.css" />
+  </head>
+  <body data-auth-page="protected" data-lead-collector-page="true">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page">
+        <section class="dashboard-heading"><p class="eyebrow" data-page-eyebrow>Atendimento</p><h1>Coleta de leads</h1><p data-page-description>Leia o QR Code do participante, confira os dados e registre as informações da conversa.</p></section>
+
+        <section class="pre-inscritos-card lead-admin-panel" data-admin-only hidden>
+          <div class="dashboard-toolbar"><strong>Configuração da coleta</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a></div></div>
+          <div class="management-grid lead-management-grid">
+            <section><div class="management-title"><h2>Vendedores</h2><small data-sellers-total></small></div><form class="lead-inline-form" data-seller-form><label class="management-field">Nome<input name="nome" maxlength="120" required autocomplete="name" /></label><label class="management-field">E-mail<input name="email" type="email" required autocomplete="email" /></label><label class="management-field">Senha inicial <span>(obrigatória somente para e-mails novos)</span><input name="senha" type="password" minlength="6" autocomplete="new-password" /></label><button class="button" type="submit" data-seller-save>Cadastrar vendedor</button></form><div class="management-list" data-sellers-list></div></section>
+            <section><div class="management-title"><h2>Campos da conversa</h2><small data-fields-total></small></div><form class="lead-inline-form" data-field-form><label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label><label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Seleção</option></select></label><label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label><label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label><button class="button" type="submit" data-field-save>Adicionar campo</button></form><div class="management-list" data-fields-list></div></section>
+          </div>
+          <p class="dashboard-feedback" data-admin-feedback></p>
+        </section>
+
+        <section class="pre-inscritos-card lead-admin-panel" data-admin-only hidden>
+          <div class="dashboard-toolbar"><strong>Leads coletados</strong><div class="toolbar-actions"><small data-leads-total></small><button class="back-link" type="button" data-export-leads>Exportar CSV</button><button class="back-link" type="button" data-reload-leads>Atualizar</button></div></div>
+          <div class="management-list lead-list" data-leads-list></div>
+          <p class="dashboard-feedback" data-leads-feedback></p>
+        </section>
+
+        <section class="pre-inscritos-card lead-collector-panel" data-seller-only hidden>
+          <div class="dashboard-toolbar"><strong>Registrar conversa</strong><div class="toolbar-actions lead-toolbar-actions"><button class="back-link toolbar-icon-button" type="button" data-download-offline aria-label="Preparar ou atualizar a base offline" title="Preparar ou atualizar a base offline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 18v2h14v-2" /></svg><span class="sr-only">Preparar coleta offline</span></button><button class="back-link toolbar-icon-button" type="button" data-sync-offline aria-label="Sincronizar leads pendentes" title="Sincronizar leads pendentes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-4M4 7V3m0 4h4m-4 6a8 8 0 0 0 14.8 4M20 17v4m0-4h-4" /></svg><span class="sr-only">Sincronizar</span></button><button class="back-link toolbar-icon-button" type="button" data-open-manual-search aria-label="Buscar participante por código" title="Buscar participante por código"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3" /><path d="m16 16 4.2 4.2" /></svg><span class="sr-only">Buscar participante</span></button><button class="back-link toolbar-icon-button" type="button" data-open-own-leads aria-label="Ver meus leads coletados" title="Ver meus leads coletados"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h8l3 3v15H7zM15 3v4h4M10 12h5m-5 4h5" /></svg><span class="sr-only">Ver meus leads coletados</span></button><button class="back-link" type="button" data-clear-lead hidden>Novo atendimento</button></div></div>
+          <p class="collection-sync-status" data-offline-status>Verificando a base deste aparelho...</p>
+          <div class="qr-scanner lead-scanner"><div class="qr-camera-wrap"><div id="lead-qr-reader" data-qr-reader></div><div class="scan-success" data-lead-scan-success hidden><span>✓</span><strong data-lead-scan-code></strong><small>QR Code reconhecido</small></div></div><button class="back-link" type="button" data-start-qr-reader>Ler QR Code pela câmera</button></div>
+          <p class="dashboard-feedback" data-collector-feedback></p>
+          <section class="lead-participant" data-participant-card hidden><div class="management-title"><h2>Participante</h2><small data-participant-qr></small></div><div class="lead-participant-data" data-participant-data></div><form class="lead-responses" data-lead-form><div data-lead-fields></div><div class="message-modal-actions"><button class="button" type="submit" data-lead-save>Salvar lead</button></div><p class="dashboard-feedback" data-lead-feedback></p></form></section>
+        </section>
+      </main>
+    </div>
+    <dialog class="message-modal" data-lead-details-modal aria-labelledby="lead-details-title">
+      <section class="message-editor"><div class="message-modal-heading"><div><p class="eyebrow">Lead coletado</p><h2 id="lead-details-title">Detalhes do lead</h2></div><button class="modal-close" type="button" data-lead-details-close aria-label="Fechar">×</button></div><div class="lead-details" data-lead-details></div><div class="message-modal-actions"><button class="back-link" type="button" data-lead-details-close>Fechar</button></div></section>
+    </dialog>
+    <dialog class="message-modal" data-manual-search-modal aria-labelledby="manual-search-title">
+      <section class="message-editor"><div class="message-modal-heading"><div><p class="eyebrow">Busca manual</p><h2 id="manual-search-title">Código do participante</h2></div><button class="modal-close" type="button" data-manual-search-close aria-label="Fechar">×</button></div><form class="lead-manual-code lead-manual-code-modal" data-manual-qr-form><label class="management-field">Código<input name="qrCode" autocomplete="off" required placeholder="Digite ou cole o QR Code" /></label><div class="message-modal-actions"><button class="button" type="submit">Buscar participante</button><button class="back-link" type="button" data-manual-search-close>Cancelar</button></div></form></section>
+    </dialog>
+    <dialog class="message-modal" data-own-leads-modal aria-labelledby="own-leads-title">
+      <section class="message-editor"><div class="message-modal-heading"><div><p class="eyebrow">Minha coleta</p><h2 id="own-leads-title">Meus leads</h2></div><button class="modal-close" type="button" data-own-leads-close aria-label="Fechar">×</button></div><p class="dashboard-feedback" data-own-leads-feedback></p><div class="management-list lead-list" data-own-leads-list></div><div class="message-modal-actions"><button class="back-link" type="button" data-own-leads-close>Fechar</button></div></section>
+    </dialog>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script type="module" src="/js/auth.js?v=offline-v7"></script>
+    <script type="module" src="/js/coleta-leads.js?v=offline-v7"></script>
+  </body>
+</html>

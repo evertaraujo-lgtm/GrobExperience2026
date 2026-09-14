@@ -45,14 +45,10 @@ async function requireAdmin(uid: string) {
 
 async function requireParticipantViewer(uid: string) {
   const firestore = getFirestore();
-  const [user, assistant] = await Promise.all([
-    firestore.doc(`users/${uid}`).get(),
-    firestore.doc(`coletaAtividadesAssistentes/${uid}`).get(),
-  ]);
+  const user = await firestore.doc(`users/${uid}`).get();
   const isAdmin = user.exists && user.data()?.active !== false && user.data()?.roles?.admin === true;
-  const isActiveUser = !user.exists || user.data()?.active !== false;
-  const isActiveAssistant = assistant.exists && assistant.data()?.ativo === true;
-  if (!isActiveUser || (isActiveAssistant && !isAdmin)) {
+  const isActiveAssistant = user.exists && user.data()?.active !== false && user.data()?.roles?.assistenteColeta === true;
+  if (!user.exists || user.data()?.active === false || (isActiveAssistant && !isAdmin)) {
     throw new HttpsError("permission-denied", "Você não tem permissão para consultar os participantes da 4 Events.");
   }
   return {firestore, isAdmin};

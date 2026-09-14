@@ -68,6 +68,15 @@ let canImport = false;
 let loadedParticipants = [];
 let participantServices;
 let batchRecipientIds = [];
+let latestConfirmedOnly = false;
+
+const latestConfirmedToggle = document.createElement("button");
+latestConfirmedToggle.type = "button";
+latestConfirmedToggle.className = "back-link";
+latestConfirmedToggle.hidden = true;
+latestConfirmedToggle.textContent = "Últimos confirmados";
+latestConfirmedToggle.setAttribute("aria-pressed", "false");
+document.querySelector(".toolbar-actions").prepend(latestConfirmedToggle);
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
@@ -256,8 +265,11 @@ async function getParticipantsWithInvitations() {
     const participant = {reference: document.ref, ...document.data()};
     if (!participant.tokenPublico) return participant;
     const invitation = await firestoreModule.getDoc(firestoreModule.doc(db, "linksPublicos", participant.tokenPublico));
-    if (invitation.exists() && invitation.data().dataSelecionada) {
-      participant.dataSelecionada = invitation.data().dataSelecionada;
+    if (invitation.exists()) {
+      const invitationData = invitation.data();
+      participant.inviteStatus = invitationData.status;
+      participant.confirmadoEm = invitationData.confirmadoEm;
+      if (invitationData.dataSelecionada) participant.dataSelecionada = invitationData.dataSelecionada;
     }
     return participant;
   }));
@@ -373,7 +385,7 @@ function participantElement(participant, db, firestore) {
     <div class="participant-meta"><strong></strong><span>WhatsApp</span></div>
     <div class="participant-meta"><strong></strong><span>Data escolhida</span></div>
     <div class="participant-meta whatsapp-delivery"><strong></strong><span>Envio WhatsApp</span><small></small></div>
-    <label class="participant-meta"><span>Status</span><select class="status-control" ${canImport ? "" : "disabled"}></select></label>
+    <label class="participant-meta"><span>Status</span><select class="status-control" ${canImport ? "" : "disabled"}></select><small class="confirmation-time"></small></label>
     <div class="participant-actions">
       <button class="button save-status" type="button" ${canImport ? "" : "hidden"}>Salvar</button>
       <button class="button api-send" type="button" ${canImport ? "" : "hidden"}>API</button>
@@ -398,6 +410,9 @@ function participantElement(participant, db, firestore) {
         : "Ainda não enviado";
   delivery.querySelector("small").textContent = participant.erroEnvioWhatsApp || deliveryDetail;
   const select = row.querySelector("select");
+  row.querySelector(".confirmation-time").textContent = participant.confirmadoEm
+    ? `Confirmado em ${formatDateTime(participant.confirmadoEm)}`
+    : "";
   const sendLink = row.querySelector(".whatsapp-link");
   if (canImport) sendLink.href = whatsappLink(participant);
   const apiSend = row.querySelector(".api-send");
@@ -510,15 +525,24 @@ function renderParticipants() {
     participant.status === "confirmado" || participant.inviteStatus === "confirmado").length;
   failedTotal.textContent = loadedParticipants.filter((participant) => participant.statusEnvioWhatsApp === "falhou").length;
   const term = searchValue(search.value).trim();
-  const visible = term
-    ? loadedParticipants.filter((participant) => [participant.nome, participant.whatsapp, participant.empresa, participant.email]
-      .some((value) => searchValue(value).includes(term)))
+  const source = latestConfirmedOnly
+    ? loadedParticipants
+      .filter((participant) => (participant.status === "confirmado" || participant.inviteStatus === "confirmado"))
+      .sort((first, second) => {
+        const firstTime = first.confirmadoEm?.toDate ? first.confirmadoEm.toDate().getTime() : 0;
+        const secondTime = second.confirmadoEm?.toDate ? second.confirmadoEm.toDate().getTime() : 0;
+        return secondTime - firstTime;
+      })
     : loadedParticipants;
+  const visible = term
+    ? source.filter((participant) => [participant.nome, participant.whatsapp, participant.empresa, participant.email]
+      .some((value) => searchValue(value).includes(term)))
+    : source;
   total.textContent = term
-    ? `${visible.length} de ${loadedParticipants.length} pré-inscrito${loadedParticipants.length === 1 ? "" : "s"}`
-    : `${loadedParticipants.length} pré-inscrito${loadedParticipants.length === 1 ? "" : "s"}`;
+    ? `${visible.length} de ${source.length} ${latestConfirmedOnly ? "confirmado" : "pré-inscrito"}${source.length === 1 ? "" : "s"}`
+    : `${source.length} ${latestConfirmedOnly ? "confirmado" : "pré-inscrito"}${source.length === 1 ? "" : "s"}`;
   if (!visible.length) {
-    list.innerHTML = `<p class="empty-state">${term ? "Nenhum pré-inscrito encontrado para esta busca." : "Nenhum pré-inscrito encontrado."}</p>`;
+    list.innerHTML = `<p class="empty-state">${latestConfirmedOnly ? "Nenhuma confirmação registrada." : term ? "Nenhum pré-inscrito encontrado para esta busca." : "Nenhum pré-inscrito encontrado."}</p>`;
     return;
   }
   for (const participant of visible) {
@@ -540,6 +564,7 @@ authModule.onAuthStateChanged(auth, async (user) => {
     inscritosLink.hidden = false;
     arrivalNotificationsLink.hidden = !canImport;
     eventManagementLink.hidden = !canImport;
+    latestConfirmedToggle.hidden = !canImport;
     addToggle.hidden = !canImport;
     // A importação permanece implementada para eventual reativação, mas não
     // deve ficar acessível na lista de pré-inscritos neste momento.
@@ -551,6 +576,12 @@ authModule.onAuthStateChanged(auth, async (user) => {
 });
 reload.addEventListener("click", loadParticipants);
 search.addEventListener("input", renderParticipants);
+latestConfirmedToggle.addEventListener("click", () => {
+  latestConfirmedOnly = !latestConfirmedOnly;
+  latestConfirmedToggle.textContent = latestConfirmedOnly ? "Todos os pré-inscritos" : "Últimos confirmados";
+  latestConfirmedToggle.setAttribute("aria-pressed", String(latestConfirmedOnly));
+  renderParticipants();
+});
 list.addEventListener("click", (event) => {
   const button = event.target.closest("[data-api2-send]");
   if (!button || button.hidden || !canImport) return;

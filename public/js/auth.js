@@ -1,4 +1,5 @@
-import {getAuthServices, getFirestoreServices} from "/js/firebase-client.js";
+import {getAuthServices, getFirestoreServices, getFunctionsServices} from "/js/firebase-client.js";
+import {clearOfflineProfile, getOfflineProfile, saveOfflineProfile} from "/js/offline-profile.js";
 
 const page = document.body.dataset.authPage;
 const form = document.querySelector("[data-login-form]");
@@ -8,6 +9,7 @@ const submit = document.querySelector("[data-submit]");
 const feedback = document.querySelector("[data-feedback]");
 const logout = document.querySelector("[data-logout]");
 const assistantPage = document.body.dataset.assistantPage === "true";
+const leadCollectorPage = document.body.dataset.leadCollectorPage === "true";
 
 function setFeedback(message, state = "neutral") {
   if (!feedback) return;
@@ -32,19 +34,43 @@ try {
 
   authModule.onAuthStateChanged(auth, async (user) => {
     let isAssistant = false;
+    let isLeadSeller = false;
+    let isAdmin = false;
     if (user) {
-      const {db, firestoreModule} = await getFirestoreServices();
-      const assistant = await firestoreModule.getDoc(firestoreModule.doc(db, "coletaAtividadesAssistentes", user.uid));
-      isAssistant = assistant.exists() && assistant.data().ativo === true;
+      let profileData = null;
+      try {
+        const {db, firestoreModule} = await getFirestoreServices();
+        const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
+        if (profile.exists()) {
+          profileData = profile.data();
+          saveOfflineProfile(user.uid, profileData);
+        }
+      } catch (error) {
+        profileData = getOfflineProfile(user.uid);
+        if (!profileData) console.warn("Não foi possível consultar o perfil do usuário.", error);
+      }
+      isAdmin = profileData?.active !== false && profileData?.roles?.admin === true;
+      isAssistant = !isAdmin && profileData?.active !== false && profileData?.roles?.assistenteColeta === true;
+      isLeadSeller = !isAdmin && profileData?.active !== false && profileData?.roles?.vendedor === true;
+      if (isAdmin) {
+        try {
+          const {functions, functionsModule} = await getFunctionsServices();
+          await functionsModule.httpsCallable(functions, "consolidateCollectionStaff")();
+        } catch (error) {
+          console.error("Não foi possível consolidar os perfis de coleta.", error);
+        }
+      }
     }
     if (page === "gate") {
-      window.location.replace(user ? (isAssistant ? "/coleta-atividades/" : "/participantes-4events/") : "/login/");
+      window.location.replace(user ? (isAssistant ? "/coleta-atividades/" : isLeadSeller && !isAdmin ? "/coleta-leads/" : "/participantes-4events/") : "/login/");
       return;
     }
-    if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : "/participantes-4events/");
+    if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : isLeadSeller && !isAdmin ? "/coleta-leads/" : "/participantes-4events/");
     if (page === "protected" && !user) window.location.replace("/login/");
     if (page === "protected" && user && isAssistant && !assistantPage) window.location.replace("/coleta-atividades/");
     if (page === "protected" && user && !isAssistant && assistantPage) window.location.replace("/app/");
+    if (page === "protected" && user && isLeadSeller && !isAdmin && !leadCollectorPage) window.location.replace("/coleta-leads/");
+    if (page === "protected" && user && leadCollectorPage && !isAdmin && !isLeadSeller) window.location.replace("/app/");
     const name = document.querySelector("[data-user-name]");
     if (page === "protected" && user && name) {
       name.textContent = user.displayName || user.email || "participante";
@@ -68,7 +94,10 @@ try {
     }
   });
 
-  logout?.addEventListener("click", () => authModule.signOut(auth));
+  logout?.addEventListener("click", () => {
+    if (auth.currentUser) clearOfflineProfile(auth.currentUser.uid);
+    authModule.signOut(auth);
+  });
 } catch (error) {
   console.error("Falha ao iniciar o Firebase", error);
   setFeedback("Não foi possível conectar ao Firebase. Tente novamente em instantes.", "error");

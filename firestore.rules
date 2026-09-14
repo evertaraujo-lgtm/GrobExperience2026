@@ -14,16 +14,30 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function hasRole(role) {
+      return currentUserDocument().data.get("roles", {}).get(role, false) == true;
+    }
+
     function isAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && currentUserDocument().data.active != false
-        && currentUserDocument().data.roles.admin == true;
+        && hasRole("admin");
     }
 
     function isCollectionAssistant() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/coletaAtividadesAssistentes/$(request.auth.uid));
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDocument().data.active != false
+        && !hasRole("admin")
+        && hasRole("assistenteColeta");
+    }
+
+    function isLeadSeller() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDocument().data.active != false
+        && hasRole("vendedor");
     }
 
     function allowedUserFields() {
@@ -66,7 +80,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSelf(userId);
+      // Cada pessoa consulta apenas o próprio perfil no login. As listas de
+      // equipe administrativas são retornadas por uma Cloud Function.
+      allow get: if isSelf(userId);
       allow create: if isSelf(userId)
         && hasOnlyAllowedUserFields()
         && request.resource.data.roles == {}
@@ -130,10 +146,6 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    match /coletaAtividadesAssistentes/{assistenteId} {
-      allow read: if isAdmin() || isSelf(assistenteId);
-    }
-
     match /coletaAtividades/{atividadeId} {
       allow read: if isAdmin()
         || (isCollectionAssistant()
@@ -153,6 +165,17 @@ service cloud.firestore {
         && request.resource.data.qrcode is string
         && get(/databases/$(database)/documents/coletaAtividades/$(request.resource.data.atividadeId)).data.responsavelIds.hasAny([request.auth.uid]);
       allow update, delete: if isAdmin();
+    }
+
+    match /coletaLeadsConfiguracoes/{configuracaoId} {
+      allow read: if isAdmin() || isLeadSeller();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /coletaLeads/{leadId} {
+      allow read: if isAdmin()
+        || (isLeadSeller() && resource.data.vendedorId == request.auth.uid);
+      allow create, update, delete: if isAdmin();
     }
 
     match /whatsappEventos/{eventId} {

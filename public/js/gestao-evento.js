@@ -20,6 +20,12 @@ const readingsModal = document.querySelector("[data-readings-modal]");
 const readingsActivity = document.querySelector("[data-readings-activity]");
 const readingsList = document.querySelector("[data-readings-list]");
 const readingsFeedback = document.querySelector("[data-readings-feedback]");
+const leadCollectionLink = document.createElement("a");
+leadCollectionLink.className = "back-link";
+leadCollectionLink.href = "/coleta-leads/";
+leadCollectionLink.textContent = "Coleta de leads";
+leadCollectionLink.hidden = true;
+document.querySelector(".toolbar-actions").append(leadCollectionLink);
 
 let assistants = [];
 let activities = [];
@@ -41,7 +47,7 @@ function setAssistantFeedback(message, state = "neutral") {
 }
 
 function assistantName(uid) {
-  return assistants.find((assistant) => assistant.id === uid)?.nome || "Assistente removido";
+  return assistants.find((assistant) => assistant.id === uid)?.name || "Assistente removido";
 }
 
 function formatReadingDate(timestamp) {
@@ -98,7 +104,7 @@ function renderActivityAssistantChoices() {
     input.type = "checkbox";
     input.name = "responsaveis";
     input.value = assistant.id;
-    label.append(input, assistant.nome + " — " + assistant.email);
+    label.append(input, (assistant.name || assistant.email) + " — " + assistant.email);
     activityAssistants.append(label);
   });
 }
@@ -202,7 +208,7 @@ function renderAssistants() {
     const card = document.createElement("article");
     card.className = "management-card";
     const title = document.createElement("h3");
-    title.textContent = assistant.nome;
+    title.textContent = assistant.name || assistant.email || "Assistente";
     const email = document.createElement("p");
     email.textContent = assistant.email;
     const actions = document.createElement("div");
@@ -212,12 +218,12 @@ function renderAssistants() {
     remove.type = "button";
     remove.textContent = "Remover";
     remove.addEventListener("click", async () => {
-      if (!window.confirm("Remover o assistente " + assistant.nome + "? O acesso de coleta será revogado.")) return;
+      if (!window.confirm("Remover o assistente " + (assistant.name || assistant.email) + "? O acesso de coleta será revogado.")) return;
       remove.disabled = true;
       try {
         const {functions, functionsModule} = await getFunctionsServices();
         await functionsModule.httpsCallable(functions, "removeCollectionAssistant")({uid: assistant.id});
-        setFeedback(assistant.nome + " foi removido(a).");
+        setFeedback((assistant.name || assistant.email) + " foi removido(a).");
         await load();
       } catch (error) {
         console.error(error);
@@ -235,11 +241,12 @@ async function load() {
   setFeedback("");
   try {
     const {db, firestoreModule} = await getFirestoreServices();
-    const [assistantSnapshot, activitySnapshot] = await Promise.all([
-      firestoreModule.getDocs(firestoreModule.query(firestoreModule.collection(db, "coletaAtividadesAssistentes"), firestoreModule.orderBy("nome"))),
+    const {functions, functionsModule} = await getFunctionsServices();
+    const [staffResult, activitySnapshot] = await Promise.all([
+      functionsModule.httpsCallable(functions, "listCollectionStaff")(),
       firestoreModule.getDocs(firestoreModule.query(firestoreModule.collection(db, "coletaAtividades"), firestoreModule.orderBy("nome"))),
     ]);
-    assistants = assistantSnapshot.docs.map((document) => ({id: document.id, ...document.data()}));
+    assistants = Array.isArray(staffResult.data?.assistants) ? staffResult.data.assistants : [];
     activities = activitySnapshot.docs.map((document) => ({id: document.id, ...document.data()}));
     renderActivityAssistantChoices();
     renderAssistants();
@@ -335,9 +342,16 @@ authModule.onAuthStateChanged(auth, async (user) => {
   const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
   const isAdmin = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
   if (!isAdmin) {
-    const assistant = await firestoreModule.getDoc(firestoreModule.doc(db, "coletaAtividadesAssistentes", user.uid));
-    window.location.replace(assistant.exists() && assistant.data().ativo === true ? "/coleta-atividades/" : "/app/");
+    const isAssistant = profile.exists() && profile.data().active !== false && profile.data().roles?.assistenteColeta === true;
+    window.location.replace(isAssistant ? "/coleta-atividades/" : "/app/");
     return;
+  }
+  leadCollectionLink.hidden = false;
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    await functionsModule.httpsCallable(functions, "consolidateCollectionStaff")();
+  } catch (error) {
+    console.error("Não foi possível consolidar os perfis legados.", error);
   }
   await load();
 });

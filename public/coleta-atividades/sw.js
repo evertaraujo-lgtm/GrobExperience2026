@@ -45,6 +45,9 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // A sincronização do Firestore usa uma conexão contínua em outro domínio.
+  // Ela é encerrada no logout e não deve ser atendida pelo cache da coleta.
+  if (new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {
