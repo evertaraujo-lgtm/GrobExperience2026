@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Pesquisa de satisfação do GROB Experience" />
+    <title>Pesquisa de satisfação | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pesquisa-satisfacao.css" />
+  </head>
+  <body data-survey-public-page="true">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a></header>
+      <main class="survey-public-layout">
+        <section class="survey-public-card" data-survey-loading><p class="eyebrow">Pesquisa de satisfação</p><h1>Carregando...</h1><p class="survey-public-intro">Aguarde um instante.</p></section>
+        <section class="survey-public-card" data-survey-content hidden>
+          <p class="eyebrow">Sua opinião importa</p>
+          <h1 data-survey-title></h1>
+          <p class="survey-public-intro" data-survey-description></p>
+          <p class="survey-anonymous-note">Esta pesquisa é anônima. Não solicitamos dados de identificação.</p>
+          <form class="survey-public-form" data-response-form>
+            <div data-public-questions></div>
+            <button class="button" type="submit" data-submit-response>Enviar respostas</button>
+            <p class="feedback" data-public-feedback></p>
+          </form>
+        </section>
+        <section class="survey-public-card survey-thanks" data-survey-thanks hidden>
+          <span aria-hidden="true">✓</span><p class="eyebrow">Resposta recebida</p><h1>Obrigado!</h1><p>Sua opinião foi registrada e vai nos ajudar a melhorar as próximas experiências.</p>
+        </section>
+        <section class="survey-public-card" data-survey-error hidden><p class="eyebrow">Pesquisa de satisfação</p><h1>Link indisponível</h1><p class="survey-public-intro" data-error-message>Confira o endereço recebido ou tente novamente mais tarde.</p></section>
+      </main>
+    </div>
+    <script type="module" src="/js/pesquisa-satisfacao-publica.js"></script>
+  </body>
+</html>

@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
     <link rel="stylesheet" href="/css/app.css" />
     <link rel="stylesheet" href="/css/pre-inscritos.css" />
-    <link rel="stylesheet" href="/css/gestao-evento.css" />
+    <link rel="stylesheet" href="/css/gestao-evento.css?v=lead-details-v2" />
   </head>
   <body data-auth-page="protected" data-lead-collector-page="true">
     <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
@@ -20,31 +20,8 @@
         <section class="dashboard-heading"><p class="eyebrow" data-page-eyebrow>Atendimento</p><h1>Coleta de leads</h1><p data-page-description>Leia o QR Code do participante, confira os dados e registre as informações da conversa.</p></section>
 
         <section class="pre-inscritos-card lead-admin-panel" data-admin-only hidden>
-          <div class="dashboard-toolbar"><strong>Configuração da coleta</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a></div></div>
-          <div class="management-grid lead-management-grid">
-            <section><div class="management-title"><h2>Vendedores</h2><small data-sellers-total></small></div><form class="lead-inline-form" data-seller-form><label class="management-field">Nome<input name="nome" maxlength="120" required autocomplete="name" /></label><label class="management-field">E-mail<input name="email" type="email" required autocomplete="email" /></label><label class="management-field">Senha inicial <span>(obrigatória somente para e-mails novos)</span><input name="senha" type="password" minlength="6" autocomplete="new-password" /></label><button class="button" type="submit" data-seller-save>Cadastrar vendedor</button></form><div class="management-list" data-sellers-list></div></section>
-            <section class="lead-questionnaire-admin">
-              <div class="management-title"><h2>Tópicos</h2><small data-topics-total></small></div>
-              <form class="lead-inline-form lead-topic-form" data-topic-form>
-                <label class="management-field">Nome do tópico<input name="titulo" maxlength="120" required placeholder="Ex.: Necessidades do cliente" /></label>
-                <button class="button" type="submit" data-topic-save>Adicionar tópico</button>
-              </form>
-              <div class="management-list lead-topics-list" data-topics-list></div>
-
-              <div class="management-title lead-fields-heading"><h2>Perguntas</h2><small data-fields-total></small></div>
-              <form class="lead-inline-form" data-field-form>
-                <label class="management-field">Tópico<select name="topicoId" required data-field-topic><option value="">Crie um tópico primeiro</option></select></label>
-                <label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label>
-                <label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Lista de seleção</option><option value="multipla-escolha">Múltipla escolha</option><option value="checkbox">Checkbox</option></select></label>
-                <label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label>
-                <label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label>
-                <label class="lead-checkbox" data-checkbox-behavior hidden><input name="abreDependentes" type="checkbox" /> Esse checkbox abre outras perguntas?</label>
-                <label class="management-field" data-dependent-questions hidden>Perguntas dependentes <span>(uma pergunta de texto por linha)</span><textarea name="perguntasDependentes" rows="4" maxlength="2000"></textarea></label>
-                <button class="button" type="submit" data-field-save>Adicionar pergunta</button>
-              </form>
-              <div class="management-list" data-fields-list></div>
-            </section>
-          </div>
+          <div class="dashboard-toolbar"><strong>Equipe de coleta</strong><div class="toolbar-actions"><a class="back-link" href="/coleta-leads/perguntas/">Editar perguntas</a><a class="back-link" href="/gestao-evento/">Voltar à gestão</a></div></div>
+          <section class="lead-sellers-panel"><div class="management-title"><h2>Vendedores</h2><small data-sellers-total></small></div><form class="lead-inline-form lead-seller-form" data-seller-form><label class="management-field">Nome<input name="nome" maxlength="120" required autocomplete="name" /></label><label class="management-field">E-mail<input name="email" type="email" required autocomplete="email" /></label><label class="management-field">Senha inicial <span>(obrigatória somente para e-mails novos)</span><input name="senha" type="password" minlength="6" autocomplete="new-password" /></label><button class="button" type="submit" data-seller-save>Cadastrar vendedor</button></form><div class="management-list" data-sellers-list></div></section>
           <p class="dashboard-feedback" data-admin-feedback></p>
         </section>
 
@@ -74,6 +51,6 @@
     </dialog>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script type="module" src="/js/auth.js?v=offline-v8"></script>
-    <script type="module" src="/js/coleta-leads.js?v=offline-v8"></script>
+    <script type="module" src="/js/coleta-leads.js?v=offline-v10"></script>
   </body>
 </html>

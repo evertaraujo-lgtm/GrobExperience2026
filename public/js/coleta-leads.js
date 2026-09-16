@@ -25,7 +25,7 @@ const topicsList = document.querySelector("[data-topics-list]");
 const topicsTotal = document.querySelector("[data-topics-total]");
 const fieldForm = document.querySelector("[data-field-form]");
 const fieldSave = document.querySelector("[data-field-save]");
-const fieldType = fieldForm.elements.tipo;
+const fieldType = fieldForm?.elements.tipo;
 const fieldTopic = document.querySelector("[data-field-topic]");
 const fieldOptions = document.querySelector("[data-field-options]");
 const checkboxBehavior = document.querySelector("[data-checkbox-behavior]");
@@ -307,6 +307,7 @@ function fieldTypeLabel(type) {
 }
 
 function renderTopics() {
+  if (!topicsTotal || !topicsList || !fieldTopic || !fieldSave) return;
   topicsTotal.textContent = `${configuredTopics.length} cadastrado(s)`;
   topicsList.replaceChildren();
   fieldTopic.replaceChildren(new Option(configuredTopics.length ? "Selecione o tópico" : "Crie um tópico primeiro", ""));
@@ -357,6 +358,7 @@ function renderTopics() {
 }
 
 function renderConfiguredFields() {
+  if (!fieldsList || !fieldsTotal) return;
   renderTopics();
   fieldsList.replaceChildren();
   fieldsTotal.textContent = `${configuredFields.length} cadastrada(s)`;
@@ -678,13 +680,14 @@ async function loadSellers() {
   });
 }
 
-function addDetail(label, value) {
+function addDetail(label, value, {questionFirst = false} = {}) {
   const item = document.createElement("div");
   item.className = "participant-meta";
+  if (questionFirst) item.classList.add("lead-response-detail");
   const strong = document.createElement("strong");
-  strong.textContent = value || "Não informado";
   const caption = document.createElement("span");
-  caption.textContent = label;
+  strong.textContent = questionFirst ? label : value || "Não informado";
+  caption.textContent = questionFirst ? value || "Não informado" : label;
   item.append(strong, caption);
   leadDetails.append(item);
 }
@@ -708,12 +711,12 @@ function showLeadDetails(lead) {
     const heading = document.createElement("h3");
     heading.textContent = "Respostas da conversa";
     leadDetails.append(heading);
-    responses.forEach((response) => addDetail(response.rotulo || "Resposta", response.valor));
+    responses.forEach((response) => addDetail(response.rotulo || "Resposta", response.valor, {questionFirst: true}));
   }
   leadDetailsModal.showModal();
 }
 
-function renderLeadCards(target, leads, emptyMessage) {
+function renderLeadCards(target, leads, emptyMessage, {canDelete = false} = {}) {
   target.replaceChildren();
   if (!leads.length) {
     target.innerHTML = `<p class="empty-management">${emptyMessage}</p>`;
@@ -734,15 +737,44 @@ function renderLeadCards(target, leads, emptyMessage) {
     details.textContent = "Ver detalhes";
     details.addEventListener("click", () => showLeadDetails(lead));
     actions.append(details);
+    if (canDelete && isAdmin && !lead.pendente) {
+      const remove = document.createElement("button");
+      remove.className = "danger-delete";
+      remove.type = "button";
+      remove.textContent = "Apagar";
+      remove.setAttribute("aria-label", `Apagar lead de ${leadName(lead)}`);
+      remove.addEventListener("click", () => { void deleteCollectedLead(lead, remove); });
+      actions.append(remove);
+    }
     card.append(title, company, actions);
     target.append(card);
   });
 }
 
+async function deleteCollectedLead(lead, button) {
+  if (!isAdmin || !lead?.id || lead.pendente) return;
+  if (!window.confirm(`Apagar o lead de “${leadName(lead)}”? Esta ação não pode ser desfeita.`)) return;
+  button.disabled = true;
+  button.textContent = "Apagando...";
+  setFeedback(leadsFeedback, `Apagando o lead de ${leadName(lead)}...`);
+  try {
+    const {db, firestoreModule} = await getFirestoreServices();
+    await firestoreModule.deleteDoc(firestoreModule.doc(db, "coletaLeads", lead.id));
+    collectedLeads = collectedLeads.filter((item) => item.id !== lead.id);
+    renderLeads();
+    setFeedback(leadsFeedback, "Lead apagado.", "success");
+  } catch (error) {
+    console.error(error);
+    button.disabled = false;
+    button.textContent = "Apagar";
+    setFeedback(leadsFeedback, "Não foi possível apagar o lead.", "error");
+  }
+}
+
 function renderLeads() {
   leadsTotal.textContent = `${collectedLeads.length} coletado(s)`;
   exportLeads.disabled = !collectedLeads.length;
-  renderLeadCards(leadsList, collectedLeads, "Nenhum lead coletado.");
+  renderLeadCards(leadsList, collectedLeads, "Nenhum lead coletado.", {canDelete: true});
 }
 
 function leadCollectionTime(lead) {
@@ -898,6 +930,7 @@ async function startQrReaderFromCamera() {
 }
 
 function updateFieldFormVisibility() {
+  if (!fieldType || !fieldForm) return;
   const hasOptions = fieldType.value === "selecao" || fieldType.value === "multipla-escolha";
   const isCheckbox = fieldType.value === "checkbox";
   fieldOptions.hidden = !hasOptions;
@@ -908,10 +941,10 @@ function updateFieldFormVisibility() {
   fieldForm.elements.perguntasDependentes.required = isCheckbox && fieldForm.elements.abreDependentes.checked;
 }
 
-fieldType.addEventListener("change", updateFieldFormVisibility);
-fieldForm.elements.abreDependentes.addEventListener("change", updateFieldFormVisibility);
+fieldType?.addEventListener("change", updateFieldFormVisibility);
+fieldForm?.elements.abreDependentes?.addEventListener("change", updateFieldFormVisibility);
 
-topicForm.addEventListener("submit", async (event) => {
+topicForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!isAdmin || !topicForm.reportValidity()) return;
   topicSave.disabled = true;
@@ -935,7 +968,7 @@ topicForm.addEventListener("submit", async (event) => {
   }
 });
 
-fieldForm.addEventListener("submit", async (event) => {
+fieldForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!isAdmin || !fieldForm.reportValidity()) return;
   const form = new FormData(fieldForm);
@@ -1136,7 +1169,7 @@ authModule.onAuthStateChanged(auth, async (user) => {
   sellerPanel.hidden = !isSeller;
   if (isAdmin) {
     pageEyebrow.textContent = "Administração";
-    pageDescription.textContent = "Cadastre vendedores e defina os campos que serão preenchidos durante cada conversa.";
+    pageDescription.textContent = "Cadastre vendedores e acompanhe os leads registrados durante o evento.";
     try {
       const {functions, functionsModule} = await getFunctionsServices();
       await functionsModule.httpsCallable(functions, "consolidateCollectionStaff")();

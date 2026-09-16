@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Gestão da pesquisa de satisfação do evento" />
+    <title>Pesquisa de satisfação | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css" />
+    <link rel="stylesheet" href="/css/gestao-evento.css" />
+    <link rel="stylesheet" href="/css/pesquisa-satisfacao.css" />
+  </head>
+  <body data-auth-page="protected" data-event-management-page="true">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page satisfaction-admin-page">
+        <section class="dashboard-heading"><p class="eyebrow">Administração</p><h1>Pesquisa de satisfação</h1><p>Configure as perguntas, compartilhe o acesso e acompanhe respostas anônimas.</p></section>
+
+        <section class="pre-inscritos-card satisfaction-editor-card" aria-labelledby="survey-editor-title">
+          <div class="dashboard-toolbar"><div><strong id="survey-editor-title">Configuração da pesquisa</strong><small class="survey-status" data-survey-status>Carregando...</small></div><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
+          <form class="satisfaction-editor" data-survey-form>
+            <div class="survey-meta-fields">
+              <label class="management-field">Título<input name="titulo" required maxlength="120" /></label>
+              <label class="management-field">Texto de apresentação<textarea name="descricao" rows="3" maxlength="500"></textarea></label>
+            </div>
+            <label class="survey-active"><input name="ativa" type="checkbox" checked /> Aceitar novas respostas</label>
+            <div class="management-title survey-questions-heading"><div><h2>Perguntas</h2><small>Arraste não é necessário: use as setas para ordenar.</small></div><div class="survey-add-actions"><button class="back-link" type="button" data-add-text>+ Texto</button><button class="back-link" type="button" data-add-choice>+ Alternativas</button></div></div>
+            <div class="survey-question-list" data-question-list></div>
+            <div class="survey-save-row"><button class="button save-status" type="submit" data-save>Salvar pesquisa</button><p class="dashboard-feedback" data-editor-feedback></p></div>
+          </form>
+        </section>
+
+        <section class="pre-inscritos-card survey-share-card" data-share-section hidden aria-labelledby="survey-share-title">
+          <div class="management-title"><div><h2 id="survey-share-title">Compartilhar com visitantes</h2><small>O mesmo link abre o formulário e está codificado no QR Code.</small></div></div>
+          <div class="survey-share-grid">
+            <div class="survey-link-panel">
+              <label class="management-field">Link público<input data-public-link readonly /></label>
+              <div class="survey-share-actions"><button class="button" type="button" data-copy-link>Copiar link</button><button class="back-link" type="button" data-share-link>Compartilhar</button><a class="back-link" data-open-link target="_blank" rel="noopener">Abrir formulário</a></div>
+              <p class="dashboard-feedback" data-share-feedback></p>
+            </div>
+            <div class="qr-code-result survey-qr-result"><img data-qr-image alt="QR Code da pesquisa de satisfação" /><a class="back-link" data-qr-download>Baixar QR Code</a></div>
+          </div>
+        </section>
+
+        <section class="pre-inscritos-card survey-responses-card" data-responses-section hidden aria-labelledby="survey-responses-title">
+          <div class="dashboard-toolbar"><div><strong id="survey-responses-title">Respostas recebidas</strong><small class="survey-status" data-responses-total></small></div><div class="toolbar-actions"><button class="back-link" type="button" data-export-responses>Exportar CSV</button><button class="back-link" type="button" data-reload-responses>Atualizar respostas</button></div></div>
+          <div class="survey-response-list" data-response-list></div>
+          <p class="dashboard-feedback" data-responses-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/pesquisa-satisfacao-admin.js"></script>
+  </body>
+</html>

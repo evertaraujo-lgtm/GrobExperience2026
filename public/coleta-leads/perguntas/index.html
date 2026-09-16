@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Configuração das perguntas da coleta de leads" />
+    <title>Perguntas da coleta de leads | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css" />
+    <link rel="stylesheet" href="/css/gestao-evento.css" />
+  </head>
+  <body data-auth-page="protected" data-event-management-page="true">
+    <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page lead-questionnaire-page">
+        <section class="dashboard-heading"><p class="eyebrow">Configuração da coleta</p><h1>Perguntas dos leads</h1><p>Organize o roteiro da conversa em tópicos e defina os campos que serão preenchidos pelos vendedores.</p></section>
+
+        <section class="pre-inscritos-card lead-questionnaire-section">
+          <div class="dashboard-toolbar"><div><strong>Tópicos do roteiro</strong><small class="lead-section-caption">Agrupe as perguntas por etapa da conversa.</small></div><div class="toolbar-actions"><a class="back-link" href="/coleta-leads/">Voltar à coleta de leads</a></div></div>
+          <form class="lead-inline-form lead-topic-form lead-questionnaire-form" data-topic-form>
+            <label class="management-field">Nome do tópico<input name="titulo" maxlength="120" required placeholder="Ex.: Necessidades do cliente" /></label>
+            <button class="button" type="submit" data-topic-save>Adicionar tópico</button>
+          </form>
+          <div class="management-title"><h2>Tópicos cadastrados</h2><small data-topics-total></small></div>
+          <div class="management-list lead-topics-list" data-topics-list></div>
+        </section>
+
+        <section class="pre-inscritos-card lead-questionnaire-section">
+          <div class="dashboard-toolbar"><div><strong>Perguntas e campos</strong><small class="lead-section-caption">Adicione campos ao tópico correspondente.</small></div></div>
+          <form class="lead-inline-form lead-questionnaire-form lead-field-editor" data-field-form>
+            <div class="lead-field-editor-grid">
+              <label class="management-field">Tópico<select name="topicoId" required data-field-topic><option value="">Crie um tópico primeiro</option></select></label>
+              <label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label>
+              <label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Lista de seleção</option><option value="multipla-escolha">Múltipla escolha</option><option value="checkbox">Checkbox</option></select></label>
+            </div>
+            <label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label>
+            <div class="lead-field-flags"><label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label><label class="lead-checkbox" data-checkbox-behavior hidden><input name="abreDependentes" type="checkbox" /> Esse checkbox abre outras perguntas?</label></div>
+            <label class="management-field" data-dependent-questions hidden>Perguntas dependentes <span>(uma pergunta de texto por linha)</span><textarea name="perguntasDependentes" rows="4" maxlength="2000"></textarea></label>
+            <div class="lead-questionnaire-submit-actions">
+              <button class="button" type="submit" data-field-save>Adicionar pergunta</button>
+              <button class="back-link" type="button" data-field-cancel hidden>Cancelar edição</button>
+            </div>
+          </form>
+          <div class="management-title"><h2>Perguntas cadastradas</h2><small data-fields-total></small></div>
+          <div class="management-list" data-fields-list></div>
+          <p class="dashboard-feedback" data-admin-feedback></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/coleta-leads-perguntas.js"></script>
+  </body>
+</html>

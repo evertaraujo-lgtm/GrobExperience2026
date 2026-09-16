@@ -195,6 +195,65 @@ service cloud.firestore {
       allow create, update: if isAdmin();
     }
 
+    // Fluxo independente da pesquisa de satisfação. O ID da pesquisa é um
+    // token aleatório presente apenas no link compartilhado com visitantes.
+    match /pesquisasSatisfacao/{pesquisaId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "titulo", "descricao", "ativa", "perguntas", "criadoEm", "atualizadoEm"
+        ])
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() > 0
+        && request.resource.data.titulo.size() <= 120
+        && request.resource.data.descricao is string
+        && request.resource.data.descricao.size() <= 500
+        && request.resource.data.ativa is bool
+        && request.resource.data.perguntas is list
+        && request.resource.data.perguntas.size() > 0
+        && request.resource.data.perguntas.size() <= 50
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.atualizadoEm == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "titulo", "descricao", "ativa", "perguntas", "criadoEm", "atualizadoEm"
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "titulo", "descricao", "ativa", "perguntas", "atualizadoEm"
+        ])
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() > 0
+        && request.resource.data.titulo.size() <= 120
+        && request.resource.data.descricao is string
+        && request.resource.data.descricao.size() <= 500
+        && request.resource.data.ativa is bool
+        && request.resource.data.perguntas is list
+        && request.resource.data.perguntas.size() > 0
+        && request.resource.data.perguntas.size() <= 50
+        && request.resource.data.atualizadoEm == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // Cada documento contém somente respostas anônimas e o horário de coleta.
+    // Não há vínculo com participantes, usuários ou demais coleções do evento.
+    match /respostasPesquisaSatisfacao/{respostaId} {
+      allow read, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly([
+          "pesquisaId", "respostas", "coletadoEm"
+        ])
+        && request.resource.data.pesquisaId is string
+        && request.resource.data.pesquisaId.size() == 48
+        && request.resource.data.respostas is list
+        && request.resource.data.respostas.size() > 0
+        && request.resource.data.respostas.size() <= 50
+        && request.resource.data.coletadoEm == request.time
+        && exists(/databases/$(database)/documents/pesquisasSatisfacao/$(request.resource.data.pesquisaId))
+        && get(/databases/$(database)/documents/pesquisasSatisfacao/$(request.resource.data.pesquisaId)).data.ativa == true
+        && request.resource.data.respostas.size() == get(/databases/$(database)/documents/pesquisasSatisfacao/$(request.resource.data.pesquisaId)).data.perguntas.size();
+      allow update: if false;
+    }
+
     // O ID de cada documento é um token aleatório de 256 bits. Não permitimos
     // listagem: somente quem recebeu o link consegue buscar o convite.
     match /linksPublicos/{token} {

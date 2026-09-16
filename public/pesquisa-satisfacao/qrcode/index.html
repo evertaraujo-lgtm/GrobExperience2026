@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Acesse a pesquisa de satisfação do GROB Experience pelo QR Code" />
+    <title>Compartilhe sua experiência | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/pesquisa-satisfacao-qrcode.css" />
+  </head>
+  <body>
+    <main class="qr-page">
+      <article class="qr-poster">
+        <header class="qr-brand"><img src="/img/logo_transparentehd.png" alt="100 Years GROB Experience do Brasil" /></header>
+
+        <section class="qr-copy">
+          <p class="qr-eyebrow">Pesquisa de satisfação</p>
+          <h1>Sua opinião faz a diferença.</h1>
+          <p>Conte como foi sua experiência e ajude a tornar os próximos eventos ainda melhores.</p>
+        </section>
+
+        <section class="qr-code-card" aria-live="polite">
+          <div class="qr-corners" aria-hidden="true"></div>
+          <div class="qr-image-wrap">
+            <span class="qr-loading" data-qr-loading>Gerando QR Code...</span>
+            <img data-qr-image alt="QR Code para abrir a pesquisa de satisfação" hidden />
+          </div>
+          <div class="qr-scan-instruction"><span aria-hidden="true"></span><strong>Aponte a câmera do celular</strong><small>Não é necessário se identificar</small></div>
+        </section>
+
+        <div class="qr-actions">
+          <a class="qr-primary-action" data-survey-link>Abrir pesquisa</a>
+          <button type="button" data-copy-link>Copiar link</button>
+          <button type="button" data-print>Imprimir</button>
+        </div>
+        <p class="qr-feedback" data-feedback aria-live="polite"></p>
+
+        <footer><span>Respostas anônimas</span><i aria-hidden="true"></i><span>Leva poucos minutos</span></footer>
+      </article>
+    </main>
+    <script type="module" src="/js/pesquisa-satisfacao-qrcode.js"></script>
+  </body>
+</html>
