@@ -7,9 +7,10 @@ import {find4EventsParticipantByQrCode, normalize4EventsQrCode} from "./particip
 type LeadField = {
   id: string;
   rotulo: string;
-  tipo: "texto" | "texto-longo" | "numero" | "selecao";
+  tipo: "texto" | "texto-longo" | "numero" | "selecao" | "multipla-escolha" | "checkbox";
   obrigatorio: boolean;
   opcoes: string[];
+  dependeDe: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -61,7 +62,7 @@ function fieldDefinitions(value: unknown): LeadField[] {
     const id = typeof field.id === "string" ? field.id.trim() : "";
     const rotulo = typeof field.rotulo === "string" ? field.rotulo.trim() : "";
     const tipo = field.tipo;
-    const validType = tipo === "texto" || tipo === "texto-longo" || tipo === "numero" || tipo === "selecao";
+    const validType = tipo === "texto" || tipo === "texto-longo" || tipo === "numero" || tipo === "selecao" || tipo === "multipla-escolha" || tipo === "checkbox";
     if (!id || !rotulo || !validType) return [];
     return [{
       id,
@@ -69,6 +70,7 @@ function fieldDefinitions(value: unknown): LeadField[] {
       tipo,
       obrigatorio: field.obrigatorio === true,
       opcoes: Array.isArray(field.opcoes) ? field.opcoes.filter((option): option is string => typeof option === "string").map((option) => option.trim()).filter(Boolean) : [],
+      dependeDe: typeof field.dependeDe === "string" ? field.dependeDe.trim() : "",
     }];
   });
 }
@@ -81,14 +83,19 @@ async function currentFields() {
 function answersForFields(value: unknown, fields: LeadField[]) {
   const input = asRecord(value);
   const responses: Record<string, {rotulo: string; valor: string}> = {};
+  const checked = (answer: unknown) => answer === true || ["true", "on", "sim", "1"].includes(String(answer ?? "").trim().toLowerCase());
   for (const field of fields) {
-    const answer = input[field.id] === undefined || input[field.id] === null ? "" : String(input[field.id]).trim();
+    const active = !field.dependeDe || checked(input[field.dependeDe]);
+    const rawAnswer = active ? input[field.id] : "";
+    const answer = rawAnswer === undefined || rawAnswer === null ? "" : String(rawAnswer).trim();
     if (answer.length > 2000) throw new HttpsError("invalid-argument", `A resposta de “${field.rotulo}” é muito longa.`);
-    if (field.obrigatorio && !answer) throw new HttpsError("invalid-argument", `Preencha o campo “${field.rotulo}”.`);
-    if (field.tipo === "selecao" && answer && !field.opcoes.includes(answer)) {
+    if (active && field.obrigatorio && (field.tipo === "checkbox" ? !checked(rawAnswer) : !answer)) {
+      throw new HttpsError("invalid-argument", `Preencha o campo “${field.rotulo}”.`);
+    }
+    if ((field.tipo === "selecao" || field.tipo === "multipla-escolha") && answer && !field.opcoes.includes(answer)) {
       throw new HttpsError("invalid-argument", `A resposta de “${field.rotulo}” não é válida.`);
     }
-    responses[field.id] = {rotulo: field.rotulo, valor: answer};
+    responses[field.id] = {rotulo: field.rotulo, valor: field.tipo === "checkbox" ? (checked(rawAnswer) ? "Sim" : "Não") : answer};
   }
   return responses;
 }

@@ -19,10 +19,17 @@ const sellerForm = document.querySelector("[data-seller-form]");
 const sellerSave = document.querySelector("[data-seller-save]");
 const sellersList = document.querySelector("[data-sellers-list]");
 const sellersTotal = document.querySelector("[data-sellers-total]");
+const topicForm = document.querySelector("[data-topic-form]");
+const topicSave = document.querySelector("[data-topic-save]");
+const topicsList = document.querySelector("[data-topics-list]");
+const topicsTotal = document.querySelector("[data-topics-total]");
 const fieldForm = document.querySelector("[data-field-form]");
 const fieldSave = document.querySelector("[data-field-save]");
 const fieldType = fieldForm.elements.tipo;
+const fieldTopic = document.querySelector("[data-field-topic]");
 const fieldOptions = document.querySelector("[data-field-options]");
+const checkboxBehavior = document.querySelector("[data-checkbox-behavior]");
+const dependentQuestions = document.querySelector("[data-dependent-questions]");
 const fieldsList = document.querySelector("[data-fields-list]");
 const fieldsTotal = document.querySelector("[data-fields-total]");
 const manualQrForm = document.querySelector("[data-manual-qr-form]");
@@ -33,6 +40,9 @@ const participantData = document.querySelector("[data-participant-data]");
 const participantQr = document.querySelector("[data-participant-qr]");
 const leadForm = document.querySelector("[data-lead-form]");
 const leadFields = document.querySelector("[data-lead-fields]");
+const leadTopicProgress = document.querySelector("[data-lead-topic-progress]");
+const leadPrevious = document.querySelector("[data-lead-previous]");
+const leadNext = document.querySelector("[data-lead-next]");
 const leadSave = document.querySelector("[data-lead-save]");
 const leadFeedback = document.querySelector("[data-lead-feedback]");
 const clearLead = document.querySelector("[data-clear-lead]");
@@ -59,7 +69,9 @@ const scanSuccessCode = document.querySelector("[data-lead-scan-code]");
 
 let isAdmin = false;
 let isSeller = false;
+let configuredTopics = [];
 let configuredFields = [];
+let currentTopicIndex = 0;
 let selectedParticipant = null;
 let scanner;
 let scanning = false;
@@ -191,11 +203,54 @@ async function synchronizeOfflineLeads() {
   }
 }
 
+const FIELD_TYPES = ["texto", "texto-longo", "numero", "selecao", "multipla-escolha", "checkbox"];
+const LEGACY_TOPIC_ID = "topico_geral";
+
 function normalizedFields(value) {
   if (!Array.isArray(value)) return [];
-  return value.filter((field) => field && typeof field === "object"
-    && typeof field.id === "string" && typeof field.rotulo === "string"
-    && ["texto", "texto-longo", "numero", "selecao"].includes(field.tipo));
+  return value.flatMap((field) => {
+    if (!field || typeof field !== "object") return [];
+    const id = typeof field.id === "string" ? field.id.trim() : "";
+    const rotulo = typeof field.rotulo === "string" ? field.rotulo.trim() : "";
+    if (!id || !rotulo || !FIELD_TYPES.includes(field.tipo)) return [];
+    return [{
+      id,
+      rotulo,
+      tipo: field.tipo,
+      obrigatorio: field.obrigatorio === true,
+      opcoes: Array.isArray(field.opcoes) ? field.opcoes.map((option) => String(option).trim()).filter(Boolean) : [],
+      topicoId: typeof field.topicoId === "string" ? field.topicoId.trim() : "",
+      dependeDe: typeof field.dependeDe === "string" ? field.dependeDe.trim() : "",
+    }];
+  });
+}
+
+function normalizedTopics(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((topic) => {
+    if (!topic || typeof topic !== "object") return [];
+    const id = typeof topic.id === "string" ? topic.id.trim() : "";
+    const titulo = typeof topic.titulo === "string" ? topic.titulo.trim() : "";
+    return id && titulo ? [{id, titulo}] : [];
+  });
+}
+
+function setQuestionnaire(topicsValue, fieldsValue) {
+  configuredTopics = normalizedTopics(topicsValue);
+  configuredFields = normalizedFields(fieldsValue);
+  if (configuredFields.length && !configuredTopics.length) {
+    configuredTopics = [{id: LEGACY_TOPIC_ID, titulo: "Perguntas gerais"}];
+  }
+  const topicIds = new Set(configuredTopics.map((topic) => topic.id));
+  configuredFields = configuredFields.map((field) => ({
+    ...field,
+    topicoId: topicIds.has(field.topicoId) ? field.topicoId : configuredTopics[0]?.id || "",
+  }));
+  const fieldIds = new Set(configuredFields.map((field) => field.id));
+  configuredFields = configuredFields.map((field) => ({
+    ...field,
+    dependeDe: fieldIds.has(field.dependeDe) ? field.dependeDe : "",
+  }));
 }
 
 function participantValue(participant, keys) {
@@ -240,76 +295,285 @@ function registerOfflineShell() {
   }
 }
 
-function renderConfiguredFields() {
-  fieldsList.replaceChildren();
-  fieldsTotal.textContent = `${configuredFields.length} cadastrado(s)`;
-  if (!configuredFields.length) {
-    fieldsList.innerHTML = '<p class="empty-management">Nenhum campo adicional cadastrado.</p>';
+function fieldTypeLabel(type) {
+  return {
+    texto: "Texto curto",
+    "texto-longo": "Texto longo",
+    numero: "Número",
+    selecao: "Lista de seleção",
+    "multipla-escolha": "Múltipla escolha",
+    checkbox: "Checkbox",
+  }[type] || "Pergunta";
+}
+
+function renderTopics() {
+  topicsTotal.textContent = `${configuredTopics.length} cadastrado(s)`;
+  topicsList.replaceChildren();
+  fieldTopic.replaceChildren(new Option(configuredTopics.length ? "Selecione o tópico" : "Crie um tópico primeiro", ""));
+  configuredTopics.forEach((topic) => fieldTopic.add(new Option(topic.titulo, topic.id)));
+  fieldTopic.disabled = !configuredTopics.length;
+  fieldSave.disabled = !configuredTopics.length;
+  if (!configuredTopics.length) {
+    topicsList.innerHTML = '<p class="empty-management">Crie o primeiro tópico para começar a adicionar perguntas.</p>';
     return;
   }
-  configuredFields.forEach((field) => {
+  configuredTopics.forEach((topic, index) => {
     const card = document.createElement("article");
-    card.className = "management-card";
+    card.className = "management-card lead-topic-card";
     const title = document.createElement("h3");
-    title.textContent = field.rotulo;
+    title.textContent = `${index + 1}. ${topic.titulo}`;
     const details = document.createElement("p");
-    const typeLabel = {texto: "Texto curto", "texto-longo": "Texto longo", numero: "Número", selecao: "Seleção"}[field.tipo];
-    details.textContent = `${typeLabel}${field.obrigatorio ? " · obrigatório" : ""}${field.opcoes?.length ? ` · ${field.opcoes.join(", ")}` : ""}`;
+    const count = configuredFields.filter((field) => field.topicoId === topic.id).length;
+    details.textContent = `${count} pergunta(s)`;
     const actions = document.createElement("div");
     actions.className = "management-card-actions";
     const remove = document.createElement("button");
     remove.className = "danger-delete";
     remove.type = "button";
-    remove.textContent = "Remover";
+    remove.textContent = "Remover tópico";
     remove.addEventListener("click", async () => {
-      if (!window.confirm(`Remover o campo “${field.rotulo}”? As respostas já registradas serão preservadas.`)) return;
-      configuredFields = configuredFields.filter((item) => item.id !== field.id);
+      const topicFields = configuredFields.filter((field) => field.topicoId === topic.id);
+      const warning = topicFields.length ? ` e suas ${topicFields.length} pergunta(s)` : "";
+      if (!window.confirm(`Remover o tópico “${topic.titulo}”${warning}? As respostas já registradas serão preservadas.`)) return;
+      const previousTopics = configuredTopics;
+      const previousFields = configuredFields;
+      configuredTopics = configuredTopics.filter((item) => item.id !== topic.id);
+      configuredFields = configuredFields.filter((field) => field.topicoId !== topic.id);
       try {
         await saveConfiguredFields();
-        setFeedback(adminFeedback, "Campo removido.", "success");
+        setFeedback(adminFeedback, "Tópico removido.", "success");
       } catch (error) {
         console.error(error);
-        setFeedback(adminFeedback, "Não foi possível remover o campo.", "error");
-        await loadConfiguredFields();
+        configuredTopics = previousTopics;
+        configuredFields = previousFields;
+        renderConfiguredFields();
+        setFeedback(adminFeedback, "Não foi possível remover o tópico.", "error");
       }
     });
     actions.append(remove);
     card.append(title, details, actions);
-    fieldsList.append(card);
+    topicsList.append(card);
   });
+}
+
+function renderConfiguredFields() {
+  renderTopics();
+  fieldsList.replaceChildren();
+  fieldsTotal.textContent = `${configuredFields.length} cadastrada(s)`;
+  const parentFields = configuredFields.filter((field) => !field.dependeDe);
+  if (!parentFields.length) {
+    fieldsList.innerHTML = '<p class="empty-management">Nenhuma pergunta cadastrada.</p>';
+    return;
+  }
+  configuredTopics.forEach((topic) => {
+    const topicFields = parentFields.filter((field) => field.topicoId === topic.id);
+    if (!topicFields.length) return;
+    const group = document.createElement("section");
+    group.className = "lead-admin-topic-group";
+    const heading = document.createElement("h3");
+    heading.textContent = topic.titulo;
+    group.append(heading);
+    topicFields.forEach((field) => {
+      const card = document.createElement("article");
+      card.className = "management-card";
+      const title = document.createElement("h3");
+      title.textContent = field.rotulo;
+      const details = document.createElement("p");
+      details.textContent = `${fieldTypeLabel(field.tipo)}${field.obrigatorio ? " · obrigatório" : ""}${field.opcoes?.length ? ` · ${field.opcoes.join(", ")}` : ""}`;
+      card.append(title, details);
+      const children = configuredFields.filter((item) => item.dependeDe === field.id);
+      if (children.length) {
+        const dependentList = document.createElement("ul");
+        dependentList.className = "lead-dependent-summary";
+        children.forEach((child) => {
+          const item = document.createElement("li");
+          item.textContent = child.rotulo;
+          dependentList.append(item);
+        });
+        card.append(dependentList);
+      }
+      const actions = document.createElement("div");
+      actions.className = "management-card-actions";
+      const remove = document.createElement("button");
+      remove.className = "danger-delete";
+      remove.type = "button";
+      remove.textContent = "Remover";
+      remove.addEventListener("click", async () => {
+        if (!window.confirm(`Remover a pergunta “${field.rotulo}”? As respostas já registradas serão preservadas.`)) return;
+        const previousFields = configuredFields;
+        configuredFields = configuredFields.filter((item) => item.id !== field.id && item.dependeDe !== field.id);
+        try {
+          await saveConfiguredFields();
+          setFeedback(adminFeedback, "Pergunta removida.", "success");
+        } catch (error) {
+          console.error(error);
+          configuredFields = previousFields;
+          renderConfiguredFields();
+          setFeedback(adminFeedback, "Não foi possível remover a pergunta.", "error");
+        }
+      });
+      actions.append(remove);
+      card.append(actions);
+      group.append(card);
+    });
+    fieldsList.append(group);
+  });
+}
+
+function createLeadFieldControl(field) {
+  if (field.tipo === "checkbox") {
+    const label = document.createElement("label");
+    label.className = "lead-answer-checkbox";
+    const control = document.createElement("input");
+    control.type = "checkbox";
+    control.name = field.id;
+    control.value = "true";
+    control.required = field.obrigatorio === true;
+    const text = document.createElement("span");
+    text.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
+    label.append(control, text);
+    return {wrapper: label, control};
+  }
+
+  if (field.tipo === "multipla-escolha") {
+    const group = document.createElement("fieldset");
+    group.className = "lead-choice-group";
+    const legend = document.createElement("legend");
+    legend.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
+    group.append(legend);
+    let firstControl = null;
+    (field.opcoes || []).forEach((option, index) => {
+      const label = document.createElement("label");
+      const control = document.createElement("input");
+      control.type = "radio";
+      control.name = field.id;
+      control.value = option;
+      control.required = field.obrigatorio === true;
+      label.append(control, document.createTextNode(option));
+      group.append(label);
+      if (index === 0) firstControl = control;
+    });
+    return {wrapper: group, control: firstControl};
+  }
+
+  const label = document.createElement("label");
+  label.className = "management-field";
+  const title = document.createElement("span");
+  title.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
+  label.append(title);
+  let control;
+  if (field.tipo === "texto-longo") {
+    control = document.createElement("textarea");
+    control.rows = 4;
+  } else if (field.tipo === "selecao") {
+    control = document.createElement("select");
+    control.add(new Option("Selecione", ""));
+    (field.opcoes || []).forEach((option) => control.add(new Option(option, option)));
+  } else {
+    control = document.createElement("input");
+    control.type = field.tipo === "numero" ? "number" : "text";
+  }
+  control.name = field.id;
+  control.required = field.obrigatorio === true;
+  control.maxLength = 2000;
+  label.append(control);
+  return {wrapper: label, control};
+}
+
+function updateDependentFields(parentId, checked) {
+  leadFields.querySelectorAll("[data-dependent-parent]").forEach((container) => {
+    if (container.dataset.dependentParent !== parentId) return;
+    container.hidden = !checked;
+    container.querySelectorAll("input, textarea, select").forEach((control) => {
+      control.disabled = !checked;
+      if (!checked) {
+        if (control.type === "checkbox" || control.type === "radio") control.checked = false;
+        else control.value = "";
+      }
+    });
+  });
+}
+
+function showLeadTopic(index) {
+  const steps = [...leadFields.querySelectorAll("[data-topic-step]")];
+  if (!steps.length) {
+    currentTopicIndex = 0;
+    leadTopicProgress.hidden = true;
+    leadPrevious.hidden = true;
+    leadNext.hidden = true;
+    leadSave.hidden = false;
+    return;
+  }
+  currentTopicIndex = Math.max(0, Math.min(index, steps.length - 1));
+  steps.forEach((step, stepIndex) => { step.hidden = stepIndex !== currentTopicIndex; });
+  const topic = configuredTopics[currentTopicIndex];
+  leadTopicProgress.hidden = false;
+  leadTopicProgress.textContent = `Tópico ${currentTopicIndex + 1} de ${steps.length} · ${topic?.titulo || "Perguntas"}`;
+  leadPrevious.hidden = currentTopicIndex === 0;
+  leadNext.hidden = currentTopicIndex === steps.length - 1;
+  leadSave.hidden = currentTopicIndex !== steps.length - 1;
+}
+
+function validateTopic(index) {
+  const step = leadFields.querySelector(`[data-topic-step="${index}"]`);
+  if (!step) return true;
+  const invalid = [...step.querySelectorAll("input, textarea, select")]
+    .find((control) => !control.disabled && !control.checkValidity());
+  if (!invalid) return true;
+  showLeadTopic(index);
+  invalid.reportValidity();
+  return false;
+}
+
+function validateAllTopics() {
+  const steps = [...leadFields.querySelectorAll("[data-topic-step]")];
+  return steps.every((step, index) => validateTopic(index));
 }
 
 function renderLeadFields() {
   leadFields.replaceChildren();
-  if (!configuredFields.length) {
+  currentTopicIndex = 0;
+  if (!configuredTopics.length) {
     leadFields.innerHTML = '<p class="empty-management">Não há perguntas adicionais cadastradas. Você ainda pode salvar este lead.</p>';
+    showLeadTopic(0);
     return;
   }
-  configuredFields.forEach((field) => {
-    const label = document.createElement("label");
-    label.className = "management-field";
-    const title = document.createElement("span");
-    title.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
-    label.append(title);
-    let control;
-    if (field.tipo === "texto-longo") {
-      control = document.createElement("textarea");
-      control.rows = 4;
-    } else if (field.tipo === "selecao") {
-      control = document.createElement("select");
-      const empty = new Option("Selecione", "");
-      control.add(empty);
-      (field.opcoes || []).forEach((option) => control.add(new Option(option, option)));
-    } else {
-      control = document.createElement("input");
-      control.type = field.tipo === "numero" ? "number" : "text";
+  configuredTopics.forEach((topic, topicIndex) => {
+    const step = document.createElement("section");
+    step.className = "lead-topic-step";
+    step.dataset.topicStep = String(topicIndex);
+    const heading = document.createElement("h3");
+    heading.textContent = topic.titulo;
+    step.append(heading);
+    const topicFields = configuredFields.filter((field) => field.topicoId === topic.id && !field.dependeDe);
+    if (!topicFields.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-management";
+      empty.textContent = "Este tópico ainda não possui perguntas.";
+      step.append(empty);
     }
-    control.name = field.id;
-    control.required = field.obrigatorio === true;
-    control.maxLength = 2000;
-    label.append(control);
-    leadFields.append(label);
+    topicFields.forEach((field) => {
+      const {wrapper, control} = createLeadFieldControl(field);
+      step.append(wrapper);
+      const children = configuredFields.filter((child) => child.dependeDe === field.id);
+      if (field.tipo === "checkbox" && children.length) {
+        const dependentContainer = document.createElement("div");
+        dependentContainer.className = "lead-dependent-fields";
+        dependentContainer.dataset.dependentParent = field.id;
+        dependentContainer.hidden = true;
+        children.forEach((child) => {
+          const childControl = createLeadFieldControl(child);
+          childControl.wrapper.classList.add("lead-dependent-field");
+          childControl.wrapper.querySelectorAll("input, textarea, select").forEach((item) => { item.disabled = true; });
+          dependentContainer.append(childControl.wrapper);
+        });
+        step.append(dependentContainer);
+        control?.addEventListener("change", () => updateDependentFields(field.id, control.checked));
+      }
+    });
+    leadFields.append(step);
   });
+  showLeadTopic(0);
 }
 
 function renderParticipant() {
@@ -347,12 +611,13 @@ async function loadConfiguredFields() {
   try {
     const {db, firestoreModule} = await getFirestoreServices();
     const snapshot = await firestoreModule.getDoc(firestoreModule.doc(db, "coletaLeadsConfiguracoes", "campos"));
-    configuredFields = normalizedFields(snapshot.data()?.campos);
-    if (userId) await setOfflineMeta(userId, "fields", configuredFields);
+    setQuestionnaire(snapshot.data()?.topicos, snapshot.data()?.campos);
+    if (userId) await setOfflineMeta(userId, "questionnaire", {topicos: configuredTopics, campos: configuredFields});
   } catch (error) {
+    const cachedQuestionnaire = userId ? await getOfflineMeta(userId, "questionnaire") : null;
     const cachedFields = userId ? await getOfflineMeta(userId, "fields") : null;
-    if (!cachedFields) throw error;
-    configuredFields = normalizedFields(cachedFields);
+    if (!cachedQuestionnaire && !cachedFields) throw error;
+    setQuestionnaire(cachedQuestionnaire?.topicos, cachedQuestionnaire?.campos || cachedFields);
     setFeedback(collectorFeedback, "Usando os campos da conversa salvos neste aparelho.", "offline");
   }
   if (isAdmin) renderConfiguredFields();
@@ -362,10 +627,11 @@ async function loadConfiguredFields() {
 async function saveConfiguredFields() {
   const {db, firestoreModule} = await getFirestoreServices();
   await firestoreModule.setDoc(firestoreModule.doc(db, "coletaLeadsConfiguracoes", "campos"), {
+    topicos: configuredTopics,
     campos: configuredFields,
     atualizadoEm: firestoreModule.serverTimestamp(),
   }, {merge: true});
-  if (userId) await setOfflineMeta(userId, "fields", configuredFields);
+  if (userId) await setOfflineMeta(userId, "questionnaire", {topicos: configuredTopics, campos: configuredFields});
   renderConfiguredFields();
 }
 
@@ -631,7 +897,43 @@ async function startQrReaderFromCamera() {
   }
 }
 
-fieldType.addEventListener("change", () => { fieldOptions.hidden = fieldType.value !== "selecao"; });
+function updateFieldFormVisibility() {
+  const hasOptions = fieldType.value === "selecao" || fieldType.value === "multipla-escolha";
+  const isCheckbox = fieldType.value === "checkbox";
+  fieldOptions.hidden = !hasOptions;
+  fieldForm.elements.opcoes.required = hasOptions;
+  checkboxBehavior.hidden = !isCheckbox;
+  if (!isCheckbox) fieldForm.elements.abreDependentes.checked = false;
+  dependentQuestions.hidden = !isCheckbox || !fieldForm.elements.abreDependentes.checked;
+  fieldForm.elements.perguntasDependentes.required = isCheckbox && fieldForm.elements.abreDependentes.checked;
+}
+
+fieldType.addEventListener("change", updateFieldFormVisibility);
+fieldForm.elements.abreDependentes.addEventListener("change", updateFieldFormVisibility);
+
+topicForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!isAdmin || !topicForm.reportValidity()) return;
+  topicSave.disabled = true;
+  const previousTopics = configuredTopics;
+  try {
+    const form = new FormData(topicForm);
+    configuredTopics = [...configuredTopics, {
+      id: `topico_${crypto.randomUUID().replaceAll("-", "")}`,
+      titulo: String(form.get("titulo") || "").trim(),
+    }];
+    await saveConfiguredFields();
+    topicForm.reset();
+    setFeedback(adminFeedback, "Tópico adicionado.", "success");
+  } catch (error) {
+    console.error(error);
+    configuredTopics = previousTopics;
+    renderConfiguredFields();
+    setFeedback(adminFeedback, "Não foi possível adicionar o tópico.", "error");
+  } finally {
+    topicSave.disabled = false;
+  }
+});
 
 fieldForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -639,29 +941,53 @@ fieldForm.addEventListener("submit", async (event) => {
   const form = new FormData(fieldForm);
   const tipo = String(form.get("tipo"));
   const opcoes = String(form.get("opcoes") || "").split("\n").map((option) => option.trim()).filter(Boolean);
-  if (tipo === "selecao" && !opcoes.length) {
-    setFeedback(adminFeedback, "Informe ao menos uma opção para o campo de seleção.", "error");
+  const topicoId = String(form.get("topicoId") || "");
+  if (!configuredTopics.some((topic) => topic.id === topicoId)) {
+    setFeedback(adminFeedback, "Selecione um tópico válido.", "error");
+    return;
+  }
+  if ((tipo === "selecao" || tipo === "multipla-escolha") && !opcoes.length) {
+    setFeedback(adminFeedback, "Informe ao menos uma opção para essa pergunta.", "error");
+    return;
+  }
+  const opensDependents = tipo === "checkbox" && form.get("abreDependentes") === "on";
+  const dependentLabels = String(form.get("perguntasDependentes") || "").split("\n").map((label) => label.trim()).filter(Boolean);
+  if (opensDependents && !dependentLabels.length) {
+    setFeedback(adminFeedback, "Informe ao menos uma pergunta dependente.", "error");
     return;
   }
   fieldSave.disabled = true;
+  const previousFields = configuredFields;
   try {
-    configuredFields.push({
-      id: `campo_${crypto.randomUUID().replaceAll("-", "")}`,
+    const fieldId = `campo_${crypto.randomUUID().replaceAll("-", "")}`;
+    configuredFields = [...configuredFields, {
+      id: fieldId,
       rotulo: String(form.get("rotulo") || "").trim(),
       tipo,
       obrigatorio: form.get("obrigatorio") === "on",
       opcoes,
-    });
+      topicoId,
+      dependeDe: "",
+    }, ...dependentLabels.map((rotulo) => ({
+      id: `campo_${crypto.randomUUID().replaceAll("-", "")}`,
+      rotulo,
+      tipo: "texto",
+      obrigatorio: false,
+      opcoes: [],
+      topicoId,
+      dependeDe: fieldId,
+    }))];
     await saveConfiguredFields();
     fieldForm.reset();
-    fieldOptions.hidden = true;
-    setFeedback(adminFeedback, "Campo adicionado.", "success");
+    updateFieldFormVisibility();
+    setFeedback(adminFeedback, "Pergunta adicionada.", "success");
   } catch (error) {
     console.error(error);
-    configuredFields.pop();
-    setFeedback(adminFeedback, "Não foi possível adicionar o campo.", "error");
+    configuredFields = previousFields;
+    renderConfiguredFields();
+    setFeedback(adminFeedback, "Não foi possível adicionar a pergunta.", "error");
   } finally {
-    fieldSave.disabled = false;
+    fieldSave.disabled = !configuredTopics.length;
   }
 });
 
@@ -726,10 +1052,26 @@ clearLead.addEventListener("click", () => {
   setFeedback(collectorFeedback, "Pronto para uma nova leitura.");
 });
 
+leadPrevious.addEventListener("click", () => {
+  showLeadTopic(currentTopicIndex - 1);
+  leadTopicProgress.scrollIntoView({behavior: "smooth", block: "nearest"});
+});
+
+leadNext.addEventListener("click", () => {
+  if (!validateTopic(currentTopicIndex)) return;
+  showLeadTopic(currentTopicIndex + 1);
+  leadTopicProgress.scrollIntoView({behavior: "smooth", block: "nearest"});
+});
+
 leadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!isSeller || !selectedParticipant || !leadForm.reportValidity()) return;
-  const respostas = Object.fromEntries(configuredFields.map((field) => [field.id, new FormData(leadForm).get(field.id) || ""]));
+  if (!isSeller || !selectedParticipant || !validateAllTopics()) return;
+  const leadData = new FormData(leadForm);
+  const respostas = Object.fromEntries(configuredFields.map((field) => {
+    if (field.tipo === "checkbox") return [field.id, leadData.has(field.id) ? "true" : "false"];
+    if (field.dependeDe && !leadData.has(field.dependeDe)) return [field.id, ""];
+    return [field.id, leadData.get(field.id) || ""];
+  }));
   leadSave.disabled = true;
   leadSave.textContent = "Salvando no aparelho...";
   try {

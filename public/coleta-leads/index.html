@@ -23,7 +23,27 @@
           <div class="dashboard-toolbar"><strong>Configuração da coleta</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a></div></div>
           <div class="management-grid lead-management-grid">
             <section><div class="management-title"><h2>Vendedores</h2><small data-sellers-total></small></div><form class="lead-inline-form" data-seller-form><label class="management-field">Nome<input name="nome" maxlength="120" required autocomplete="name" /></label><label class="management-field">E-mail<input name="email" type="email" required autocomplete="email" /></label><label class="management-field">Senha inicial <span>(obrigatória somente para e-mails novos)</span><input name="senha" type="password" minlength="6" autocomplete="new-password" /></label><button class="button" type="submit" data-seller-save>Cadastrar vendedor</button></form><div class="management-list" data-sellers-list></div></section>
-            <section><div class="management-title"><h2>Campos da conversa</h2><small data-fields-total></small></div><form class="lead-inline-form" data-field-form><label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label><label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Seleção</option></select></label><label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label><label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label><button class="button" type="submit" data-field-save>Adicionar campo</button></form><div class="management-list" data-fields-list></div></section>
+            <section class="lead-questionnaire-admin">
+              <div class="management-title"><h2>Tópicos</h2><small data-topics-total></small></div>
+              <form class="lead-inline-form lead-topic-form" data-topic-form>
+                <label class="management-field">Nome do tópico<input name="titulo" maxlength="120" required placeholder="Ex.: Necessidades do cliente" /></label>
+                <button class="button" type="submit" data-topic-save>Adicionar tópico</button>
+              </form>
+              <div class="management-list lead-topics-list" data-topics-list></div>
+
+              <div class="management-title lead-fields-heading"><h2>Perguntas</h2><small data-fields-total></small></div>
+              <form class="lead-inline-form" data-field-form>
+                <label class="management-field">Tópico<select name="topicoId" required data-field-topic><option value="">Crie um tópico primeiro</option></select></label>
+                <label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label>
+                <label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Lista de seleção</option><option value="multipla-escolha">Múltipla escolha</option><option value="checkbox">Checkbox</option></select></label>
+                <label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label>
+                <label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label>
+                <label class="lead-checkbox" data-checkbox-behavior hidden><input name="abreDependentes" type="checkbox" /> Esse checkbox abre outras perguntas?</label>
+                <label class="management-field" data-dependent-questions hidden>Perguntas dependentes <span>(uma pergunta de texto por linha)</span><textarea name="perguntasDependentes" rows="4" maxlength="2000"></textarea></label>
+                <button class="button" type="submit" data-field-save>Adicionar pergunta</button>
+              </form>
+              <div class="management-list" data-fields-list></div>
+            </section>
           </div>
           <p class="dashboard-feedback" data-admin-feedback></p>
         </section>
@@ -39,7 +59,7 @@
           <p class="collection-sync-status" data-offline-status>Verificando a base deste aparelho...</p>
           <div class="qr-scanner lead-scanner"><div class="qr-camera-wrap"><div id="lead-qr-reader" data-qr-reader></div><div class="scan-success" data-lead-scan-success hidden><span>✓</span><strong data-lead-scan-code></strong><small>QR Code reconhecido</small></div></div><button class="back-link" type="button" data-start-qr-reader>Ler QR Code pela câmera</button></div>
           <p class="dashboard-feedback" data-collector-feedback></p>
-          <section class="lead-participant" data-participant-card hidden><div class="management-title"><h2>Participante</h2><small data-participant-qr></small></div><div class="lead-participant-data" data-participant-data></div><form class="lead-responses" data-lead-form><div data-lead-fields></div><div class="message-modal-actions"><button class="button" type="submit" data-lead-save>Salvar lead</button></div><p class="dashboard-feedback" data-lead-feedback></p></form></section>
+          <section class="lead-participant" data-participant-card hidden><div class="management-title"><h2>Participante</h2><small data-participant-qr></small></div><div class="lead-participant-data" data-participant-data></div><form class="lead-responses" data-lead-form><div class="lead-topic-progress" data-lead-topic-progress hidden></div><div data-lead-fields></div><div class="message-modal-actions lead-step-actions"><button class="back-link" type="button" data-lead-previous hidden>Anterior</button><button class="button" type="button" data-lead-next hidden>Próximo</button><button class="button" type="submit" data-lead-save>Salvar lead</button></div><p class="dashboard-feedback" data-lead-feedback></p></form></section>
         </section>
       </main>
     </div>
@@ -53,7 +73,7 @@
       <section class="message-editor"><div class="message-modal-heading"><div><p class="eyebrow">Minha coleta</p><h2 id="own-leads-title">Meus leads</h2></div><button class="modal-close" type="button" data-own-leads-close aria-label="Fechar">×</button></div><p class="dashboard-feedback" data-own-leads-feedback></p><div class="management-list lead-list" data-own-leads-list></div><div class="message-modal-actions"><button class="back-link" type="button" data-own-leads-close>Fechar</button></div></section>
     </dialog>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script type="module" src="/js/auth.js?v=offline-v7"></script>
-    <script type="module" src="/js/coleta-leads.js?v=offline-v7"></script>
+    <script type="module" src="/js/auth.js?v=offline-v8"></script>
+    <script type="module" src="/js/coleta-leads.js?v=offline-v8"></script>
   </body>
 </html>

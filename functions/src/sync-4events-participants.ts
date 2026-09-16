@@ -45,10 +45,19 @@ async function requireAdmin(uid: string) {
 
 async function requireParticipantViewer(uid: string) {
   const firestore = getFirestore();
-  const user = await firestore.doc(`users/${uid}`).get();
+  const [user, legacyAssistant] = await Promise.all([
+    firestore.doc(`users/${uid}`).get(),
+    firestore.doc(`coletaAtividadesAssistentes/${uid}`).get(),
+  ]);
   const isAdmin = user.exists && user.data()?.active !== false && user.data()?.roles?.admin === true;
-  const isActiveAssistant = user.exists && user.data()?.active !== false && user.data()?.roles?.assistenteColeta === true;
-  if (!user.exists || user.data()?.active === false || (isActiveAssistant && !isAdmin)) {
+  const isInactiveUser = user.exists && user.data()?.active === false;
+  const isActiveAssistant = (
+    user.exists && user.data()?.active !== false && user.data()?.roles?.assistenteColeta === true
+  ) || legacyAssistant.exists && legacyAssistant.data()?.ativo === true;
+
+  // Usuários somente leitura podem existir apenas no Firebase Auth, sem perfil em /users.
+  // A ausência desse perfil não deve retirar o acesso à consulta dos dados mascarados.
+  if (isInactiveUser || (isActiveAssistant && !isAdmin)) {
     throw new HttpsError("permission-denied", "Você não tem permissão para consultar os participantes da 4 Events.");
   }
   return {firestore, isAdmin};
@@ -135,23 +144,34 @@ export const list4EventsParticipants = onCall(async (request) => {
   const requestedPageSize = Number(data.pageSize);
   const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 200) : 200;
   const afterId = typeof data.afterId === "string" ? data.afterId.trim() : "";
+  const initial = typeof data.initial === "string" ? data.initial.trim().toUpperCase() : "";
   const includeTotal = data.includeTotal === true;
   if (afterId.length > 200 || afterId.includes("/")) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
+  if (initial && !/^[A-Z]$/.test(initial)) throw new HttpsError("invalid-argument", "Inicial inválida.");
 
   const collection = firestore.collection("participantes4Events");
-  const ordered = collection.orderBy("nome");
+  const nextInitial = initial ? String.fromCharCode(initial.charCodeAt(0) + 1) : "";
+  const filtered = initial ? collection.orderBy("nome").startAt(initial).endBefore(nextInitial) : collection.orderBy("nome");
   let snapshot;
   if (afterId) {
     const cursor = await collection.doc(afterId).get();
     if (!cursor.exists) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
-    snapshot = await ordered.startAfter(cursor).limit(pageSize).get();
+    const cursorName = String(cursor.get("nome") ?? "");
+    if (initial && (cursorName < initial || cursorName >= nextInitial)) throw new HttpsError("invalid-argument", "Cursor de paginação inválido para a inicial selecionada.");
+    snapshot = await filtered.startAfter(cursor).limit(pageSize).get();
   } else {
-    snapshot = await ordered.limit(pageSize).get();
+    snapshot = await filtered.limit(pageSize).get();
   }
+
+  const [totalSnapshot, filteredTotalSnapshot] = includeTotal ? await Promise.all([
+    collection.count().get(),
+    initial ? filtered.count().get() : Promise.resolve(null),
+  ]) : [null, null];
 
   return {
     participants: snapshot.docs.map((document) => participantResponseValue(document.data(), !isAdmin)),
     nextCursor: snapshot.size === pageSize ? snapshot.docs.at(-1)?.id ?? null : null,
-    total: includeTotal ? (await collection.count().get()).data().count : null,
+    total: totalSnapshot?.data().count ?? null,
+    filteredTotal: filteredTotalSnapshot?.data().count ?? totalSnapshot?.data().count ?? null,
   };
 });
