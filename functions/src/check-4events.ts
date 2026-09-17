@@ -1,8 +1,9 @@
 import {createHash, randomUUID} from "node:crypto";
 
-import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {FieldValue, Firestore, getFirestore, Timestamp} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {HttpsError, onCall} from "firebase-functions/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 
 const fourEventsToken = defineSecret("FOUR_EVENTS_TOKEN");
 const metaWhatsAppAccessToken = defineSecret("META_WHATSAPP_ACCESS_TOKEN");
@@ -10,6 +11,20 @@ const endpoint = "https://api.4.events/attendees/2/search";
 const phoneNumberId = "1289110394284226";
 const graphVersion = "v23.0";
 const templateName = "notificacao_presenca_wpp";
+const automationConfigPath = "configuracoes/checagemPresenca4Events";
+const allowedIntervals = [5, 10, 15, 30, 60] as const;
+const executionLeaseMilliseconds = 12 * 60 * 1000;
+
+type CheckSource = "manual" | "automatica";
+
+type PresenceCheckResult = {
+  checked: number;
+  attending: number;
+  attendeesSaved: number;
+  notificationsSent: number;
+  notificationsSkipped: number;
+  notificationFailures: {id: string; message: string}[];
+};
 
 type ApiAttendee = {
   id4Events: string | null;
@@ -60,7 +75,7 @@ function normalizeEmail(value: unknown) {
 }
 
 function phoneWithoutCountry(value: unknown) {
-  let phone = typeof value === "string" ? value.replace(/D/g, "") : "";
+  let phone = typeof value === "string" ? value.replace(/\D/g, "") : "";
   if (phone.startsWith("55") && (phone.length === 12 || phone.length === 13)) phone = phone.slice(2);
   return phone;
 }
@@ -143,13 +158,59 @@ async function getAdminFirestore(request: {auth?: {uid: string}}) {
   return firestore;
 }
 
-export const check4EventsPresence = onCall(
-  {secrets: [fourEventsToken, metaWhatsAppAccessToken], timeoutSeconds: 540},
-  async (request) => {
-    const firestore = await getAdminFirestore(request);
+function timestamp(value: unknown) {
+  return value instanceof Timestamp ? value : null;
+}
+
+async function acquirePresenceCheck(firestore: Firestore, source: CheckSource, onlyWhenDue: boolean) {
+  const configRef = firestore.doc(automationConfigPath);
+  const runId = randomUUID();
+  const now = Timestamp.now();
+  return firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(configRef);
+    const data = snapshot.data() ?? {};
+    if (onlyWhenDue && data.ativa !== true) return null;
+    const nextCheck = timestamp(data.proximaChecagemEm);
+    if (onlyWhenDue && nextCheck && nextCheck.toMillis() > now.toMillis()) return null;
+    const runningSince = timestamp(data.execucaoIniciadaEm);
+    const activeLease = typeof data.execucaoId === "string" && runningSince && now.toMillis() - runningSince.toMillis() < executionLeaseMilliseconds;
+    if (activeLease) return null;
+    transaction.set(configRef, {
+      execucaoId: runId,
+      execucaoIniciadaEm: now,
+      ultimaChecagemIniciadaEm: now,
+      ultimaOrigem: source,
+      ultimoErro: FieldValue.delete(),
+    }, {merge: true});
+    return runId;
+  });
+}
+
+async function finishPresenceCheck(firestore: Firestore, runId: string, source: CheckSource, result?: PresenceCheckResult, error?: unknown) {
+  const configRef = firestore.doc(automationConfigPath);
+  const now = Timestamp.now();
+  await firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(configRef);
+    const data = snapshot.data() ?? {};
+    if (data.execucaoId !== runId) return;
+    const interval = allowedIntervals.includes(data.intervaloMinutos) ? data.intervaloMinutos as number : 5;
+    const update: Record<string, unknown> = {
+      execucaoId: FieldValue.delete(),
+      execucaoIniciadaEm: FieldValue.delete(),
+      ultimaChecagemEm: now,
+      ultimaOrigem: source,
+      ultimoResultado: result ?? FieldValue.delete(),
+      ultimoErro: error ? (error instanceof Error ? error.message : "Falha inesperada na checagem.") : FieldValue.delete(),
+      proximaChecagemEm: data.ativa === true ? Timestamp.fromMillis(now.toMillis() + interval * 60 * 1000) : FieldValue.delete(),
+    };
+    transaction.set(configRef, update, {merge: true});
+  });
+}
+
+async function runPresenceCheck(firestore: Firestore): Promise<PresenceCheckResult> {
     const references = await firestore.collection("visitantesEstrategicos").get();
     const attendeesByEmail = new Map<string, ApiAttendee[]>();
-    let checked = 0; let attendeesSaved = 0; let notificationsSent = 0; let notificationsSkipped = 0;
+    let checked = 0; let attending = 0; let attendeesSaved = 0; let notificationsSent = 0; let notificationsSkipped = 0;
     const notificationFailures: {id: string; message: string}[] = [];
 
     for (const reference of references.docs) {
@@ -174,19 +235,22 @@ export const check4EventsPresence = onCall(
       await reference.ref.set({attendeeAttendingEvent: present, presenceCheckedAt: FieldValue.serverTimestamp()}, {merge: true});
       checked += 1;
       if (!present) continue;
+      attending += 1;
 
       const reservationId = randomUUID();
       const notification = await firestore.runTransaction(async (transaction) => {
         const current = await transaction.get(reference.ref);
         const currentData = current.data() ?? {};
-        if (currentData.presenceNotificationSentAt || currentData.presenceNotificationReservationId) return null;
+        const reservedAt = timestamp(currentData.presenceNotificationReservedAt);
+        const activeReservation = typeof currentData.presenceNotificationReservationId === "string" && reservedAt && Timestamp.now().toMillis() - reservedAt.toMillis() < executionLeaseMilliseconds;
+        if (currentData.presenceNotificationSentAt || activeReservation) return null;
         const coordinatorPhone = coordinatorDestination(currentData.whatsappCoordenador);
         const coordinator = typeof currentData.coordenador === "string" ? currentData.coordenador.trim() : "";
         const visitorName = typeof currentData.nome === "string" ? currentData.nome.trim() : "";
         const company = typeof currentData.empresa === "string" ? currentData.empresa.trim() : "";
         const visitorPhone = phoneWithoutCountry(currentData.whatsapp);
         if (!coordinatorPhone || !coordinator || !visitorName || !company || !visitorPhone) return null;
-        transaction.update(reference.ref, {presenceNotificationReservationId: reservationId, presenceNotificationReservedAt: FieldValue.serverTimestamp()});
+        transaction.update(reference.ref, {presenceNotificationReservationId: reservationId, presenceNotificationReservedAt: Timestamp.now()});
         return {coordinatorPhone, coordinator, visitorName, company, visitorPhone};
       });
       if (!notification) { notificationsSkipped += 1; continue; }
@@ -209,7 +273,61 @@ export const check4EventsPresence = onCall(
         notificationFailures.push({id: reference.id, message: error instanceof Error ? error.message : "Não foi possível enviar a notificação."});
       }
     }
-    return {checked, attendeesSaved, notificationsSent, notificationsSkipped, notificationFailures};
+    return {checked, attending, attendeesSaved, notificationsSent, notificationsSkipped, notificationFailures};
+}
+
+async function executeTrackedPresenceCheck(firestore: Firestore, source: CheckSource, onlyWhenDue: boolean) {
+  const runId = await acquirePresenceCheck(firestore, source, onlyWhenDue);
+  if (!runId) return null;
+  try {
+    const result = await runPresenceCheck(firestore);
+    await finishPresenceCheck(firestore, runId, source, result);
+    return result;
+  } catch (error) {
+    await finishPresenceCheck(firestore, runId, source, undefined, error);
+    throw error;
+  }
+}
+
+export const check4EventsPresence = onCall(
+  {secrets: [fourEventsToken, metaWhatsAppAccessToken], timeoutSeconds: 540},
+  async (request) => {
+    const firestore = await getAdminFirestore(request);
+    const result = await executeTrackedPresenceCheck(firestore, "manual", false);
+    if (!result) throw new HttpsError("aborted", "Já existe uma checagem de presença em andamento.");
+    return result;
+  },
+);
+
+export const configure4EventsPresenceAutomation = onCall(async (request) => {
+  const firestore = await getAdminFirestore(request);
+  const input = asRecord(request.data);
+  const active = input.ativa === true;
+  const interval = Number(input.intervaloMinutos);
+  if (!allowedIntervals.includes(interval as typeof allowedIntervals[number])) {
+    throw new HttpsError("invalid-argument", "Escolha um intervalo de 5, 10, 15, 30 ou 60 minutos.");
+  }
+  const now = Timestamp.now();
+  await firestore.doc(automationConfigPath).set({
+    ativa: active,
+    intervaloMinutos: interval,
+    proximaChecagemEm: active ? now : FieldValue.delete(),
+    atualizadoEm: now,
+    atualizadoPor: request.auth?.uid,
+  }, {merge: true});
+  return {ativa: active, intervaloMinutos: interval, proximaChecagemEm: active ? now.toMillis() : null};
+});
+
+export const scheduled4EventsPresenceCheck = onSchedule(
+  {
+    schedule: "every 5 minutes",
+    timeZone: "America/Sao_Paulo",
+    secrets: [fourEventsToken, metaWhatsAppAccessToken],
+    timeoutSeconds: 540,
+  },
+  async () => {
+    const result = await executeTrackedPresenceCheck(getFirestore(), "automatica", true);
+    if (result) console.log("Checagem automática da 4 Events concluída.", result);
   },
 );
 

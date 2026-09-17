@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Lembrete do aplicativo | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
+    <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
+    <link rel="stylesheet" href="/css/lembrete-presenca.css?v=1" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="pre-inscritos-page reminder-page">
+        <section class="dashboard-heading">
+          <p class="eyebrow">Comunicação independente</p>
+          <h1>Lembrete do aplicativo</h1>
+          <p>Importe nome e WhatsApp, organize automaticamente em grupos alfabéticos de até 250 participantes e acompanhe o retorno da Meta.</p>
+        </section>
+
+        <section class="pre-inscritos-card">
+          <div class="dashboard-toolbar">
+            <div class="reminder-totals">
+              <strong data-total>Carregando...</strong>
+              <span class="reminder-quota"><b data-quota-used>0</b>/250 tentativas hoje</span>
+            </div>
+            <div class="toolbar-actions">
+              <button class="back-link" type="button" data-import-open>Importar planilha</button>
+              <button class="back-link reminder-test-button" type="button" data-test-open>Envio de teste</button>
+              <button class="back-link" type="button" data-reload>Atualizar</button>
+            </div>
+          </div>
+
+          <form class="import-editor reminder-import" data-import-form hidden>
+            <label for="reminder-file">Planilha de participantes</label>
+            <input id="reminder-file" type="file" accept=".xlsx,.xls" data-import-file required />
+            <p class="selected-file" data-import-file-name>Nenhuma planilha selecionada.</p>
+            <p>Colunas obrigatórias: <code>Nome</code> e <code>WhatsApp</code> ou <code>Celular (WhatsApp)</code>.</p>
+            <p>A importação substituirá a composição da lista e recalculará os dias. Números já existentes conservarão o status de envio.</p>
+            <div><button class="button save-status" type="submit" data-import-submit>Confirmar importação</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
+            <p class="import-feedback" data-import-feedback></p>
+          </form>
+
+          <section class="reminder-template" aria-labelledby="template-title">
+            <div><p class="eyebrow">Template Meta</p><h2 id="template-title">lembrete_presenca <small>• English</small></h2></div>
+            <p>Olá, <b>{nome}</b>! Esta mensagem é referente à sua inscrição no GROB Experience. Para acessar seu ingresso e consultar as informações da programação do evento, utilize o aplicativo do participante.</p>
+            <a href="https://grobexperience.web.app/baixar-app/" target="_blank" rel="noopener noreferrer">grobexperience.web.app/baixar-app/</a>
+          </section>
+
+          <label class="participant-search"><span>Buscar participante</span><input type="search" data-search placeholder="Nome, WhatsApp ou status" /></label>
+          <div class="reminder-days" data-days></div>
+          <p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="message-modal reminder-preview-modal" data-preview-modal aria-labelledby="preview-title">
+      <section class="message-editor">
+        <div class="message-modal-heading"><div><p class="eyebrow">Prévia obrigatória</p><h2 id="preview-title" data-preview-title>Conferir envio</h2></div><button class="modal-close" type="button" data-preview-close aria-label="Fechar">×</button></div>
+        <p data-preview-summary>Carregando destinatários...</p>
+        <ol class="batch-recipients reminder-preview-list" data-preview-list></ol>
+        <div class="message-modal-actions"><button class="button save-status" type="button" data-preview-confirm>Confirmar envio</button><button class="back-link" type="button" data-preview-close>Cancelar</button></div>
+        <p class="message-modal-feedback" data-preview-feedback></p>
+      </section>
+    </dialog>
+
+    <dialog class="message-modal reminder-test-modal" data-test-modal aria-labelledby="test-title">
+      <form class="message-editor" data-test-form>
+        <div class="message-modal-heading"><div><p class="eyebrow">Validação do template</p><h2 id="test-title">Envio de teste</h2></div><button class="modal-close" type="button" data-test-close aria-label="Fechar">×</button></div>
+        <p>Preencha os dados manualmente. O teste usa o mesmo template e o mesmo link, mas não consome a cota operacional de 250.</p>
+        <div class="participant-form-fields">
+          <label>Nome do participante<input name="nome" type="text" autocomplete="name" required /></label>
+          <label>WhatsApp com DDD<input name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(11) 99999-9999" required /></label>
+        </div>
+        <div class="reminder-test-preview"><span>Link enviado</span><strong>https://grobexperience.web.app/baixar-app/</strong></div>
+        <div class="message-modal-actions"><button class="button save-status" type="submit" data-test-submit>Enviar teste</button><button class="back-link" type="button" data-test-close>Cancelar</button></div>
+        <p class="message-modal-feedback" data-test-feedback></p>
+      </form>
+    </dialog>
+
+    <script type="module" src="/js/auth.js?v=admin-nav-v3"></script>
+    <script type="module" src="/js/lembrete-presenca.js?v=1"></script>
+  </body>
+</html>

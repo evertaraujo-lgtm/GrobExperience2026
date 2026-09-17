@@ -8,9 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
-    <link rel="stylesheet" href="/css/app.css" />
-    <link rel="stylesheet" href="/css/pre-inscritos.css" />
-    <link rel="stylesheet" href="/css/importacao.css" />
+    <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
+    <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
   </head>
   <body data-auth-page="protected">
     <div class="page-shell">
@@ -30,6 +30,32 @@
               <button class="back-link" data-reload>Atualizar</button>
             </div>
           </div>
+          <section class="presence-automation" data-presence-automation hidden aria-labelledby="presence-automation-title">
+            <div class="presence-automation-heading">
+              <div>
+                <p class="eyebrow">Checagem periódica</p>
+                <h2 id="presence-automation-title">Automação de presença</h2>
+              </div>
+              <span class="presence-automation-status" data-presence-status data-active="false">Inativo</span>
+            </div>
+            <div class="presence-automation-details">
+              <div><span>Última checagem</span><strong data-presence-last>Nunca realizada</strong><small data-presence-last-result></small></div>
+              <div><span>Próxima checagem</span><strong data-presence-next>Automação inativa</strong><small data-presence-source></small></div>
+            </div>
+            <div class="presence-automation-controls">
+              <label for="presence-interval">Período de checagem
+                <select id="presence-interval" data-presence-interval>
+                  <option value="5">A cada 5 minutos</option>
+                  <option value="10">A cada 10 minutos</option>
+                  <option value="15">A cada 15 minutos</option>
+                  <option value="30">A cada 30 minutos</option>
+                  <option value="60">A cada 60 minutos</option>
+                </select>
+              </label>
+              <button class="button presence-automation-toggle" type="button" data-presence-toggle>Start</button>
+            </div>
+            <p class="presence-automation-feedback" data-presence-automation-feedback></p>
+          </section>
           <label class="participant-search"><span>Buscar visitante</span><input data-search type="search" placeholder="Nome, e-mail ou coordenador" /></label>
           <form class="import-editor" data-import-editor hidden>
             <label for="visitors-file">Planilha de visitantes estratégicos</label>
@@ -58,7 +84,7 @@
         </section>
       </main>
     </div>
-    <script type="module" src="/js/auth.js"></script>
-    <script type="module" src="/js/4events.js"></script>
+    <script type="module" src="/js/auth.js?v=admin-nav-v3"></script>
+    <script type="module" src="/js/4events.js?v=visitor-delete-v1"></script>
   </body>
 </html>

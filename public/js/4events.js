@@ -23,12 +23,24 @@ const search4EventsSubmit = document.querySelector("[data-search-4events-submit]
 const search4EventsFeedback = document.querySelector("[data-search-4events-feedback]");
 const search4EventsResults = document.querySelector("[data-search-4events-results]");
 const search4EventsCancel = document.querySelectorAll("[data-search-4events-cancel]");
+const presenceAutomation = document.querySelector("[data-presence-automation]");
+const presenceStatus = document.querySelector("[data-presence-status]");
+const presenceLast = document.querySelector("[data-presence-last]");
+const presenceLastResult = document.querySelector("[data-presence-last-result]");
+const presenceNext = document.querySelector("[data-presence-next]");
+const presenceSource = document.querySelector("[data-presence-source]");
+const presenceInterval = document.querySelector("[data-presence-interval]");
+const presenceToggle = document.querySelector("[data-presence-toggle]");
+const presenceAutomationFeedback = document.querySelector("[data-presence-automation-feedback]");
 
 let admin = false;
 let lastDoc;
 let hasMore = false;
 let loading = false;
 let xlsx;
+let presenceAutomationConfig = {ativa: false, intervaloMinutos: 5};
+let unsubscribePresenceAutomation;
+let observedLastCheck;
 
 const normalize = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 const normalizedEmail = (value) => String(value ?? "").trim().toLowerCase();
@@ -49,7 +61,66 @@ function setSearch4EventsFeedback(message, state = "neutral") {
   search4EventsFeedback.dataset.state = state;
 }
 
-function searchResultElement(occurrence) {
+function dateFromTimestamp(value) {
+  if (value?.toDate) return value.toDate();
+  if (typeof value?.seconds === "number") return new Date(value.seconds * 1000);
+  return null;
+}
+
+function formattedDateTime(value) {
+  const date = dateFromTimestamp(value);
+  return date && !Number.isNaN(date.getTime())
+    ? new Intl.DateTimeFormat("pt-BR", {dateStyle: "short", timeStyle: "medium"}).format(date)
+    : "Nunca realizada";
+}
+
+function renderPresenceAutomation(data = {}) {
+  const active = data.ativa === true;
+  const running = typeof data.execucaoId === "string" && data.execucaoId;
+  const interval = [5, 10, 15, 30, 60].includes(Number(data.intervaloMinutos)) ? Number(data.intervaloMinutos) : 5;
+  presenceAutomationConfig = {ativa: active, intervaloMinutos: interval};
+  presenceStatus.dataset.active = String(active);
+  presenceStatus.textContent = `${active ? "Ativo" : "Inativo"}${running ? " • checando" : ""}`;
+  presenceInterval.value = String(interval);
+  presenceInterval.disabled = active || Boolean(running);
+  presenceToggle.textContent = active ? "Stop" : "Start";
+  presenceToggle.dataset.running = String(active);
+
+  presenceLast.textContent = formattedDateTime(data.ultimaChecagemEm);
+  const result = data.ultimoResultado;
+  if (result && typeof result === "object") {
+    const failures = Array.isArray(result.notificationFailures) ? result.notificationFailures.length : 0;
+    presenceLastResult.textContent = `${result.checked ?? 0} consultado(s), ${result.attending ?? 0} presente(s), ${result.notificationsSent ?? 0} notificação(ões) enviada(s)${failures ? `, ${failures} falha(s)` : ""}.`;
+  } else if (data.ultimoErro) presenceLastResult.textContent = `Falha: ${data.ultimoErro}`;
+  else presenceLastResult.textContent = "";
+
+  if (running) presenceNext.textContent = "Checando agora...";
+  else if (active) presenceNext.textContent = formattedDateTime(data.proximaChecagemEm).replace("Nunca realizada", "Aguardando agendamento");
+  else presenceNext.textContent = "Automação inativa";
+  presenceSource.textContent = data.ultimaOrigem ? `Última execução: ${data.ultimaOrigem === "automatica" ? "automática" : "manual"}.` : "";
+}
+
+async function observePresenceAutomation(db, firestore) {
+  unsubscribePresenceAutomation?.();
+  const configRef = firestore.doc(db, "configuracoes", "checagemPresenca4Events");
+  unsubscribePresenceAutomation = firestore.onSnapshot(configRef, (snapshot) => {
+    const data = snapshot.exists() ? snapshot.data() : {};
+    renderPresenceAutomation(data);
+    const lastCheck = dateFromTimestamp(data.ultimaChecagemEm)?.getTime();
+    if (observedLastCheck !== undefined && lastCheck && lastCheck !== observedLastCheck) load();
+    observedLastCheck = lastCheck;
+  }, (error) => {
+    console.error(error);
+    presenceAutomationFeedback.textContent = "Não foi possível acompanhar o estado da automação.";
+    presenceAutomationFeedback.dataset.state = "error";
+  });
+}
+
+function deleteButtonLabel() {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg><span>Excluir</span>';
+}
+
+function searchResultElement(occurrence, firestore) {
   const item = document.createElement("article");
   item.className = "participant-row";
   item.innerHTML = '<div class="participant-meta"><strong></strong><span>E-mail</span></div><div class="participant-meta"><strong></strong><span>ID</span></div><div class="participant-meta"><strong></strong><span>QRCode</span></div><div class="participant-meta"><strong></strong><span>Data</span></div><div class="participant-meta"><strong></strong><span>Presença</span></div><div class="participant-meta whatsapp-delivery"><strong></strong><span>WhatsApp</span></div>';
@@ -61,27 +132,54 @@ function searchResultElement(occurrence) {
   values[3].textContent = occurrence.dataParticipacao || "Não informada";
   values[4].textContent = occurrence.presente === true ? "Presente" : occurrence.presente === false ? "Não presente" : "Não informado";
   values[5].textContent = occurrence.notificacaoWhatsAppStatus || (occurrence.presente === true ? "Aguardando notificação" : "Aguardando presença");
+  if (admin && occurrence.reference && firestore) {
+    item.classList.add("participant-row-api-actions");
+    const actions = document.createElement("div");
+    actions.className = "participant-actions";
+    const remove = document.createElement("button");
+    remove.className = "danger-delete";
+    remove.type = "button";
+    remove.title = "Excluir documento do Firestore";
+    remove.innerHTML = deleteButtonLabel();
+    remove.addEventListener("click", async () => {
+      const name = occurrence.nome || occurrence.email || "este visitante";
+      if (!window.confirm(`Excluir o documento de ${name} salvo em visitantes4Events? Esta ação não pode ser desfeita.`)) return;
+      remove.disabled = true;
+      try {
+        await firestore.deleteDoc(occurrence.reference);
+        setFeedback(`Documento de ${name} excluído do Firestore.`, "success");
+        await load();
+      } catch (error) {
+        console.error(error);
+        setFeedback("Não foi possível excluir o documento da 4 Events.", "error");
+        remove.disabled = false;
+      }
+    });
+    actions.append(remove);
+    item.append(actions);
+  }
   return item;
 }
 
 function row(visitor, firestore) {
   const element = document.createElement("article");
   element.className = "participant-row";
-  element.innerHTML = '<div class="participant-meta"><strong></strong><span></span></div><div class="participant-meta"><strong></strong><span>Empresa</span></div><div class="participant-meta"><strong></strong><span>Coordenador</span></div><div class="participant-meta"><strong></strong><span>4 Events</span></div><div class="participant-actions"><button class="danger-delete" type="button" hidden>Excluir</button></div>';
+  element.innerHTML = '<div class="participant-meta"><strong></strong><span></span></div><div class="participant-meta"><strong></strong><span>Empresa</span></div><div class="participant-meta"><strong></strong><span>Coordenador</span></div><div class="participant-meta"><strong></strong><span>4 Events</span></div><div class="participant-actions"><button class="danger-delete" type="button" title="Excluir documento do Firestore" hidden></button></div>';
   element.querySelectorAll("strong")[0].textContent = visitor.nome || "Nome não informado";
   element.querySelectorAll("span")[0].textContent = visitor.email || "E-mail não informado";
   element.querySelectorAll("strong")[1].textContent = visitor.empresa || "Não informada";
   element.querySelectorAll("strong")[2].textContent = visitor.coordenador || "Coordenador não informado";
   element.querySelectorAll("strong")[3].textContent = visitor.attendeeAttendingEvent === true ? "Presente" : visitor.attendeeAttendingEvent === false ? "Não presente" : "Ainda não consultado";
   const remove = element.querySelector(".danger-delete");
+  remove.innerHTML = deleteButtonLabel();
   if (admin) {
     remove.hidden = false;
     remove.addEventListener("click", async () => {
-      if (!window.confirm(`Excluir a linha de ${visitor.nome}? Esta ação não pode ser desfeita.`)) return;
+      if (!window.confirm(`Excluir o documento de ${visitor.nome} salvo em visitantesEstrategicos? Esta ação não pode ser desfeita.`)) return;
       remove.disabled = true;
       try {
         await firestore.deleteDoc(visitor.reference);
-        setFeedback(`${visitor.nome} foi excluído(a).`);
+        setFeedback(`Documento de ${visitor.nome} excluído do Firestore.`, "success");
         await load();
       } catch (error) {
         console.error(error);
@@ -107,7 +205,7 @@ async function load(reset = true) {
       if (reset) list.innerHTML = '<p class="empty-state">Nenhuma linha de referência.</p>';
       hasMore = false;
     } else {
-      snapshot.docs.forEach((document) => list.append(row({reference: document.ref, ...document.data()}, firestore)));
+      snapshot.docs.forEach((document) => list.append(row({...document.data(), reference: document.ref}, firestore)));
       lastDoc = snapshot.docs.at(-1);
       hasMore = snapshot.size === 100;
       more.hidden = !hasMore;
@@ -116,7 +214,7 @@ async function load(reset = true) {
     if (reset) {
       const apiSnapshot = await firestore.getDocs(firestore.query(firestore.collection(db, "visitantes4Events"), firestore.orderBy("email"), firestore.limit(100)));
       if (apiSnapshot.empty) apiList.innerHTML = '<p class="empty-state">Nenhum retorno da API salvo ainda.</p>';
-      else apiSnapshot.docs.forEach((document) => apiList.append(searchResultElement(document.data())));
+      else apiSnapshot.docs.forEach((document) => apiList.append(searchResultElement({...document.data(), reference: document.ref}, firestore)));
       apiTotal.textContent = `${apiSnapshot.size} registro(s)`;
     }
   } catch (error) {
@@ -221,7 +319,7 @@ search4EventsForm.addEventListener("submit", async (event) => {
     const search4EventsApi = functionsModule.httpsCallable(functions, "search4Events");
     const result = await search4EventsApi({email: search4EventsValue.value});
     const occurrences = Array.isArray(result.data.occurrences) ? result.data.occurrences : [];
-    search4EventsResults.append(...occurrences.map(searchResultElement));
+    search4EventsResults.append(...occurrences.map((occurrence) => searchResultElement(occurrence)));
     search4EventsResults.hidden = false;
     setSearch4EventsFeedback(`${occurrences.length} ocorrência(s) encontrada(s) para ${result.data.email}.`, occurrences.length ? "success" : "neutral");
   } catch (error) {
@@ -249,6 +347,34 @@ check.addEventListener("click", async () => {
   } finally {
     check.disabled = false;
     check.textContent = "Checar presença";
+  }
+});
+
+presenceToggle.addEventListener("click", async () => {
+  if (!admin) return;
+  const activating = !presenceAutomationConfig.ativa;
+  if (activating && !window.confirm(`Iniciar a checagem automática a cada ${presenceInterval.value} minutos? Visitantes presentes poderão gerar notificações aos coordenadores.`)) return;
+  presenceToggle.disabled = true;
+  presenceInterval.disabled = true;
+  presenceAutomationFeedback.textContent = activating ? "Ativando automação..." : "Interrompendo novas checagens...";
+  presenceAutomationFeedback.dataset.state = "neutral";
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    await functionsModule.httpsCallable(functions, "configure4EventsPresenceAutomation")({
+      ativa: activating,
+      intervaloMinutos: Number(presenceInterval.value),
+    });
+    presenceAutomationFeedback.textContent = activating
+      ? "Automação ativada. A primeira checagem ocorrerá em até 5 minutos."
+      : "Automação inativa. Uma checagem já iniciada será concluída normalmente.";
+    presenceAutomationFeedback.dataset.state = "success";
+  } catch (error) {
+    console.error(error);
+    presenceAutomationFeedback.textContent = error.message || "Não foi possível alterar a automação.";
+    presenceAutomationFeedback.dataset.state = "error";
+    presenceInterval.disabled = presenceAutomationConfig.ativa;
+  } finally {
+    presenceToggle.disabled = false;
   }
 });
 
@@ -290,5 +416,7 @@ authModule.onAuthStateChanged(auth, async (user) => {
   const profile = await firestore.getDoc(firestore.doc(db, "users", user.uid));
   admin = profile.exists() && profile.data().active !== false && profile.data().roles?.admin === true;
   importToggle.hidden = !admin; check.hidden = !admin; search4Events.hidden = !admin; deleteAll.hidden = !admin;
+  presenceAutomation.hidden = !admin;
+  if (admin) observePresenceAutomation(db, firestore);
   load();
 });

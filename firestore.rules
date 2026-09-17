@@ -140,6 +140,25 @@ service cloud.firestore {
 
     match /visitantes4Events/{visitanteId} {
       allow read: if isSignedIn() && !isCollectionAssistant();
+      allow delete: if isAdmin();
+    }
+
+    // Fluxo independente de lembrete para download do aplicativo. Todas as
+    // gravações passam pelas Cloud Functions; o painel administrativo só lê.
+    match /lembretePresencaParticipantes/{participanteId} {
+      allow read: if isAdmin();
+    }
+
+    match /lembretePresencaMensagens/{mensagemId} {
+      allow read: if isAdmin();
+    }
+
+    match /lembretePresencaEventos/{eventoId} {
+      allow read: if isAdmin();
+    }
+
+    match /lembretePresencaControleDiario/{dataId} {
+      allow read: if isAdmin();
     }
 
     match /participantes4Events/{participanteId} {
