@@ -186,7 +186,7 @@ async function openPreview(day) {
     previewSummary.textContent = `${data.recipients.length} destinatário(s) serão enviados agora, em ordem alfabética. Cota de hoje: ${data.usedToday}/${data.dailyLimit} utilizada; ${data.availableToday} disponível(is).${data.skipped ? ` ${data.skipped} registro(s) já processado(s) serão ignorados.` : ""}${data.notIncludedByLimit ? ` ${data.notIncludedByLimit} registro(s) ficaram fora por causa do limite diário.` : ""}`;
     previewConfirm.disabled = data.recipients.length === 0;
     if (!data.recipients.length) {
-      previewFeedback.textContent = data.availableToday === 0 ? "A cota diária de 250 já foi utilizada." : "Não há mensagens pendentes neste dia.";
+      previewFeedback.textContent = data.availableToday === 0 ? `A cota diária de ${data.dailyLimit} já foi utilizada.` : "Não há mensagens pendentes neste dia.";
     }
   } catch (error) {
     console.error(error);

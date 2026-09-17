@@ -86,6 +86,20 @@ function participantResponseValue(value: unknown, maskCpf: boolean): unknown {
   return value ?? null;
 }
 
+function normalizedSearch(value: unknown) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
+}
+
+function searchableParticipantText(value: unknown): string {
+  if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (Array.isArray(value)) return value.map(searchableParticipantText).join(" ");
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).map(searchableParticipantText).join(" ");
+  }
+  return String(value ?? "");
+}
+
 async function searchAttendees(eid: string, page: number) {
   const form = new FormData();
   form.append("search_by", "");
@@ -145,11 +159,49 @@ export const list4EventsParticipants = onCall(async (request) => {
   const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 200) : 200;
   const afterId = typeof data.afterId === "string" ? data.afterId.trim() : "";
   const initial = typeof data.initial === "string" ? data.initial.trim().toUpperCase() : "";
+  const searchTerm = normalizedSearch(data.searchTerm);
   const includeTotal = data.includeTotal === true;
   if (afterId.length > 200 || afterId.includes("/")) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
   if (initial && !/^[A-Z]$/.test(initial)) throw new HttpsError("invalid-argument", "Inicial inválida.");
+  if (searchTerm.length > 120) throw new HttpsError("invalid-argument", "A busca deve ter no máximo 120 caracteres.");
 
   const collection = firestore.collection("participantes4Events");
+  if (searchTerm) {
+    let cursor = afterId ? await collection.doc(afterId).get() : null;
+    if (cursor && !cursor.exists) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
+    const matches: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    let nextCursor: string | null = null;
+    let exhausted = false;
+    const scanSize = 400;
+    while (matches.length < pageSize && !exhausted) {
+      let query = collection.orderBy("nome").limit(scanSize);
+      if (cursor) query = query.startAfter(cursor);
+      const page = await query.get();
+      if (page.empty) { exhausted = true; break; }
+      for (let index = 0; index < page.docs.length; index += 1) {
+        const document = page.docs[index];
+        cursor = document;
+        const searchable = normalizedSearch(searchableParticipantText(document.data()));
+        if (searchable.includes(searchTerm)) matches.push(document);
+        if (matches.length === pageSize) {
+          const mayHaveMore = index < page.docs.length - 1 || page.size === scanSize;
+          nextCursor = mayHaveMore ? document.id : null;
+          break;
+        }
+      }
+      if (matches.length === pageSize) break;
+      if (page.size < scanSize) exhausted = true;
+    }
+    const totalSnapshot = includeTotal ? await collection.count().get() : null;
+    return {
+      participants: matches.map((document) => participantResponseValue(document.data(), !isAdmin)),
+      nextCursor,
+      total: totalSnapshot?.data().count ?? null,
+      filteredTotal: null,
+      searchMode: true,
+    };
+  }
+
   const nextInitial = initial ? String.fromCharCode(initial.charCodeAt(0) + 1) : "";
   const filtered = initial ? collection.orderBy("nome").startAt(initial).endBefore(nextInitial) : collection.orderBy("nome");
   let snapshot;

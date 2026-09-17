@@ -9,7 +9,8 @@ const phoneNumberId = "1289110394284226";
 const graphVersion = "v23.0";
 const templateName = "lembrete_presenca";
 const appLink = "https://grobexperience.web.app/baixar-app/";
-const dailyLimit = 250;
+const dailyLimit = 500;
+const groupSize = 250;
 const maximumImportSize = 10000;
 const participantsCollection = "lembretePresencaParticipantes";
 const messagesCollection = "lembretePresencaMensagens";
@@ -254,7 +255,7 @@ export const importPresenceReminderParticipants = onCall(
     participants.forEach((participant, index) => {
       const current = existingById.get(participant.whatsapp);
       const reference = firestore.collection(participantsCollection).doc(participant.whatsapp);
-      const day = Math.floor(index / dailyLimit) + 1;
+      const day = Math.floor(index / groupSize) + 1;
       operations.push((batch) => batch.set(reference, {
         ...participant,
         dia: day,
@@ -270,7 +271,7 @@ export const importPresenceReminderParticipants = onCall(
       importados: participants.length,
       duplicadosIgnorados: entries.length - participants.length,
       removidos: existing.docs.filter((document) => !incomingIds.has(document.id)).length,
-      dias: Math.ceil(participants.length / dailyLimit),
+      dias: Math.ceil(participants.length / groupSize),
     };
   },
 );
@@ -317,7 +318,7 @@ export const sendPresenceReminderDay = onCall(
     const day = Number(asRecord(request.data).dia);
     if (!Number.isInteger(day) || day < 1) throw new HttpsError("invalid-argument", "Informe um dia válido.");
     const participantIdsInput = asRecord(request.data).participanteIds;
-    if (!Array.isArray(participantIdsInput) || !participantIdsInput.length || participantIdsInput.length > dailyLimit
+    if (!Array.isArray(participantIdsInput) || !participantIdsInput.length || participantIdsInput.length > groupSize
       || participantIdsInput.some((id) => typeof id !== "string" || !/^\d{10,11}$/.test(id))) {
       throw new HttpsError("invalid-argument", "Gere a prévia obrigatória antes de confirmar o envio.");
     }
