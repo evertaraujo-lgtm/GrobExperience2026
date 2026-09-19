@@ -11,7 +11,7 @@ import {check4EventsPresence, configure4EventsPresenceAutomation, scheduled4Even
 import {consolidateCollectionStaff, createCollectionAssistant, listCollectionStaff, removeCollectionAssistant} from "./gestao-atividades.js";
 import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead} from "./coleta-leads.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
-import {list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
+import {import4EventsParticipantComplements, list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
 import {whatsappWebhook} from "./whatsapp-webhook.js";
 
 initializeApp();
@@ -30,6 +30,7 @@ export {
   download4EventsParticipantIndex,
   importPreInscritos,
   importPresenceReminderParticipants,
+  import4EventsParticipantComplements,
   get4EventsParticipantByQrCode,
   listCollectionStaff,
   list4EventsParticipants,

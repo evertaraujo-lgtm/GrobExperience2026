@@ -5,6 +5,8 @@ import {defineSecret} from "firebase-functions/params";
 import {HttpsError, onCall} from "firebase-functions/https";
 
 const fourEventsToken = defineSecret("FOUR_EVENTS_TOKEN");
+const participantComplementsCollection = "participantes4EventsComplementos";
+const complementFields = ["pais", "estado", "cidade", "endereco", "empresa", "cargo", "nivel", "setorIndustrial"] as const;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -91,6 +93,84 @@ function normalizedSearch(value: unknown) {
     .toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
 }
 
+function correlationKeys(value: Record<string, unknown>) {
+  const source = {...asRecord(value.dados4Events), ...value};
+  const id = firstText(source, ["idParticipante", "id4Events", "id", "certificate_id", "certificateId", "attendee_id", "attendeeId", "participant_id", "participantId"]);
+  const qrCode = firstText(source, ["qrCode", "qrcode", "qr_code", "attendee_qrcode", "attendee_qr_code"]);
+  const email = firstText(source, ["email", "attendee_email", "attendeeEmail", "participant_email"]).toLowerCase();
+  const cpf = firstText(source, ["cpf", "attendee_doc", "document", "document_number", "tax_id"]).replace(/\D/g, "");
+  return [...new Set([
+    id ? `id:${id.toLowerCase()}` : "",
+    qrCode ? `qr:${qrCode.toLowerCase()}` : "",
+    email ? `email:${email}` : "",
+    cpf ? `cpf:${cpf}` : "",
+  ].filter(Boolean))];
+}
+
+function correlationDocumentId(key: string) {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+function timestampMillis(value: unknown) {
+  return value instanceof Timestamp ? value.toMillis() : 0;
+}
+
+async function enrichWithSpreadsheetComplements(
+  firestore: FirebaseFirestore.Firestore,
+  participants: Record<string, unknown>[],
+) {
+  const keysByParticipant = participants.map(correlationKeys);
+  const references = [...new Set(keysByParticipant.flat())]
+    .map((key) => firestore.collection(participantComplementsCollection).doc(correlationDocumentId(key)));
+  const complements = new Map<string, Record<string, unknown>>();
+  for (let index = 0; index < references.length; index += 250) {
+    const snapshots = await firestore.getAll(...references.slice(index, index + 250));
+    snapshots.forEach((snapshot) => {
+      if (snapshot.exists) complements.set(snapshot.id, snapshot.data() ?? {});
+    });
+  }
+  return participants.map((participant, index) => {
+    const candidates = keysByParticipant[index]
+      .map((key) => complements.get(correlationDocumentId(key)))
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .sort((left, right) => timestampMillis(right.atualizadoEm) - timestampMillis(left.atualizadoEm));
+    const complement = candidates[0];
+    if (!complement) return participant;
+    const supplemented = {...participant};
+    complementFields.forEach((field) => {
+      const item = firstText(complement, [field]);
+      if (item) supplemented[field] = item;
+    });
+    return supplemented;
+  });
+}
+
+function normalizeComplement(value: unknown, index: number) {
+  const source = asRecord(value);
+  const cpfDigits = firstText(source, ["cpf"]).replace(/\D/g, "");
+  const identity = {
+    idParticipante: firstText(source, ["idParticipante"]),
+    qrCode: firstText(source, ["qrCode"]),
+    email: firstText(source, ["email"]).toLowerCase(),
+    cpf: cpfDigits && cpfDigits.length < 11 ? cpfDigits.padStart(11, "0") : cpfDigits,
+  };
+  if (identity.email && !/^\S+@\S+\.\S+$/.test(identity.email)) {
+    throw new HttpsError("invalid-argument", `O e-mail da linha ${index + 1} é inválido.`);
+  }
+  const fields = Object.fromEntries(complementFields.map((field) => [field, firstText(source, [field])]));
+  const keys = correlationKeys({...identity, ...fields});
+  if (!keys.length) {
+    throw new HttpsError("invalid-argument", `A linha ${index + 1} precisa de ID participante, QR Code, e-mail ou CPF.`);
+  }
+  if (!Object.values(fields).some(Boolean)) {
+    throw new HttpsError("invalid-argument", `A linha ${index + 1} não possui dados complementares.`);
+  }
+  for (const [field, item] of Object.entries({...identity, ...fields})) {
+    if (item.length > 500) throw new HttpsError("invalid-argument", `O campo ${field} da linha ${index + 1} é muito longo.`);
+  }
+  return {identity, fields, keys, documentId: correlationDocumentId(keys[0])};
+}
+
 function searchableParticipantText(value: unknown): string {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (Array.isArray(value)) return value.map(searchableParticipantText).join(" ");
@@ -151,6 +231,50 @@ export const sync4EventsParticipants = onCall({secrets: [fourEventsToken], timeo
   return {eid, imported: participants.length};
 });
 
+export const import4EventsParticipantComplements = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para importar a planilha complementar.");
+  const firestore = await requireAdmin(request.auth.uid);
+  const supplied = asRecord(request.data);
+  const entries = supplied.complementos;
+  if (!Array.isArray(entries) || !entries.length) {
+    throw new HttpsError("invalid-argument", "Envie uma lista não vazia em complementos.");
+  }
+  if (entries.length > 400) {
+    throw new HttpsError("invalid-argument", "Importe no máximo 400 registros por lote.");
+  }
+  const importacaoId = typeof supplied.importacaoId === "string" ? supplied.importacaoId.trim().slice(0, 100) : "";
+  const arquivoOrigem = typeof supplied.arquivoOrigem === "string" ? supplied.arquivoOrigem.trim().slice(0, 200) : "";
+  if (!importacaoId) throw new HttpsError("invalid-argument", "Identificador de importação ausente.");
+
+  const normalized = new Map(entries.map((entry, index) => {
+    const item = normalizeComplement(entry, index);
+    return [item.documentId, item];
+  }));
+  const references = [...normalized.keys()].map((id) => firestore.collection(participantComplementsCollection).doc(id));
+  const existing = await firestore.getAll(...references);
+  const batch = firestore.batch();
+  let created = 0;
+  let updated = 0;
+  existing.forEach((snapshot, index) => {
+    const item = normalized.get(references[index].id);
+    if (!item) return;
+    if (snapshot.exists) updated += 1; else created += 1;
+    batch.set(references[index], {
+      ...item.identity,
+      ...item.fields,
+      chavesCorrelacao: item.keys,
+      chavePrincipal: item.keys[0],
+      importacaoId,
+      arquivoOrigem,
+      importadoPor: request.auth?.uid,
+      criadoEm: snapshot.exists ? snapshot.get("criadoEm") ?? FieldValue.serverTimestamp() : FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  return {imported: normalized.size, created, updated};
+});
+
 export const list4EventsParticipants = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para consultar os participantes.");
   const {firestore, isAdmin} = await requireParticipantViewer(request.auth.uid);
@@ -169,7 +293,7 @@ export const list4EventsParticipants = onCall(async (request) => {
   if (searchTerm) {
     let cursor = afterId ? await collection.doc(afterId).get() : null;
     if (cursor && !cursor.exists) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
-    const matches: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    const matches: {document: FirebaseFirestore.QueryDocumentSnapshot; data: Record<string, unknown>}[] = [];
     let nextCursor: string | null = null;
     let exhausted = false;
     const scanSize = 400;
@@ -178,11 +302,13 @@ export const list4EventsParticipants = onCall(async (request) => {
       if (cursor) query = query.startAfter(cursor);
       const page = await query.get();
       if (page.empty) { exhausted = true; break; }
+      const enrichedPage = await enrichWithSpreadsheetComplements(firestore, page.docs.map((document) => document.data()));
       for (let index = 0; index < page.docs.length; index += 1) {
         const document = page.docs[index];
         cursor = document;
-        const searchable = normalizedSearch(searchableParticipantText(document.data()));
-        if (searchable.includes(searchTerm)) matches.push(document);
+        const enriched = enrichedPage[index];
+        const searchable = normalizedSearch(searchableParticipantText(enriched));
+        if (searchable.includes(searchTerm)) matches.push({document, data: enriched});
         if (matches.length === pageSize) {
           const mayHaveMore = index < page.docs.length - 1 || page.size === scanSize;
           nextCursor = mayHaveMore ? document.id : null;
@@ -194,7 +320,7 @@ export const list4EventsParticipants = onCall(async (request) => {
     }
     const totalSnapshot = includeTotal ? await collection.count().get() : null;
     return {
-      participants: matches.map((document) => participantResponseValue(document.data(), !isAdmin)),
+      participants: matches.map((match) => participantResponseValue(match.data, !isAdmin)),
       nextCursor,
       total: totalSnapshot?.data().count ?? null,
       filteredTotal: null,
@@ -219,9 +345,10 @@ export const list4EventsParticipants = onCall(async (request) => {
     collection.count().get(),
     initial ? filtered.count().get() : Promise.resolve(null),
   ]) : [null, null];
+  const enrichedParticipants = await enrichWithSpreadsheetComplements(firestore, snapshot.docs.map((document) => document.data()));
 
   return {
-    participants: snapshot.docs.map((document) => participantResponseValue(document.data(), !isAdmin)),
+    participants: enrichedParticipants.map((participant) => participantResponseValue(participant, !isAdmin)),
     nextCursor: snapshot.size === pageSize ? snapshot.docs.at(-1)?.id ?? null : null,
     total: totalSnapshot?.data().count ?? null,
     filteredTotal: filteredTotalSnapshot?.data().count ?? totalSnapshot?.data().count ?? null,

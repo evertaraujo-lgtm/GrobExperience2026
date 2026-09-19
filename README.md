@@ -14,6 +14,7 @@ Ele organiza a jornada completa do visitante: pré-inscrição, confirmação de
 - acompanha aceitação, entrega, leitura e falha de mensagens;
 - processa respostas e botões recebidos pelo WhatsApp;
 - sincroniza e consulta participantes do 4Events;
+- complementa participantes do 4Events com dados importados de planilhas Excel;
 - apoia o acompanhamento de visitantes estratégicos;
 - registra presença por QR Code;
 - permite coleta de leads em modo offline;
@@ -86,6 +87,7 @@ O webhook recebe status e respostas dos participantes. Requisições `POST` da M
 | `linksPublicos` | Convites por token para confirmação pública |
 | `inscritos` | Registros internos de inscrição |
 | `participantes4Events` | Participantes sincronizados do 4Events |
+| `participantes4EventsComplementos` | País, estado, cidade, endereço e dados profissionais importados por Excel |
 | `visitantesEstrategicos` | Visitantes que exigem acompanhamento especial |
 | `whatsappMensagens` | Estado atual das mensagens enviadas |
 | `whatsappEventos` | Histórico de eventos do WhatsApp |
@@ -94,6 +96,12 @@ O webhook recebe status e respostas dos participantes. Requisições `POST` da M
 | `coletaAtividadesRegistros` | Leituras de QR Code por atividade |
 | `coletaLeads` | Leads coletados pela equipe |
 | `users` | Perfis e papéis internos |
+
+### Complementos dos participantes 4 Events
+
+Administradores podem importar uma planilha Excel em `/participantes-4events/` para preencher País, Estado, Cidade, Endereço, Empresa, Cargo, Nível e Setor Industrial. Cada linha deve ter pelo menos um identificador: ID participante, QRCODE, e-mail ou CPF.
+
+Os registros ficam em `participantes4EventsComplementos`. Novas importações atualizam chaves já existentes e adicionam as demais. A correlação usa IDs de documento determinísticos e leituras diretas; portanto, não exige índice composto no Firestore.
 
 ## Papéis internos
 
