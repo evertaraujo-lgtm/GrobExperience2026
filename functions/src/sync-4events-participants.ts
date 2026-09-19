@@ -228,7 +228,14 @@ export const sync4EventsParticipants = onCall({secrets: [fourEventsToken], timeo
     if (operations === 400) { await batch.commit(); batch = firestore.batch(); operations = 0; }
   }
   if (operations) await batch.commit();
-  return {eid, imported: participants.length};
+  const synchronizedAt = Timestamp.now();
+  await firestore.collection("integracoes4Events").doc(eid).set({
+    eid,
+    totalParticipantes: participants.length,
+    ultimaSincronizacaoPor: request.auth.uid,
+    ultimaSincronizacaoEm: synchronizedAt,
+  }, {merge: true});
+  return {eid, imported: participants.length, synchronizedAt: synchronizedAt.toDate().toISOString()};
 });
 
 export const import4EventsParticipantComplements = onCall(async (request) => {

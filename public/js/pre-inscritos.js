@@ -49,6 +49,7 @@ const batchBack = document.querySelector("[data-batch-back]");
 const inscritosLink = document.querySelector(".inscritos-link");
 const eventManagementLink = document.querySelector('a[href="/gestao-evento/"]');
 const arrivalNotificationsLink = document.querySelector('a[href="/4events/"]');
+const raffleLink = document.querySelector("[data-raffle-link]");
 const statuses = ["pendente", "contatado", "confirmado", "cancelado"];
 const defaultMessageVariants = [
   "Olá, {nome}! Notamos que você ainda não escolheu uma data para o GROB Experience. Acesse seu link exclusivo e finalize sua inscrição:\n\n{link}",
@@ -564,6 +565,7 @@ authModule.onAuthStateChanged(auth, async (user) => {
     inscritosLink.hidden = false;
     arrivalNotificationsLink.hidden = !canImport;
     eventManagementLink.hidden = !canImport;
+    raffleLink.hidden = !canImport;
     latestConfirmedToggle.hidden = !canImport;
     addToggle.hidden = !canImport;
     // A importação permanece implementada para eventual reativação, mas não

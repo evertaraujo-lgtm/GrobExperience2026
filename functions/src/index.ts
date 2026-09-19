@@ -12,6 +12,7 @@ import {consolidateCollectionStaff, createCollectionAssistant, listCollectionSta
 import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead} from "./coleta-leads.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
 import {import4EventsParticipantComplements, list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
+import {clear4EventsRaffleFinalHistory, clear4EventsRaffleTestHistory, create4EventsRaffleTestSession, draw4EventsRaffle, get4EventsRaffleState, set4EventsRaffleTestPresence} from "./sorteio-4events.js";
 import {whatsappWebhook} from "./whatsapp-webhook.js";
 
 initializeApp();
@@ -23,15 +24,20 @@ export const health = onRequest((_request, response) => {
 export {
   backfillPreInscritoSortOrder,
   check4EventsPresence,
+  clear4EventsRaffleFinalHistory,
+  clear4EventsRaffleTestHistory,
   configure4EventsPresenceAutomation,
   consolidateCollectionStaff,
+  create4EventsRaffleTestSession,
   createCollectionAssistant,
   createLeadSeller,
   download4EventsParticipantIndex,
+  draw4EventsRaffle,
   importPreInscritos,
   importPresenceReminderParticipants,
   import4EventsParticipantComplements,
   get4EventsParticipantByQrCode,
+  get4EventsRaffleState,
   listCollectionStaff,
   list4EventsParticipants,
   marketingMessageStats,
@@ -45,6 +51,7 @@ export {
   sendPresenceReminderDay,
   sendPresenceReminderTest,
   sendSelecaoDataMarketing,
+  set4EventsRaffleTestPresence,
   search4Events,
   scheduled4EventsPresenceCheck,
   sendWhatsAppTemplate,

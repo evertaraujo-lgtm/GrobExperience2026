@@ -15,6 +15,7 @@ Ele organiza a jornada completa do visitante: pré-inscrição, confirmação de
 - processa respostas e botões recebidos pelo WhatsApp;
 - sincroniza e consulta participantes do 4Events;
 - complementa participantes do 4Events com dados importados de planilhas Excel;
+- realiza sorteios auditáveis de brindes entre participantes presentes;
 - apoia o acompanhamento de visitantes estratégicos;
 - registra presença por QR Code;
 - permite coleta de leads em modo offline;
@@ -39,6 +40,7 @@ flowchart TD
 | `/app/` | Painel administrativo de pré-inscritos, confirmações e mensagens |
 | `/confirmar/` | Página pública para seleção da data pelo convidado |
 | `/participantes-4events/` | Consulta dos participantes sincronizados do 4Events |
+| `/sorteio-4events/` | Sorteio administrativo de brindes, com modo teste e telão |
 | `/gestao-evento/` | Gestão de atividades e equipe de coleta |
 | `/coleta-atividades/` | Leitura de QR Codes para atividades presenciais |
 | `/coleta-leads/` | Captação de leads, inclusive sem conexão |
@@ -88,6 +90,10 @@ O webhook recebe status e respostas dos participantes. Requisições `POST` da M
 | `inscritos` | Registros internos de inscrição |
 | `participantes4Events` | Participantes sincronizados do 4Events |
 | `participantes4EventsComplementos` | País, estado, cidade, endereço e dados profissionais importados por Excel |
+| `integracoes4Events` | Última sincronização da presença por EID |
+| `sorteios4Events` | Histórico definitivo dos sorteios de brindes |
+| `sorteios4EventsVencedores` | Bloqueios que impedem nova vitória na mesma categoria |
+| `sorteios4EventsTestes` | Sessões isoladas, presenças simuladas e resultados de ensaio |
 | `visitantesEstrategicos` | Visitantes que exigem acompanhamento especial |
 | `whatsappMensagens` | Estado atual das mensagens enviadas |
 | `whatsappEventos` | Histórico de eventos do WhatsApp |
@@ -102,6 +108,12 @@ O webhook recebe status e respostas dos participantes. Requisições `POST` da M
 Administradores podem importar uma planilha Excel em `/participantes-4events/` para preencher País, Estado, Cidade, Endereço, Empresa, Cargo, Nível e Setor Industrial. Cada linha deve ter pelo menos um identificador: ID participante, QRCODE, e-mail ou CPF.
 
 Os registros ficam em `participantes4EventsComplementos`. Novas importações atualizam chaves já existentes e adicionam as demais. A correlação usa IDs de documento determinísticos e leituras diretas; portanto, não exige índice composto no Firestore.
+
+### Sorteio de brindes 4 Events
+
+Administradores usam `/sorteio-4events/` para ensaiar ou realizar o sorteio final do evento fixo de EID `2`. No modo final, somente participantes marcados como presentes pela API e pertencentes à categoria do dia em `America/Sao_Paulo` são elegíveis. Resultados e bloqueios ficam em coleções próprias e nunca são gravados em `participantes4Events`.
+
+O modo teste aceita categorias futuras e permite presença simulada. Cada sessão mantém vencedores e resultados isolados. O administrador pode limpar os resultados e bloqueios da sessão de teste atual, preservando a presença simulada e sem alterar o histórico final. A escolha ocorre em uma Cloud Function com aleatoriedade criptográfica e gravação transacional; a animação do telão apenas revela o resultado já persistido. Após a revelação, uma contagem regressiva configurável ajuda os apresentadores a aguardar a manifestação do vencedor, sem executar desclassificação ou qualquer outra ação automática.
 
 ## Papéis internos
 

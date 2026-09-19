@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="description" content="Sorteio de brindes entre participantes da GROB Experience">
+    <title>Sorteio de brindes | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png">
+    <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5">
+    <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3">
+    <link rel="stylesheet" href="/css/sorteio-4events.css?v=raffle-v3">
+  </head>
+  <body data-auth-page="protected" data-admin-page="true">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="raffle-page">
+        <section class="dashboard-heading raffle-heading">
+          <div><p class="eyebrow">Operação do evento</p><h1>Sorteio de brindes</h1><p>Sorteio seguro por categoria, com modo de ensaio isolado e apresentação para telão.</p></div>
+          <div class="raffle-mode-switch" role="group" aria-label="Modo de operação">
+            <button type="button" data-mode="teste" aria-pressed="true">Modo teste</button>
+            <button type="button" data-mode="final" aria-pressed="false">Sorteio final</button>
+          </div>
+        </section>
+
+        <section class="raffle-alert raffle-alert-test" data-mode-alert>
+          <strong>MODO TESTE</strong>
+          <span>Os resultados desta sessão não afetam o sorteio definitivo.</span>
+        </section>
+
+        <section class="raffle-layout">
+          <div class="raffle-main">
+            <section class="pre-inscritos-card raffle-config-card">
+              <div class="raffle-section-heading"><div><p class="eyebrow">1. Participantes</p><h2>Evento e categoria</h2></div><a class="back-link" href="/participantes-4events/">Ver participantes</a></div>
+              <form class="raffle-event-form" data-event-form>
+                <label>EID do evento (fixo)<input name="eid" type="text" value="2" readonly required data-eid></label>
+                <button class="button" type="submit" data-load-event>Recarregar evento</button>
+                <button class="back-link" type="button" data-sync-event disabled>Atualizar pela API</button>
+              </form>
+              <label class="raffle-field raffle-category-field">Categoria do dia
+                <select data-category disabled><option value="">Carregue um evento</option></select>
+              </label>
+              <div class="raffle-sync-status" data-sync-status>Nenhum evento carregado.</div>
+
+              <section class="raffle-test-controls" data-test-controls>
+                <div class="raffle-section-heading compact"><div><p class="eyebrow">Sessão de ensaio</p><h3 data-test-session>Nenhuma sessão criada</h3></div><button class="back-link" type="button" data-new-test-session disabled>Nova sessão</button></div>
+                <label class="raffle-field">Filtro de elegibilidade
+                  <select data-test-filter>
+                    <option value="todos">Todos os participantes da categoria</option>
+                    <option value="presenca_simulada">Somente presença simulada</option>
+                  </select>
+                </label>
+                <div class="raffle-presence-actions" data-presence-actions hidden>
+                  <button class="back-link" type="button" data-mark-all disabled>Simular presença de todos</button>
+                  <button class="back-link" type="button" data-clear-all disabled>Limpar presença simulada</button>
+                </div>
+              </section>
+            </section>
+
+            <section class="raffle-stats" aria-label="Resumo do sorteio">
+              <article><span>Participantes</span><strong data-stat-total>0</strong></article>
+              <article><span data-stat-presence-label>Presentes simulados</span><strong data-stat-present>0</strong></article>
+              <article><span>Já sorteados</span><strong data-stat-winners>0</strong></article>
+              <article class="eligible"><span>Elegíveis agora</span><strong data-stat-eligible>0</strong></article>
+            </section>
+
+            <section class="pre-inscritos-card raffle-draw-card">
+              <div class="raffle-section-heading"><div><p class="eyebrow">2. Executar</p><h2>Preparar sorteio</h2></div><span class="raffle-security-label">Resultado definido no servidor</span></div>
+              <form class="raffle-draw-form" data-draw-form>
+                <label class="raffle-field">Nome do brinde<input name="brinde" maxlength="120" required placeholder="Ex.: Kit GROB Experience" data-prize></label>
+                <label class="raffle-field">Manifestação (segundos)<input type="number" min="0" max="600" step="5" value="30" list="raffle-manifestation-options" inputmode="numeric" required data-manifestation-time><small>Use 0 para desativar</small></label>
+                <datalist id="raffle-manifestation-options"><option value="15"></option><option value="30"></option><option value="45"></option><option value="60"></option><option value="90"></option><option value="120"></option></datalist>
+                <label class="raffle-fullscreen-option"><input type="checkbox" data-fullscreen checked> Abrir apresentação em tela cheia</label>
+                <button class="button raffle-draw-button" type="submit" data-draw disabled>Sortear brinde</button>
+              </form>
+              <p class="dashboard-feedback" data-feedback></p>
+            </section>
+
+            <section class="pre-inscritos-card raffle-participants-card">
+              <div class="raffle-section-heading"><div><p class="eyebrow">Lista conferível</p><h2>Participantes da categoria</h2></div><label class="raffle-search">Buscar<input type="search" data-search placeholder="Nome, empresa ou QR Code"></label></div>
+              <div class="raffle-participant-head" data-participant-head>
+                <span>Participante</span><span>Empresa / cargo</span><span>Presença</span><span>Situação</span>
+              </div>
+              <div class="raffle-participants" data-participants><p class="empty-state">Carregue um evento para começar.</p></div>
+            </section>
+          </div>
+
+          <aside class="pre-inscritos-card raffle-history-card">
+            <div class="raffle-section-heading"><div><p class="eyebrow">Auditoria</p><h2>Histórico</h2></div><div class="raffle-history-actions"><button class="back-link raffle-clear-history" type="button" data-clear-history hidden disabled>Limpar testes</button><button class="back-link" type="button" data-refresh disabled>Atualizar</button></div></div>
+            <div class="raffle-history" data-history><p class="empty-state">Nenhum sorteio carregado.</p></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="raffle-stage" data-stage aria-labelledby="raffle-stage-title">
+      <div class="raffle-stage-background"></div>
+      <div class="raffle-stage-top">
+        <img src="/img/LogoPNG.png" alt="GROB">
+        <span data-stage-mode>MODO TESTE</span>
+      </div>
+      <div class="raffle-stage-content">
+        <p class="raffle-stage-category" data-stage-category></p>
+        <p class="raffle-stage-prize-label">Sorteio do brinde</p>
+        <h2 id="raffle-stage-title" data-stage-prize>Brinde</h2>
+        <div class="raffle-countdown" data-countdown></div>
+        <div class="raffle-stage-name" data-stage-name>Aguardando sorteio</div>
+        <div class="raffle-stage-details" data-stage-details></div>
+        <div class="raffle-winner-timer" data-manifestation-timer hidden><span data-manifestation-label>Aguardando o vencedor se manifestar</span><strong data-manifestation-value>00:30</strong></div>
+        <p class="raffle-stage-status" data-stage-status>Validando participantes elegíveis...</p>
+      </div>
+      <div class="raffle-confetti" data-confetti aria-hidden="true"></div>
+      <button class="raffle-stage-close" type="button" data-stage-close hidden>Fechar apresentação</button>
+    </dialog>
+
+    <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
+    <script type="module" src="/js/sorteio-4events.js?v=raffle-v8"></script>
+  </body>
+</html>

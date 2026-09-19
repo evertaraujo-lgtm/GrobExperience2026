@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plano de implementação — Sorteio 4 Events</title>
+  <style>
+    :root{--navy:#04152b;--blue:#075c9e;--cyan:#1ca7df;--ice:#eaf6fb;--ink:#182532;--muted:#5b6875;--line:#cfdae3;--green:#167852;--amber:#9a5a00;--red:#b42318}
+    *{box-sizing:border-box}
+    @page{size:A4;margin:15mm 15mm 17mm}
+    body{margin:0;color:var(--ink);font:10.5pt/1.48 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h1,h2,h3,p{margin-top:0} h1,h2,h3{color:var(--navy);page-break-after:avoid}
+    h1{font-size:28pt;line-height:1.08;margin-bottom:8mm}
+    h2{margin:9mm 0 4mm;padding-bottom:2mm;border-bottom:2px solid var(--cyan);font-size:17pt;line-height:1.2}
+    h3{margin:5mm 0 2mm;font-size:12pt} p{margin-bottom:3.2mm}
+    ul,ol{margin:2mm 0 4mm 6mm;padding-left:5mm} li{margin-bottom:1.5mm}
+    strong{color:var(--navy)}
+    code{padding:.2mm 1mm;border-radius:2px;background:#eef3f7;color:#093b63;font:9pt Consolas,"Courier New",monospace}
+    .cover{min-height:258mm;margin:-15mm -15mm -17mm;padding:22mm 19mm 17mm;color:white;background:radial-gradient(circle at 82% 17%,rgba(28,167,223,.42),transparent 32%),linear-gradient(145deg,#020c1a 0%,var(--navy) 48%,#073d66 100%);page-break-after:always;position:relative;overflow:hidden}
+    .cover:after{content:"";position:absolute;right:-48mm;bottom:20mm;width:145mm;height:145mm;border:1px solid rgba(255,255,255,.14);border-radius:50%;box-shadow:0 0 0 18mm rgba(255,255,255,.03),0 0 0 38mm rgba(255,255,255,.025)}
+    .brand{width:54mm;padding:0}.brand img{display:block;width:100%;height:auto}
+    .cover-copy{margin-top:47mm;max-width:150mm;position:relative;z-index:1}
+    .cover .eyebrow{color:#75d5ff;font-size:10pt;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+    .cover h1{color:white;font-size:35pt}.cover .subtitle{max-width:130mm;color:#dceef8;font-size:15pt;line-height:1.45}
+    .cover-meta{position:absolute;left:19mm;bottom:20mm;z-index:1;color:#bcd7e6;font-size:9.5pt}
+    .document-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7mm;padding-bottom:3mm;border-bottom:1px solid var(--line);color:var(--muted);font-size:8.5pt}
+    .document-header img{width:31mm;height:auto;padding:1.2mm 2mm;border-radius:1.5mm;background:var(--navy)}
+    .lead{margin-bottom:6mm;padding:5mm 6mm;border-left:4px solid var(--cyan);background:var(--ice);color:#14354d;font-size:11.5pt}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:5mm 0}
+    .summary-card,.callout{border:1px solid var(--line);border-radius:3mm;background:#fff;padding:4mm 5mm;page-break-inside:avoid}
+    .summary-card h3{margin:0 0 1.5mm;color:var(--blue)}.summary-card p{margin:0;color:var(--muted);font-size:9.5pt}
+    .callout{margin:4mm 0;border-left-width:4px}.callout.info{border-left-color:var(--cyan);background:#f4fbfe}.callout.success{border-left-color:var(--green);background:#f2faf6}.callout.warning{border-left-color:var(--amber);background:#fff8ec}.callout.danger{border-left-color:var(--red);background:#fff4f2}.callout p:last-child{margin-bottom:0}
+    .stage{display:grid;grid-template-columns:13mm 1fr;gap:4mm;margin:5mm 0 7mm;page-break-inside:avoid}
+    .stage-number{display:grid;place-items:center;width:12mm;height:12mm;border-radius:50%;background:var(--blue);color:white;font-size:12pt;font-weight:700}.stage h2{margin-top:0}
+    table{width:100%;margin:4mm 0 6mm;border-collapse:collapse;page-break-inside:avoid;font-size:9.2pt}
+    th,td{padding:2.7mm 3mm;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--navy);color:white}tbody tr:nth-child(even){background:#f6f9fb}
+    .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:2mm;margin:5mm 0 6mm;page-break-inside:avoid}
+    .flow div{min-height:22mm;padding:3mm;border-radius:2mm;background:var(--navy);color:white;text-align:center;font-size:8.5pt;display:grid;place-items:center;position:relative}
+    .flow div:not(:last-child):after{content:"›";position:absolute;right:-2.4mm;z-index:2;color:var(--cyan);font-size:16pt;font-weight:700}
+    .schema{margin:4mm 0 6mm;padding:4mm 5mm;border-radius:2mm;background:#07192e;color:#d9eef9;font:8.8pt/1.55 Consolas,"Courier New",monospace;white-space:pre-wrap;page-break-inside:avoid}
+    .checklist{list-style:none;margin-left:0;padding-left:0}.checklist li{position:relative;padding-left:7mm}.checklist li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+    .page-break,.section-break{page-break-before:always}.footer-note{margin-top:8mm;padding-top:3mm;border-top:1px solid var(--line);color:var(--muted);font-size:8.5pt}
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="brand"><img src="../public/img/LogoPNG.png" alt="GROB"></div>
+    <div class="cover-copy">
+      <p class="eyebrow">Plano técnico e operacional</p>
+      <h1>Sorteio de brindes<br>4 Events</h1>
+      <p class="subtitle">Especificação da experiência administrativa, modo teste, sorteio final, auditoria e apresentação para telão.</p>
+    </div>
+    <div class="cover-meta">GROB Experience<br>Versão para aprovação antes da implementação<br>19 de setembro de 2026</div>
+  </section>
+
+  <header class="document-header"><img src="../public/img/LogoPNG.png" alt="GROB"><span>Sorteio de brindes 4 Events · Plano de implementação</span></header>
+  <h1>Visão geral</h1>
+  <p class="lead">A solução manterá os participantes sincronizados pela API completamente separados do estado dos sorteios. O resultado será definido no servidor, com aleatoriedade criptográfica, bloqueio de vencedores e histórico auditável.</p>
+  <div class="summary-grid">
+    <article class="summary-card"><h3>Fonte oficial</h3><p><code>participantes4Events</code> permanece como espelho dinâmico da API.</p></article>
+    <article class="summary-card"><h3>Elegibilidade final</h3><p>Presente, categoria do dia, evento correto e sem vitória anterior na categoria.</p></article>
+    <article class="summary-card"><h3>Modo teste isolado</h3><p>Presença simulada e vencedores de ensaio nunca afetam a operação final.</p></article>
+    <article class="summary-card"><h3>Resultado confiável</h3><p>Cloud Function, <code>crypto.randomInt()</code>, transação e trilha de auditoria.</p></article>
+  </div>
+  <h2>Decisões centrais</h2>
+  <ul class="checklist">
+    <li>Nenhum campo de sorteio será gravado em <code>participantes4Events</code>.</li>
+    <li>A categoria informada pela 4 Events determinará o dia de participação.</li>
+    <li>No modo final, a data será validada em <code>America/Sao_Paulo</code>.</li>
+    <li>Um vencedor será removido dos próximos sorteios da mesma categoria.</li>
+    <li>A animação do telão apenas revelará um resultado já definido pelo servidor.</li>
+    <li>CPF, telefone e e-mail nunca serão exibidos no telão.</li>
+  </ul>
+  <div class="callout info"><strong>Premissa operacional</strong><p>A regra inicial considera uma vitória por categoria/dia. Caso uma pessoa esteja inscrita em outra categoria, poderá participar naquele outro dia.</p></div>
+
+  <div class="page-break"></div>
+  <header class="document-header"><img src="../public/img/LogoPNG.png" alt="GROB"><span>Etapas críticas · Dados e elegibilidade</span></header>
+  <div class="stage"><div class="stage-number">1</div><div>
+    <h2>Elegibilidade do sorteio final</h2>
+    <p>Um participante somente poderá entrar quando todas as condições forem verdadeiras:</p>
+    <div class="schema">eid = evento selecionado
+attendeeCat = categoria correspondente ao dia
+presente = true
+data da categoria = data atual em America/Sao_Paulo
+sem vitória anterior no mesmo EID e categoria</div>
+    <p>Exemplo válido em 23/09/2026:</p>
+    <div class="callout success"><code>[GROB EXPERIENCE] VISITANTE - 23.09.2026 (quarta-feira)</code></div>
+    <p>Participantes de outros dias serão recusados pelo servidor, mesmo que uma tentativa seja feita fora da interface.</p>
+  </div></div>
+  <div class="stage"><div class="stage-number">2</div><div>
+    <h2>Isolamento das coleções</h2>
+    <table><thead><tr><th>Estrutura</th><th>Responsabilidade</th></tr></thead><tbody>
+      <tr><td><code>participantes4Events</code></td><td>Espelho da API: identidade, categoria, presença e dados cadastrais.</td></tr>
+      <tr><td><code>sorteios4Events</code></td><td>Histórico imutável dos sorteios definitivos.</td></tr>
+      <tr><td><code>sorteios4EventsVencedores</code></td><td>Bloqueios determinísticos que impedem uma segunda vitória na categoria.</td></tr>
+      <tr><td><code>sorteios4EventsTestes</code></td><td>Sessões, presenças simuladas, vencedores e resultados de ensaio.</td></tr>
+    </tbody></table>
+    <div class="callout warning"><strong>Proteção contra sincronizações</strong><p>A API continuará atualizando somente <code>participantes4Events</code>. O histórico e os bloqueios estarão fora dessa coleção e não poderão ser sobrescritos.</p></div>
+  </div></div>
+  <div class="stage"><div class="stage-number">3</div><div>
+    <h2>Atualização da presença</h2>
+    <p>Antes do sorteio final, o administrador executará a sincronização com a 4 Events:</p>
+    <div class="schema">attendee_attending_event = "1"  →  presente = true
+attendee_attending_event = "0"  →  presente = false</div>
+    <p>A interface mostrará última atualização, total da categoria, presentes, elegíveis e vencedores anteriores. Recomenda-se bloquear o sorteio sem sincronização recente.</p>
+  </div></div>
+
+  <div class="page-break"></div>
+  <header class="document-header"><img src="../public/img/LogoPNG.png" alt="GROB"><span>Etapas críticas · Execução e auditoria</span></header>
+  <div class="stage"><div class="stage-number">4</div><div>
+    <h2>Sorteio definitivo no servidor</h2>
+    <div class="flow"><div>Validar administrador e evento</div><div>Montar lista elegível</div><div>Excluir vencedores</div><div>Sortear com criptografia</div><div>Gravar em transação</div></div>
+    <ol>
+      <li>Validar autenticação, EID, categoria e data atual em São Paulo.</li>
+      <li>Buscar somente participantes presentes e remover duplicidades.</li>
+      <li>Excluir vencedores anteriores e ordenar os IDs de forma estável.</li>
+      <li>Congelar a lista e selecionar uma posição com <code>crypto.randomInt()</code>.</li>
+      <li>Reler o vencedor e o bloqueio dentro da transação.</li>
+      <li>Criar simultaneamente o resultado e o bloqueio do vencedor.</li>
+    </ol>
+    <p>Se duas execuções concorrerem, apenas uma criará o bloqueio determinístico. A outra repetirá a seleção com os participantes restantes.</p>
+  </div></div>
+  <div class="stage"><div class="stage-number">5</div><div>
+    <h2>Auditoria e rastreabilidade</h2>
+    <div class="summary-grid">
+      <article class="summary-card"><h3>Contexto</h3><p>EID, categoria, data e nome do brinde.</p></article>
+      <article class="summary-card"><h3>Elegibilidade</h3><p>Quantidade, hash da lista e posição sorteada.</p></article>
+      <article class="summary-card"><h3>Vencedor</h3><p>ID, nome, empresa, cargo e QR Code necessários ao evento.</p></article>
+      <article class="summary-card"><h3>Operação</h3><p>Administrador, data, hora e regra aplicada.</p></article>
+    </div>
+    <p>A lista congelada de IDs poderá ser salva em blocos de auditoria. Sorteios concluídos não serão alterados; cada execução produzirá um novo registro.</p>
+  </div></div>
+  <div class="callout danger"><strong>O navegador não escolhe o vencedor</strong><p>A interface recebe um resultado já persistido. Alterar JavaScript, interromper a animação ou recarregar a página não muda quem venceu.</p></div>
+
+  <div class="page-break"></div>
+  <header class="document-header"><img src="../public/img/LogoPNG.png" alt="GROB"><span>Etapas críticas · Ensaio e operação</span></header>
+  <div class="stage"><div class="stage-number">6</div><div>
+    <h2>Modo teste</h2>
+    <p>O ensaio usará o mesmo algoritmo, aceitará categorias futuras e manterá tudo em uma sessão isolada.</p>
+    <table><thead><tr><th>Filtro</th><th>Comportamento</th></tr></thead><tbody>
+      <tr><td><strong>Todos da categoria</strong></td><td>Todos os participantes cadastrados naquela categoria entram.</td></tr>
+      <tr><td><strong>Presença simulada</strong></td><td>Somente os marcados na coluna virtual de presença entram.</td></tr>
+    </tbody></table>
+    <ul>
+      <li>Marcação individual, busca e opção de marcar todos.</li>
+      <li>Vencedores removidos durante a sessão de ensaio.</li>
+      <li>Nova sessão restaura os elegíveis sem apagar o histórico anterior.</li>
+      <li>Vencedores de teste nunca bloqueiam participantes no modo final.</li>
+      <li>Identificação visual permanente de <strong>MODO TESTE</strong>.</li>
+    </ul>
+  </div></div>
+  <div class="stage"><div class="stage-number">7</div><div>
+    <h2>Tela administrativa</h2>
+    <div class="schema">Modo: Teste ou Final
+Evento / EID
+Categoria e data
+Nome do brinde
+Última sincronização
+Quantidade total, presente e elegível
+Histórico de vencedores</div>
+    <p>No modo final, categoria e data serão vinculadas, a presença virá exclusivamente da API e haverá confirmação explícita antes de sortear.</p>
+  </div></div>
+  <div class="stage"><div class="stage-number">8</div><div>
+    <h2>Experiência para telão</h2>
+    <div class="flow"><div>Contagem<br>3 · 2 · 1</div><div>Nomes em alta velocidade</div><div>Desaceleração visual</div><div>Revelação do vencedor</div><div>Confetes e brinde</div></div>
+    <ul>
+      <li>Layout 16:9, modo tela cheia e tipografia de longa distância.</li>
+      <li>Nome, empresa e cargo em grande destaque.</li>
+      <li>Som opcional, brilho, zoom e partículas.</li>
+      <li>Categoria, data, brinde e indicação de teste/final sempre visíveis.</li>
+      <li>Suporte a <code>prefers-reduced-motion</code>.</li>
+    </ul>
+  </div></div>
+
+  <div class="page-break"></div>
+  <header class="document-header"><img src="../public/img/LogoPNG.png" alt="GROB"><span>Etapas críticas · Segurança, validação e entrega</span></header>
+  <div class="stage"><div class="stage-number">9</div><div>
+    <h2>Índices e segurança</h2>
+    <p>Índice recomendado em <code>participantes4Events</code>:</p>
+    <div class="schema">eid ASC
+attendeeCat ASC
+presente ASC</div>
+    <ul>
+      <li>Apenas administradores poderão iniciar sorteios e sessões de teste.</li>
+      <li>O navegador não poderá gravar diretamente resultados ou bloqueios.</li>
+      <li>Escritas definitivas ocorrerão exclusivamente pela Cloud Function.</li>
+      <li>Dados pessoais desnecessários serão omitidos do telão e da auditoria.</li>
+    </ul>
+  </div></div>
+  <div class="stage"><div class="stage-number">10</div><div>
+    <h2>Validação antes da publicação</h2>
+    <ul class="checklist">
+      <li>Participante ausente nunca entra no sorteio final.</li>
+      <li>Categoria de outro dia nunca entra no sorteio final.</li>
+      <li>Vencedor não participa novamente na mesma categoria.</li>
+      <li>Duas execuções simultâneas não registram a mesma pessoa.</li>
+      <li>Modo teste não afeta bloqueios ou resultados definitivos.</li>
+      <li>Nova sincronização não altera o histórico do sorteio.</li>
+      <li>Animação sempre termina no resultado persistido.</li>
+      <li>Interface funciona em notebook, projetor e telão 16:9.</li>
+    </ul>
+  </div></div>
+  <h2 class="section-break">Ordem recomendada de implementação</h2>
+  <table><thead><tr><th>Fase</th><th>Entrega</th><th>Critério de conclusão</th></tr></thead><tbody>
+    <tr><td>1</td><td>Modelo de dados, regras e índices</td><td>Coleções isoladas e acesso administrativo.</td></tr>
+    <tr><td>2</td><td>Cloud Functions</td><td>Resultado transacional, sem repetição e auditável.</td></tr>
+    <tr><td>3</td><td>Modo teste</td><td>Ensaio completo sem alterar dados finais.</td></tr>
+    <tr><td>4</td><td>Painel administrativo</td><td>Sincronização, filtros, contadores e histórico.</td></tr>
+    <tr><td>5</td><td>Modo telão</td><td>Animação responsiva revelando o resultado do servidor.</td></tr>
+    <tr><td>6</td><td>Testes e deploy</td><td>Critérios críticos aprovados no ambiente publicado.</td></tr>
+  </tbody></table>
+  <div class="callout success"><strong>Resultado esperado</strong><p>Uma solução justa, visual e auditável, capaz de ser ensaiada antes do evento sem contaminar o sorteio definitivo ou os dados sincronizados pela 4 Events.</p></div>
+  <p class="footer-note">Documento de planejamento. A implementação deve preservar as decisões de isolamento, elegibilidade e segurança descritas acima.</p>
+</body>
+</html>

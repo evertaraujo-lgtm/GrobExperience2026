@@ -10,6 +10,7 @@ const feedback = document.querySelector("[data-feedback]");
 const logout = document.querySelector("[data-logout]");
 const assistantPage = document.body.dataset.assistantPage === "true";
 const leadCollectorPage = document.body.dataset.leadCollectorPage === "true";
+const adminPage = document.body.dataset.adminPage === "true";
 
 const ADMIN_NAVIGATION = [
   {
@@ -24,6 +25,7 @@ const ADMIN_NAVIGATION = [
     title: "Operação do evento",
     items: [
       {label: "Gestão do evento", description: "Atividades e assistentes", href: "/gestao-evento/", icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 2-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.55V20h-2.8v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2-2 .06-.06A1.7 1.7 0 0 0 7.52 15a1.7 1.7 0 0 0-1.55-1H5.9v-2.8h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2-2 .06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1-1.55V4.9h2.8v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2 2-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1h.09V14h-.09a1.7 1.7 0 0 0-1.57 1Z"/>'},
+      {label: "Sorteio de brindes", description: "Modo teste, sorteio final e telão", href: "/sorteio-4events/", icon: '<path d="M20 12v9H4v-9M2 7h20v5H2zM12 7v14M12 7H7.5a2.5 2.5 0 1 1 0-5C10.5 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13.5 2 12 7 12 7Z"/>'},
       {label: "Participação", description: "Presença nas atividades", href: "/gestao-evento/participacao/", icon: '<path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/><path d="M2 21h20"/>'},
       {label: "Coleta de leads", description: "Equipe e leads coletados", href: "/coleta-leads/", icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 5V3h8v2m-5 6h2m-7 4h12"/>'},
       {label: "Perguntas dos leads", description: "Roteiro da coleta comercial", href: "/coleta-leads/perguntas/", icon: '<path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/>'},
@@ -112,6 +114,7 @@ const ADMIN_ACTION_ICON_RULES = [
   {test: /Notificações de chegada/i, icon: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>'},
   {test: /Dashboard de participação/i, icon: '<path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/><path d="M2 21h20"/>'},
   {test: /Pesquisa de satisfação/i, icon: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="m12 7 1.2 2.4 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4Z"/>'},
+  {test: /Sorteio de brindes/i, icon: '<path d="M20 12v9H4v-9M2 7h20v5H2zM12 7v14M12 7H7.5a2.5 2.5 0 1 1 0-5C10.5 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13.5 2 12 7 12 7Z"/>'},
   {test: /Editar perguntas/i, icon: '<path d="M9 5h11M9 12h7M9 19h4"/><path d="m17 16 3-3 2 2-3 3-3 1Z"/><circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/>'},
   {test: /Gerar QR Code/i, icon: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zm3 3h4v4h-4zm1-3h3"/>'},
   {test: /Checar presença/i, icon: '<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 10.5-4M16 18l2 2 4-5"/>'},
@@ -210,6 +213,7 @@ try {
     }
     if (page === "login" && user) window.location.replace(isAssistant ? "/coleta-atividades/" : isLeadSeller && !isAdmin ? "/coleta-leads/" : "/participantes-4events/");
     if (page === "protected" && !user) window.location.replace("/login/");
+    if (page === "protected" && user && adminPage && !isAdmin) window.location.replace("/participantes-4events/");
     if (page === "protected" && user && isAssistant && !assistantPage) window.location.replace("/coleta-atividades/");
     if (page === "protected" && user && !isAssistant && assistantPage) window.location.replace("/app/");
     if (page === "protected" && user && isLeadSeller && !isAdmin && !leadCollectorPage) window.location.replace("/coleta-leads/");

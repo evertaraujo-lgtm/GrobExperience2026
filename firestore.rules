@@ -171,6 +171,28 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Estado operacional da integração e histórico de sorteios. Todas as
+    // gravações são transacionais e realizadas pelas Cloud Functions.
+    match /integracoes4Events/{integracaoId} {
+      allow read: if isAdmin();
+    }
+
+    match /sorteios4Events/{sorteioId} {
+      allow read: if isAdmin();
+    }
+
+    match /sorteios4EventsVencedores/{vencedorId} {
+      allow read: if isAdmin();
+    }
+
+    match /sorteios4EventsTestes/{sessaoId} {
+      allow read: if isAdmin();
+    }
+
+    match /sorteios4EventsTestes/{sessaoId}/{document=**} {
+      allow read: if isAdmin();
+    }
+
     match /coletaAtividades/{atividadeId} {
       allow read: if isAdmin()
         || (isCollectionAssistant()

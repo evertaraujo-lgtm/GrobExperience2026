@@ -1,0 +1,726 @@
+import {getAuthServices, getFunctionsServices} from "/js/firebase-client.js";
+
+const FIXED_EVENT_EID = "2";
+const modeButtons = [...document.querySelectorAll("[data-mode]")];
+const modeAlert = document.querySelector("[data-mode-alert]");
+const eventForm = document.querySelector("[data-event-form]");
+const eidInput = document.querySelector("[data-eid]");
+const loadEventButton = document.querySelector("[data-load-event]");
+const syncButton = document.querySelector("[data-sync-event]");
+const categorySelect = document.querySelector("[data-category]");
+const syncStatus = document.querySelector("[data-sync-status]");
+const testControls = document.querySelector("[data-test-controls]");
+const testSessionLabel = document.querySelector("[data-test-session]");
+const newTestSessionButton = document.querySelector("[data-new-test-session]");
+const testFilter = document.querySelector("[data-test-filter]");
+const presenceActions = document.querySelector("[data-presence-actions]");
+const markAllButton = document.querySelector("[data-mark-all]");
+const clearAllButton = document.querySelector("[data-clear-all]");
+const totalStat = document.querySelector("[data-stat-total]");
+const presentStat = document.querySelector("[data-stat-present]");
+const winnersStat = document.querySelector("[data-stat-winners]");
+const eligibleStat = document.querySelector("[data-stat-eligible]");
+const presenceStatLabel = document.querySelector("[data-stat-presence-label]");
+const drawForm = document.querySelector("[data-draw-form]");
+const prizeInput = document.querySelector("[data-prize]");
+const manifestationTimeInput = document.querySelector("[data-manifestation-time]");
+const fullscreenInput = document.querySelector("[data-fullscreen]");
+const drawButton = document.querySelector("[data-draw]");
+const feedback = document.querySelector("[data-feedback]");
+const participantsContainer = document.querySelector("[data-participants]");
+const searchInput = document.querySelector("[data-search]");
+const historyContainer = document.querySelector("[data-history]");
+const refreshButton = document.querySelector("[data-refresh]");
+const clearHistoryButton = document.querySelector("[data-clear-history]");
+const stage = document.querySelector("[data-stage]");
+const stageMode = document.querySelector("[data-stage-mode]");
+const stageCategory = document.querySelector("[data-stage-category]");
+const stagePrize = document.querySelector("[data-stage-prize]");
+const stageName = document.querySelector("[data-stage-name]");
+const stageDetails = document.querySelector("[data-stage-details]");
+const stageStatus = document.querySelector("[data-stage-status]");
+const manifestationTimer = document.querySelector("[data-manifestation-timer]");
+const manifestationLabel = document.querySelector("[data-manifestation-label]");
+const manifestationValue = document.querySelector("[data-manifestation-value]");
+const countdown = document.querySelector("[data-countdown]");
+const confetti = document.querySelector("[data-confetti]");
+const stageClose = document.querySelector("[data-stage-close]");
+
+const apiCache = new Map();
+const state = {
+  mode: localStorage.getItem("grob-raffle-mode") === "final" ? "final" : "teste",
+  eid: FIXED_EVENT_EID,
+  category: "",
+  sessionId: "",
+  filter: localStorage.getItem("grob-raffle-test-filter") === "presenca_simulada" ? "presenca_simulada" : "todos",
+  categories: [],
+  data: null,
+  participants: [],
+  history: [],
+  requestId: 0,
+  stageBusy: false,
+  manifestationInterval: null,
+};
+
+function setFeedback(message, status = "neutral") {
+  feedback.textContent = message;
+  feedback.dataset.state = status;
+}
+
+function errorText(error, fallback) {
+  const message = typeof error?.message === "string" ? error.message.replace(/^FirebaseError:\s*/i, "") : "";
+  return message || fallback;
+}
+
+async function callable(name, data = {}) {
+  let fn = apiCache.get(name);
+  if (!fn) {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const options = name === "sync4EventsParticipants" ? {timeout: 540000} : undefined;
+    fn = functionsModule.httpsCallable(functions, name, options);
+    apiCache.set(name, fn);
+  }
+  const response = await fn(data);
+  return response.data;
+}
+
+function formatDateTime(value) {
+  if (!value) return "Não registrada";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Não registrada" : date.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+function testSessionStorageKey() {
+  return state.eid && state.category ? `grob-raffle-test-session:${state.eid}:${state.category}` : "";
+}
+
+function restoreTestSession() {
+  const key = testSessionStorageKey();
+  state.sessionId = key ? localStorage.getItem(key) || "" : "";
+}
+
+function saveTestSession(id) {
+  const key = testSessionStorageKey();
+  state.sessionId = id;
+  if (key) localStorage.setItem(key, id);
+}
+
+function currentCategory() {
+  return state.categories.find((item) => item.categoria === state.category) || null;
+}
+
+function renderMode() {
+  modeButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode)));
+  testControls.hidden = state.mode !== "teste";
+  presenceStatLabel.textContent = state.mode === "teste" ? "Presentes simulados" : "Presentes na API";
+  modeAlert.classList.toggle("raffle-alert-test", state.mode === "teste");
+  modeAlert.classList.toggle("raffle-alert-final", state.mode === "final");
+  modeAlert.querySelector("strong").textContent = state.mode === "teste" ? "MODO TESTE" : "SORTEIO FINAL";
+  modeAlert.querySelector("span").textContent = state.mode === "teste"
+    ? "Os resultados desta sessão não afetam o sorteio definitivo."
+    : "Somente presentes da categoria correspondente ao dia atual podem participar.";
+  testFilter.value = state.filter;
+  presenceActions.hidden = state.mode !== "teste" || state.filter !== "presenca_simulada";
+  clearHistoryButton.hidden = false;
+  clearHistoryButton.textContent = state.mode === "teste" ? "Limpar testes" : "Limpar sorteio final";
+  renderCategoryOptions();
+}
+
+function renderCategoryOptions() {
+  const previous = state.category;
+  categorySelect.replaceChildren();
+  if (!state.categories.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = state.eid ? "Nenhuma categoria encontrada" : "Carregue um evento";
+    categorySelect.append(option);
+    categorySelect.disabled = true;
+    state.category = "";
+    return;
+  }
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione uma categoria";
+  categorySelect.append(placeholder);
+  const categoriesForMode = state.categories.filter((item) =>
+    state.mode === "teste" || (item.visitante && item.data),
+  );
+  categoriesForMode.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.categoria;
+    option.textContent = `${item.categoria} · ${item.total} participante(s)${item.hoje ? " · HOJE" : ""}`;
+    option.disabled = state.mode === "final" && !item.hoje;
+    categorySelect.append(option);
+  });
+  const available = categoriesForMode.filter((item) => state.mode === "teste" || item.hoje);
+  const selected = available.find((item) => item.categoria === previous) || available[0];
+  state.category = selected?.categoria || "";
+  categorySelect.value = state.category;
+  categorySelect.disabled = !available.length;
+  restoreTestSession();
+}
+
+function renderSyncStatus() {
+  if (!state.data) {
+    syncStatus.textContent = state.eid ? "Selecione uma categoria." : "Nenhum evento carregado.";
+    syncStatus.dataset.state = "neutral";
+    return;
+  }
+  const syncAt = state.data.ultimaSincronizacaoEm;
+  if (!syncAt) {
+    syncStatus.textContent = "Ainda não existe sincronização registrada para este EID. Atualize pela API antes do sorteio final.";
+    syncStatus.dataset.state = "warning";
+    return;
+  }
+  syncStatus.textContent = `Última sincronização da API: ${formatDateTime(syncAt)}.${state.data.sincronizacaoHoje ? " Atualizada hoje." : " É necessário atualizar novamente no dia do sorteio final."}`;
+  syncStatus.dataset.state = state.data.sincronizacaoHoje ? "success" : "warning";
+}
+
+function renderStats() {
+  const totals = state.data?.totais || {};
+  totalStat.textContent = String(totals.participantes || 0);
+  presentStat.textContent = String(state.mode === "teste" ? totals.presencasSimuladas || 0 : totals.presentes || 0);
+  winnersStat.textContent = String(totals.vencedores || 0);
+  eligibleStat.textContent = String(totals.elegiveis || 0);
+}
+
+function participantSearchText(participant) {
+  return [participant.nome, participant.empresa, participant.cargo, participant.qrCode, participant.id4Events]
+    .join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function situation(participant) {
+  if (participant.jaSorteado) return {label: "Já sorteado", className: "winner"};
+  if (participant.elegivel) return {label: "Elegível", className: "eligible"};
+  if (state.mode === "final" && !participant.presente) return {label: "Ausente", className: ""};
+  if (state.mode === "teste" && state.filter === "presenca_simulada" && !participant.presencaSimulada) return {label: "Fora da simulação", className: ""};
+  return {label: "Não elegível", className: ""};
+}
+
+function renderParticipants() {
+  participantsContainer.replaceChildren();
+  const term = searchInput.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const filtered = state.participants.filter((participant) => !term || participantSearchText(participant).includes(term));
+  if (!filtered.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = state.participants.length ? "Nenhum participante corresponde à busca." : "Nenhum participante nessa categoria.";
+    participantsContainer.append(empty);
+    return;
+  }
+  filtered.forEach((participant) => {
+    const row = document.createElement("article");
+    row.className = "raffle-participant";
+    row.dataset.eligible = String(participant.elegivel);
+    row.dataset.winner = String(participant.jaSorteado);
+
+    const identity = document.createElement("div");
+    identity.className = "raffle-participant-copy";
+    const name = document.createElement("strong");
+    name.textContent = participant.nome;
+    const identifier = document.createElement("small");
+    identifier.textContent = participant.qrCode || (participant.id4Events ? `ID ${participant.id4Events}` : "Sem identificador visível");
+    identity.append(name, identifier);
+
+    const professional = document.createElement("div");
+    professional.className = "raffle-participant-copy";
+    const company = document.createElement("span");
+    company.textContent = participant.empresa || "Empresa não informada";
+    const cargo = document.createElement("small");
+    cargo.textContent = participant.cargo || "Cargo não informado";
+    professional.append(company, cargo);
+
+    const presence = document.createElement("label");
+    presence.className = "raffle-presence-toggle";
+    if (state.mode === "teste") {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = participant.presencaSimulada;
+      checkbox.disabled = !state.sessionId || participant.jaSorteado;
+      checkbox.setAttribute("aria-label", `Presença simulada de ${participant.nome}`);
+      checkbox.addEventListener("change", () => updateSimulatedPresence([participant.participantDocumentId], checkbox.checked, checkbox));
+      presence.append(checkbox, document.createTextNode(checkbox.checked ? "Simulada" : "Não marcada"));
+    } else {
+      presence.textContent = participant.presente ? "Presente" : "Ausente";
+    }
+
+    const status = situation(participant);
+    const pill = document.createElement("span");
+    pill.className = `raffle-status-pill ${status.className}`.trim();
+    pill.textContent = status.label;
+    row.append(identity, professional, presence, pill);
+    participantsContainer.append(row);
+  });
+}
+
+function renderHistory() {
+  historyContainer.replaceChildren();
+  if (!state.history.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = state.mode === "teste" && !state.sessionId
+      ? "Crie uma sessão de teste para registrar os ensaios."
+      : "Nenhum sorteio realizado neste contexto.";
+    historyContainer.append(empty);
+    return;
+  }
+  state.history.forEach((item, index) => {
+    const winner = item.vencedor || {};
+    const card = document.createElement("article");
+    card.className = "raffle-history-item";
+    const order = document.createElement("small");
+    order.textContent = `#${state.history.length - index} · ${formatDateTime(item.sorteadoEm)}`;
+    const name = document.createElement("strong");
+    name.textContent = winner.nome || "Vencedor";
+    const prize = document.createElement("span");
+    prize.className = "raffle-history-prize";
+    prize.textContent = item.brinde || "Brinde não informado";
+    const details = document.createElement("span");
+    details.textContent = `${winner.empresa || "Empresa não informada"} · ${item.quantidadeElegiveis || 0} elegível(is)`;
+    card.append(order, name, prize, details);
+    historyContainer.append(card);
+  });
+}
+
+function updateControls() {
+  const hasCategory = Boolean(state.eid && state.category);
+  syncButton.disabled = !state.eid;
+  refreshButton.disabled = !hasCategory;
+  newTestSessionButton.disabled = state.mode !== "teste" || !hasCategory;
+  markAllButton.disabled = !state.sessionId || !state.participants.length;
+  clearAllButton.disabled = !state.sessionId || !state.participants.length;
+  clearHistoryButton.disabled = !state.history.length || (state.mode === "teste" && !state.sessionId);
+  testSessionLabel.textContent = state.sessionId
+    ? `Sessão ativa · ${state.sessionId.slice(0, 8)}`
+    : "Nenhuma sessão criada";
+  const eligible = Number(state.data?.totais?.elegiveis || 0);
+  const finalReady = state.mode === "final" && state.data?.categoriaPermitidaHoje && state.data?.sincronizacaoHoje;
+  const testReady = state.mode === "teste" && Boolean(state.sessionId);
+  drawButton.disabled = !hasCategory || !eligible || !(finalReady || testReady);
+}
+
+function render() {
+  renderMode();
+  renderSyncStatus();
+  renderStats();
+  renderParticipants();
+  renderHistory();
+  updateControls();
+}
+
+async function loadEvent() {
+  if (!eventForm.reportValidity()) return;
+  const eid = FIXED_EVENT_EID;
+  eidInput.value = FIXED_EVENT_EID;
+  const requestId = ++state.requestId;
+  loadEventButton.disabled = true;
+  loadEventButton.textContent = "Carregando...";
+  setFeedback("");
+  syncStatus.textContent = "Consultando categorias do evento...";
+  syncStatus.dataset.state = "neutral";
+  try {
+    const data = await callable("get4EventsRaffleState", {eid, modo: state.mode});
+    if (requestId !== state.requestId) return;
+    state.eid = eid;
+    state.categories = Array.isArray(data.categorias) ? data.categorias : [];
+    state.data = data;
+    renderCategoryOptions();
+    if (state.category) await refreshState();
+    else {
+      state.participants = [];
+      state.history = [];
+      render();
+      if (state.mode === "final") setFeedback("Nenhuma categoria corresponde ao dia de hoje.", "error");
+    }
+  } catch (error) {
+    console.error(error);
+    state.categories = [];
+    state.participants = [];
+    state.history = [];
+    state.data = null;
+    render();
+    setFeedback(errorText(error, "Não foi possível carregar o evento."), "error");
+  } finally {
+    loadEventButton.disabled = false;
+    loadEventButton.textContent = "Recarregar evento";
+  }
+}
+
+async function refreshState(retryWithoutSession = true) {
+  if (!state.eid || !state.category) return;
+  const requestId = ++state.requestId;
+  refreshButton.disabled = true;
+  setFeedback("Atualizando elegibilidade...");
+  try {
+    const data = await callable("get4EventsRaffleState", {
+      eid: state.eid,
+      categoria: state.category,
+      modo: state.mode,
+      sessaoTesteId: state.mode === "teste" ? state.sessionId : "",
+      filtroTeste: state.filter,
+    });
+    if (requestId !== state.requestId) return;
+    state.data = data;
+    state.categories = Array.isArray(data.categorias) ? data.categorias : state.categories;
+    state.participants = Array.isArray(data.participantes) ? data.participantes : [];
+    state.history = Array.isArray(data.historico) ? data.historico : [];
+    setFeedback("");
+    render();
+  } catch (error) {
+    if (state.mode === "teste" && state.sessionId && retryWithoutSession && ["functions/not-found", "functions/failed-precondition"].includes(error?.code)) {
+      saveTestSession("");
+      await refreshState(false);
+      return;
+    }
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível atualizar o sorteio."), "error");
+  } finally {
+    refreshButton.disabled = false;
+  }
+}
+
+async function synchronizeEvent() {
+  if (!state.eid) return;
+  syncButton.disabled = true;
+  syncButton.textContent = "Sincronizando...";
+  setFeedback("Consultando todos os participantes na API da 4 Events...");
+  try {
+    const result = await callable("sync4EventsParticipants", {eid: state.eid});
+    setFeedback(`${result.imported || 0} participante(s) atualizado(s) pela API.`, "success");
+    await loadEvent();
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível atualizar os participantes."), "error");
+  } finally {
+    syncButton.disabled = false;
+    syncButton.textContent = "Atualizar pela API";
+  }
+}
+
+async function createTestSession() {
+  if (!state.eid || !state.category) return;
+  if (state.sessionId && !window.confirm("Iniciar uma nova sessão de teste? A sessão atual continuará preservada no histórico, mas os vencedores serão zerados na nova sessão.")) return;
+  newTestSessionButton.disabled = true;
+  newTestSessionButton.textContent = "Criando...";
+  try {
+    const result = await callable("create4EventsRaffleTestSession", {eid: state.eid, categoria: state.category});
+    saveTestSession(result.sessaoTesteId);
+    setFeedback("Nova sessão de teste criada. Os vencedores começam zerados.", "success");
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível criar a sessão de teste."), "error");
+  } finally {
+    newTestSessionButton.disabled = false;
+    newTestSessionButton.textContent = "Nova sessão";
+  }
+}
+
+async function clearTestHistory() {
+  if (state.mode !== "teste" || !state.sessionId || !state.history.length) return;
+  const confirmed = window.confirm(
+    "Limpar o histórico desta sessão de teste? Os vencedores voltarão a participar. A presença simulada será mantida e os sorteios finais não serão afetados.",
+  );
+  if (!confirmed) return;
+  clearHistoryButton.disabled = true;
+  clearHistoryButton.textContent = "Limpando...";
+  try {
+    const result = await callable("clear4EventsRaffleTestHistory", {
+      eid: state.eid,
+      categoria: state.category,
+      sessaoTesteId: state.sessionId,
+    });
+    const removed = Number(result.resultadosRemovidos || 0);
+    setFeedback(`${removed} resultado(s) de teste removido(s). Os participantes estão elegíveis novamente.`, "success");
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível limpar o histórico de testes."), "error");
+  } finally {
+    clearHistoryButton.textContent = "Limpar testes";
+    updateControls();
+  }
+}
+
+async function clearFinalHistory() {
+  if (state.mode !== "final" || !state.category || !state.history.length) return;
+  const confirmed = window.confirm(
+    `Limpar todo o histórico FINAL da categoria “${state.category}”? Os vencedores voltarão a ficar elegíveis. A presença e os participantes da API serão mantidos.`,
+  );
+  if (!confirmed) return;
+  clearHistoryButton.disabled = true;
+  clearHistoryButton.textContent = "Limpando...";
+  try {
+    const result = await callable("clear4EventsRaffleFinalHistory", {
+      eid: state.eid,
+      categoria: state.category,
+    });
+    const removed = Number(result.resultadosRemovidos || 0);
+    const released = Number(result.vencedoresLiberados || 0);
+    setFeedback(`${removed} resultado(s) final(is) removido(s) e ${released} participante(s) novamente elegível(is).`, "success");
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível limpar o histórico do sorteio final."), "error");
+  } finally {
+    clearHistoryButton.textContent = "Limpar sorteio final";
+    updateControls();
+  }
+}
+
+function clearCurrentHistory() {
+  return state.mode === "teste" ? clearTestHistory() : clearFinalHistory();
+}
+
+async function updateSimulatedPresence(participantIds, present, control = null) {
+  if (!state.sessionId || !participantIds.length) return;
+  if (control) control.disabled = true;
+  try {
+    for (let index = 0; index < participantIds.length; index += 350) {
+      await callable("set4EventsRaffleTestPresence", {
+        eid: state.eid,
+        categoria: state.category,
+        sessaoTesteId: state.sessionId,
+        participanteIds: participantIds.slice(index, index + 350),
+        presente: present,
+      });
+    }
+    setFeedback(`${participantIds.length} presença(s) simulada(s) atualizada(s).`, "success");
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível atualizar a presença simulada."), "error");
+    if (control) control.disabled = false;
+  }
+}
+
+function wait(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function manifestationSeconds() {
+  const supplied = Math.trunc(Number(manifestationTimeInput.value));
+  const seconds = Number.isFinite(supplied) ? Math.min(600, Math.max(0, supplied)) : 30;
+  manifestationTimeInput.value = String(seconds);
+  localStorage.setItem("grob-raffle-manifestation-seconds", String(seconds));
+  return seconds;
+}
+
+function timerText(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+}
+
+function stopManifestationTimer(hide = true) {
+  if (state.manifestationInterval) window.clearInterval(state.manifestationInterval);
+  state.manifestationInterval = null;
+  if (hide) manifestationTimer.hidden = true;
+  manifestationTimer.dataset.state = "";
+}
+
+function startManifestationTimer(seconds) {
+  stopManifestationTimer();
+  if (!seconds) return;
+  let remaining = seconds;
+  manifestationTimer.hidden = false;
+  manifestationTimer.dataset.state = "running";
+  manifestationLabel.textContent = "Aguardando o vencedor se manifestar";
+  manifestationValue.textContent = timerText(remaining);
+  state.manifestationInterval = window.setInterval(() => {
+    remaining -= 1;
+    manifestationValue.textContent = timerText(Math.max(remaining, 0));
+    if (remaining > 0) return;
+    stopManifestationTimer(false);
+    manifestationTimer.dataset.state = "ended";
+    manifestationLabel.textContent = "Tempo de manifestação encerrado";
+  }, 1000);
+}
+
+function randomVisualIndex(length, previousIndex = -1) {
+  if (length <= 1) return 0;
+  let index = previousIndex;
+  while (index === previousIndex) {
+    if (globalThis.crypto?.getRandomValues) {
+      const value = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(value);
+      index = value[0] % length;
+    } else {
+      index = Math.floor(Math.random() * length);
+    }
+  }
+  return index;
+}
+
+async function showCountdown() {
+  stopManifestationTimer();
+  stage.dataset.phase = "countdown";
+  stageName.textContent = "";
+  stageDetails.textContent = "";
+  for (const value of ["3", "2", "1"]) {
+    countdown.textContent = value;
+    countdown.classList.remove("active");
+    void countdown.offsetWidth;
+    countdown.classList.add("active");
+    await wait(780);
+  }
+  countdown.classList.remove("active");
+  countdown.textContent = "";
+}
+
+function createConfetti() {
+  confetti.replaceChildren();
+  const colors = ["#70dfff", "#ffffff", "#76efb4", "#ffc65f", "#348fe5"];
+  for (let index = 0; index < 90; index += 1) {
+    const particle = document.createElement("i");
+    particle.style.setProperty("--x", `${Math.random() * 100}%`);
+    particle.style.setProperty("--w", `${5 + Math.random() * 8}px`);
+    particle.style.setProperty("--color", colors[index % colors.length]);
+    particle.style.setProperty("--rotate", `${Math.random() * 180}deg`);
+    particle.style.setProperty("--duration", `${2.6 + Math.random() * 2.8}s`);
+    particle.style.setProperty("--delay", `${Math.random() * .8}s`);
+    particle.style.setProperty("--drift", `${-90 + Math.random() * 180}px`);
+    confetti.append(particle);
+  }
+}
+
+async function revealWinner(result) {
+  const winner = result.vencedor || {};
+  const names = state.participants.filter((participant) => participant.elegivel).map((participant) => participant.nome);
+  if (!names.length) names.push(winner.nome || "Participante");
+  await showCountdown();
+  stage.dataset.phase = "spinning";
+  stageStatus.textContent = "Sorteando entre os participantes elegíveis";
+  let visualIndex = -1;
+  for (let index = 0; index < 22; index += 1) {
+    visualIndex = randomVisualIndex(names.length, visualIndex);
+    stageName.textContent = names[visualIndex];
+    const progress = index / 21;
+    await wait(38 + Math.round(progress * progress * 105));
+  }
+  stage.dataset.phase = "winner";
+  stageName.textContent = winner.nome || "Vencedor";
+  stageDetails.textContent = [winner.empresa, winner.cargo].filter(Boolean).join(" · ");
+  stageStatus.textContent = `Vencedor do brinde ${prizeInput.value.trim()}`;
+  createConfetti();
+  stageClose.hidden = false;
+}
+
+async function executeDraw(event) {
+  event.preventDefault();
+  if (!drawForm.reportValidity() || drawButton.disabled) return;
+  if (state.mode === "final" && !window.confirm(`Confirmar o sorteio FINAL do brinde “${prizeInput.value.trim()}” para a categoria selecionada? O vencedor sairá dos próximos sorteios dessa categoria.`)) return;
+
+  stopManifestationTimer();
+  stage.dataset.mode = state.mode;
+  stage.dataset.phase = "loading";
+  stageMode.textContent = state.mode === "teste" ? "MODO TESTE" : "SORTEIO FINAL";
+  stageCategory.textContent = state.category;
+  stagePrize.textContent = prizeInput.value.trim();
+  stageName.textContent = "Validando elegíveis";
+  stageDetails.textContent = "";
+  stageStatus.textContent = "O resultado será definido e registrado no servidor";
+  stageClose.hidden = true;
+  confetti.replaceChildren();
+  stage.showModal();
+  state.stageBusy = true;
+
+  if (fullscreenInput.checked && stage.requestFullscreen) {
+    try { await stage.requestFullscreen(); } catch (error) { console.warn("Tela cheia não disponível.", error); }
+  }
+
+  drawButton.disabled = true;
+  try {
+    const result = await callable("draw4EventsRaffle", {
+      modo: state.mode,
+      eid: state.eid,
+      categoria: state.category,
+      sessaoTesteId: state.mode === "teste" ? state.sessionId : "",
+      filtroTeste: state.filter,
+      brinde: prizeInput.value.trim(),
+    });
+    await revealWinner(result);
+    startManifestationTimer(manifestationSeconds());
+    setFeedback(`${result.vencedor?.nome || "Participante"} venceu o sorteio de ${prizeInput.value.trim()}.`, "success");
+    await refreshState();
+  } catch (error) {
+    console.error(error);
+    stage.dataset.phase = "error";
+    stageName.textContent = "Sorteio não realizado";
+    stageDetails.textContent = errorText(error, "Não foi possível realizar o sorteio.");
+    stageStatus.textContent = "Nenhum vencedor foi registrado";
+    stageClose.hidden = false;
+    setFeedback(errorText(error, "Não foi possível realizar o sorteio."), "error");
+  } finally {
+    state.stageBusy = false;
+    updateControls();
+  }
+}
+
+async function closeStage() {
+  if (state.stageBusy) return;
+  stopManifestationTimer();
+  if (document.fullscreenElement) {
+    try { await document.exitFullscreen(); } catch (error) { console.warn(error); }
+  }
+  stage.close();
+  confetti.replaceChildren();
+}
+
+modeButtons.forEach((button) => button.addEventListener("click", async () => {
+  const mode = button.dataset.mode;
+  if (mode === state.mode) return;
+  state.mode = mode;
+  localStorage.setItem("grob-raffle-mode", mode);
+  state.data = null;
+  state.participants = [];
+  state.history = [];
+  renderMode();
+  renderCategoryOptions();
+  if (state.category) await refreshState();
+  else render();
+}));
+
+eventForm.addEventListener("submit", (event) => { event.preventDefault(); loadEvent(); });
+syncButton.addEventListener("click", synchronizeEvent);
+categorySelect.addEventListener("change", async () => {
+  state.category = categorySelect.value;
+  restoreTestSession();
+  await refreshState();
+});
+testFilter.addEventListener("change", async () => {
+  state.filter = testFilter.value === "presenca_simulada" ? "presenca_simulada" : "todos";
+  localStorage.setItem("grob-raffle-test-filter", state.filter);
+  await refreshState();
+});
+newTestSessionButton.addEventListener("click", createTestSession);
+clearHistoryButton.addEventListener("click", clearCurrentHistory);
+markAllButton.addEventListener("click", () => updateSimulatedPresence(state.participants.filter((item) => !item.jaSorteado).map((item) => item.participantDocumentId), true, markAllButton));
+clearAllButton.addEventListener("click", () => updateSimulatedPresence(state.participants.filter((item) => !item.jaSorteado).map((item) => item.participantDocumentId), false, clearAllButton));
+refreshButton.addEventListener("click", () => refreshState());
+searchInput.addEventListener("input", renderParticipants);
+drawForm.addEventListener("submit", executeDraw);
+stageClose.addEventListener("click", closeStage);
+stage.addEventListener("cancel", (event) => {
+  if (state.stageBusy) event.preventDefault();
+  else stopManifestationTimer();
+});
+
+eidInput.value = FIXED_EVENT_EID;
+testFilter.value = state.filter;
+manifestationTimeInput.value = localStorage.getItem("grob-raffle-manifestation-seconds") || "30";
+manifestationTimeInput.addEventListener("change", manifestationSeconds);
+render();
+const {auth, authModule} = await getAuthServices();
+await new Promise((resolve) => {
+  const unsubscribe = authModule.onAuthStateChanged(auth, (user) => {
+    if (!user) return;
+    unsubscribe();
+    resolve();
+  });
+});
+loadEvent();
