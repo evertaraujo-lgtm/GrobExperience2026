@@ -291,10 +291,14 @@ export const list4EventsParticipants = onCall(async (request) => {
   const afterId = typeof data.afterId === "string" ? data.afterId.trim() : "";
   const initial = typeof data.initial === "string" ? data.initial.trim().toUpperCase() : "";
   const searchTerm = normalizedSearch(data.searchTerm);
+  const sortMode = typeof data.sortMode === "string" ? data.sortMode.trim() : "";
+  const latestRegistrations = sortMode === "registrationDateDesc";
   const includeTotal = data.includeTotal === true;
   if (afterId.length > 200 || afterId.includes("/")) throw new HttpsError("invalid-argument", "Cursor de paginação inválido.");
   if (initial && !/^[A-Z]$/.test(initial)) throw new HttpsError("invalid-argument", "Inicial inválida.");
   if (searchTerm.length > 120) throw new HttpsError("invalid-argument", "A busca deve ter no máximo 120 caracteres.");
+  if (sortMode && !latestRegistrations) throw new HttpsError("invalid-argument", "Ordenação inválida.");
+  if (latestRegistrations && initial) throw new HttpsError("invalid-argument", "A ordenação por inscrição não pode ser combinada com o filtro por inicial.");
 
   const collection = firestore.collection("participantes4Events");
   if (searchTerm) {
@@ -305,7 +309,9 @@ export const list4EventsParticipants = onCall(async (request) => {
     let exhausted = false;
     const scanSize = 400;
     while (matches.length < pageSize && !exhausted) {
-      let query = collection.orderBy("nome").limit(scanSize);
+      let query = latestRegistrations
+        ? collection.orderBy("dados4Events.created_at", "desc").limit(scanSize)
+        : collection.orderBy("nome").limit(scanSize);
       if (cursor) query = query.startAfter(cursor);
       const page = await query.get();
       if (page.empty) { exhausted = true; break; }
@@ -336,7 +342,11 @@ export const list4EventsParticipants = onCall(async (request) => {
   }
 
   const nextInitial = initial ? String.fromCharCode(initial.charCodeAt(0) + 1) : "";
-  const filtered = initial ? collection.orderBy("nome").startAt(initial).endBefore(nextInitial) : collection.orderBy("nome");
+  const filtered = latestRegistrations
+    ? collection.orderBy("dados4Events.created_at", "desc")
+    : initial
+      ? collection.orderBy("nome").startAt(initial).endBefore(nextInitial)
+      : collection.orderBy("nome");
   let snapshot;
   if (afterId) {
     const cursor = await collection.doc(afterId).get();
@@ -350,7 +360,7 @@ export const list4EventsParticipants = onCall(async (request) => {
 
   const [totalSnapshot, filteredTotalSnapshot] = includeTotal ? await Promise.all([
     collection.count().get(),
-    initial ? filtered.count().get() : Promise.resolve(null),
+    initial || latestRegistrations ? filtered.count().get() : Promise.resolve(null),
   ]) : [null, null];
   const enrichedParticipants = await enrichWithSpreadsheetComplements(firestore, snapshot.docs.map((document) => document.data()));
 
