@@ -2,6 +2,7 @@ import {initializeApp} from "firebase-admin/app";
 import {onRequest} from "firebase-functions/https";
 
 import {previewWhatsAppBatch, sendWhatsAppBatch} from "./envio-em-lote.js";
+import {approveWhatsAppCampaignTest, importWhatsAppCampaignParticipants, previewWhatsAppCampaignBatch, sendWhatsAppCampaignBatch, sendWhatsAppCampaignTest} from "./campanhas-whatsapp.js";
 import {marketingMessageStats, sendSelecaoDataMarketing} from "./envio-selecao-data.js";
 import {importPreInscritos} from "./pre-inscritos.js";
 import {importPresenceReminderParticipants, previewPresenceReminderDay, sendPresenceReminderDay, sendPresenceReminderTest} from "./lembrete-presenca.js";
@@ -22,6 +23,7 @@ export const health = onRequest((_request, response) => {
 });
 
 export {
+  approveWhatsAppCampaignTest,
   backfillPreInscritoSortOrder,
   check4EventsPresence,
   clear4EventsRaffleFinalHistory,
@@ -34,6 +36,7 @@ export {
   download4EventsParticipantIndex,
   draw4EventsRaffle,
   importPreInscritos,
+  importWhatsAppCampaignParticipants,
   importPresenceReminderParticipants,
   import4EventsParticipantComplements,
   get4EventsParticipantByQrCode,
@@ -42,12 +45,15 @@ export {
   list4EventsParticipants,
   marketingMessageStats,
   previewWhatsAppBatch,
+  previewWhatsAppCampaignBatch,
   previewPresenceReminderDay,
   repopulatePreInscritoMessages,
   removeCollectionAssistant,
   removeLeadSeller,
   saveLead,
   sendWhatsAppBatch,
+  sendWhatsAppCampaignBatch,
+  sendWhatsAppCampaignTest,
   sendPresenceReminderDay,
   sendPresenceReminderTest,
   sendSelecaoDataMarketing,

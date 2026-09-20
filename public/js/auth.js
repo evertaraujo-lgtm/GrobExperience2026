@@ -37,6 +37,7 @@ const ADMIN_NAVIGATION = [
     items: [
       {label: "Notificações de chegada", description: "Presença e avisos da recepção", href: "/4events/", icon: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>'},
       {label: "Lembrete do aplicativo", description: "Lotes diários de até 250 mensagens", href: "/lembrete-presenca/", accent: "orange", icon: '<rect x="5" y="2" width="11" height="20" rx="2"/><path d="M8 6h5m-4 12h3M18 8l4 4-4 4m4-4H12"/>'},
+      {label: "Participação chegando", description: "Campanha protegida em lotes de 250", href: "/participacao-chegando/", accent: "orange", icon: '<path d="M21 11.5a8.1 8.1 0 0 1-9 8 8.3 8.3 0 0 1-3.47-.9L3 20l1.43-4.18A8 8 0 1 1 21 11.5Z"/><path d="m9 12 2 2 4-5"/>'},
       {label: "Eventos WhatsApp", description: "Mensagens e eventos recebidos", href: "/webhooks/", icon: '<path d="M21 11.5a8.1 8.1 0 0 1-9 8 8.3 8.3 0 0 1-3.47-.9L3 20l1.43-4.18A8 8 0 1 1 21 11.5Z"/><path d="M8 9c1 4 3 6 7 7"/>'},
     ],
   },

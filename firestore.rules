@@ -161,6 +161,32 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Campanhas de WhatsApp isolam template, lista, prévia e histórico. Todas
+    // as gravações passam pelas Cloud Functions; o painel administrativo lê.
+    match /campanhasWhatsapp/{campanhaId} {
+      allow read: if isAdmin();
+    }
+
+    match /campanhasWhatsapp/{campanhaId}/destinatarios/{destinatarioId} {
+      allow read: if isAdmin();
+    }
+
+    match /campanhasWhatsappMensagens/{mensagemId} {
+      allow read: if isAdmin();
+    }
+
+    match /campanhasWhatsappEventos/{eventoId} {
+      allow read: if isAdmin();
+    }
+
+    match /campanhasWhatsappPreviews/{previewId} {
+      allow read: if isAdmin();
+    }
+
+    match /campanhasWhatsappControleDiario/{controleId} {
+      allow read: if isAdmin();
+    }
+
     match /participantes4Events/{participanteId} {
       allow read: if isAdmin();
     }

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Participação chegando | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
+    <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
+    <link rel="stylesheet" href="/css/lembrete-presenca.css?v=1" />
+    <link rel="stylesheet" href="/css/campanhas-whatsapp.css?v=1" />
+  </head>
+  <body data-auth-page="protected">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="pre-inscritos-page reminder-page">
+        <section class="dashboard-heading">
+          <p class="eyebrow">Campanha protegida</p>
+          <h1>Participação chegando</h1>
+          <p>A planilha e o template são vinculados no backend. O envio só é liberado após importação, teste aprovado e prévia congelada.</p>
+        </section>
+
+        <section class="pre-inscritos-card">
+          <section class="campaign-identity" aria-labelledby="campaign-identity-title">
+            <div><p class="eyebrow">Identidade da campanha</p><h2 id="campaign-identity-title">Participação chegando</h2></div>
+            <dl>
+              <div><dt>Template autorizado</dt><dd>participacao_chegando</dd></div>
+              <div><dt>Idioma Meta</dt><dd>English (en)</dd></div>
+              <div><dt>Variável</dt><dd>nome</dd></div>
+              <div><dt>Limites</dt><dd>250 por lote • 500 por dia</dd></div>
+            </dl>
+            <span class="campaign-state" data-campaign-state>Sem planilha</span>
+          </section>
+
+          <div class="dashboard-toolbar">
+            <div class="reminder-totals">
+              <strong data-total>Carregando...</strong>
+              <span class="reminder-quota"><b data-quota-used>0</b>/500 tentativas hoje</span>
+            </div>
+            <div class="toolbar-actions">
+              <button class="back-link" type="button" data-import-open>Importar planilha</button>
+              <button class="back-link reminder-test-button" type="button" data-test-open>Teste obrigatório</button>
+              <button class="back-link" type="button" data-reload>Atualizar</button>
+            </div>
+          </div>
+
+          <form class="import-editor reminder-import" data-import-form hidden>
+            <label for="campaign-file">Planilha exclusiva desta campanha</label>
+            <input id="campaign-file" type="file" accept=".xlsx,.xls" data-import-file required />
+            <p class="selected-file" data-import-file-name>Nenhuma planilha selecionada.</p>
+            <p>Colunas obrigatórias: <code>Nome</code> e <code>WhatsApp</code> ou <code>Celular (WhatsApp)</code>.</p>
+            <p>A importação cria uma nova versão identificada da lista e invalida prévias anteriores. Um teste aprovado continua válido enquanto o template permanecer igual. Depois do primeiro envio, a lista não poderá ser substituída.</p>
+            <div><button class="button save-status" type="submit" data-import-submit>Revisar e importar</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
+            <p class="import-feedback" data-import-feedback></p>
+          </form>
+
+          <section class="reminder-template campaign-template" aria-labelledby="template-title">
+            <div>
+              <p class="eyebrow">Template Meta fixado</p>
+              <h2 id="template-title">participacao_chegando <small>• English</small></h2>
+              <div class="campaign-fixed-buttons"><span>Ver no mapa</span><span>Baixar o app</span></div>
+            </div>
+            <p>Olá, <b>{nome}</b>.<br /><br />O <b>GROB Experience</b> está chegando, e gostaríamos de compartilhar algumas orientações importantes para garantir a melhor experiência para você.<br /><br /><b>Ingresso/Ticket de Entrada</b><br />A apresentação do ingresso para entrada no evento é obrigatória. Por isso, no dia do evento, não se esqueça de trazer o ingresso enviado em seu e-mail no momento da confirmação.<br /><br /><b>Acesso e Estacionamento</b><br />A entrada de todos os participantes será realizada pela portaria principal da GROB:<br /><br /><b>B. GROB DO BRASIL S.A. – Portaria 1</b><br />Av. Caminho do Mar, 1811<br />São Bernardo do Campo, SP - BRASIL<br />CEP: 09609-000<br /><br /><b>Informações Gerais</b><br />• A GROB disponibilizará conexão WiFi durante o evento;<br />• Haverá serviço de chapelaria/guarda volumes;<br />• Recomendamos o uso de calçados fechados e confortáveis, devido à dinâmica do evento.<br /><br />Estamos ansiosos para recebê-lo(a) no GROB Experience e garantir que sua participação seja incrível!</p>
+          </section>
+
+          <section class="campaign-file-seal" data-file-seal hidden>
+            <div><span>Planilha vinculada</span><strong data-file-name>—</strong></div>
+            <div><span>Identificador</span><code data-file-hash>—</code></div>
+            <div><span>Teste</span><strong data-test-status>Não realizado</strong></div>
+          </section>
+
+          <label class="participant-search"><span>Buscar destinatário</span><input type="search" data-search placeholder="Nome, WhatsApp ou status" /></label>
+          <div class="reminder-days" data-days></div>
+          <p class="dashboard-feedback" data-feedback></p>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="message-modal reminder-preview-modal" data-preview-modal aria-labelledby="preview-title">
+      <section class="message-editor">
+        <div class="message-modal-heading"><div><p class="eyebrow">Prévia congelada</p><h2 id="preview-title" data-preview-title>Conferir envio</h2></div><button class="modal-close" type="button" data-preview-close aria-label="Fechar">×</button></div>
+        <div class="campaign-preview-seal" data-preview-seal></div>
+        <p data-preview-summary>Carregando destinatários...</p>
+        <ol class="batch-recipients reminder-preview-list" data-preview-list></ol>
+        <label class="campaign-confirmation">Para liberar o envio, digite <strong data-confirmation-label>PARTICIPACAO CHEGANDO</strong><input type="text" autocomplete="off" data-confirmation-input /></label>
+        <div class="message-modal-actions"><button class="button save-status" type="button" data-preview-confirm disabled>Confirmar envio</button><button class="back-link" type="button" data-preview-close>Cancelar</button></div>
+        <p class="message-modal-feedback" data-preview-feedback></p>
+      </section>
+    </dialog>
+
+    <dialog class="message-modal reminder-test-modal" data-test-modal aria-labelledby="test-title">
+      <form class="message-editor" data-test-form>
+        <div class="message-modal-heading"><div><p class="eyebrow">Validação obrigatória</p><h2 id="test-title">Testar participacao_chegando</h2></div><button class="modal-close" type="button" data-test-close aria-label="Fechar">×</button></div>
+        <p>O teste usa exatamente o template fixado nesta campanha, com a variável <code>nome</code> e os dois botões de URL fixa.</p>
+        <div class="participant-form-fields">
+          <label>Nome do participante<input name="nome" type="text" autocomplete="name" required /></label>
+          <label>WhatsApp com DDD<input name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(11) 99999-9999" required /></label>
+        </div>
+        <div class="reminder-test-preview"><span>Botões fixos configurados na Meta</span><strong>Ver no mapa • Baixar o app</strong></div>
+        <div class="message-modal-actions"><button class="button save-status" type="submit" data-test-submit>Enviar teste</button><button class="button campaign-approve-test" type="button" data-test-approve hidden>Recebi e aprovei o teste</button><button class="back-link" type="button" data-test-close>Cancelar</button></div>
+        <p class="message-modal-feedback" data-test-feedback></p>
+      </form>
+    </dialog>
+
+    <script type="module" src="/js/auth.js?v=campaign-nav-v1"></script>
+    <script type="module" src="/js/participacao-chegando.js?v=1"></script>
+  </body>
+</html>

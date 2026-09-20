@@ -9,6 +9,8 @@ const metaWebhookVerifyToken = defineSecret("META_WEBHOOK_VERIFY_TOKEN");
 const reminderParticipantsCollection = "lembretePresencaParticipantes";
 const reminderMessagesCollection = "lembretePresencaMensagens";
 const reminderEventsCollection = "lembretePresencaEventos";
+const campaignMessagesCollection = "campanhasWhatsappMensagens";
+const campaignEventsCollection = "campanhasWhatsappEventos";
 
 type RequestWithRawBody = {
   get(name: string): string | undefined;
@@ -139,9 +141,77 @@ async function savePresenceReminderStatus(status: Record<string, unknown>) {
   return true;
 }
 
+async function saveWhatsAppCampaignStatus(status: Record<string, unknown>) {
+  const messageId = typeof status.id === "string" ? status.id : "";
+  if (!messageId) return false;
+  const firestore = getFirestore();
+  const messageRef = firestore.collection(campaignMessagesCollection).doc(messageId);
+  if (!(await messageRef.get()).exists) return false;
+  const statusName = typeof status.status === "string" ? status.status : "";
+  const translatedStatus = (statusLabels[statusName] ?? statusName) || "desconhecido";
+  const occurredAt = eventTimestamp(status.timestamp);
+  const recipient = normalizedParticipantId(status.recipient_id);
+  const eventRef = firestore.collection(campaignEventsCollection).doc(eventId("status", [
+    messageId, statusName, status.timestamp, recipient,
+  ]));
+  await firestore.runTransaction(async (transaction) => {
+    const message = await transaction.get(messageRef);
+    if (!message.exists) return;
+    const data = message.data() ?? {};
+    const currentTimestamp = data.statusAtualizadoEm;
+    if (currentTimestamp instanceof Timestamp && currentTimestamp.toMillis() > occurredAt.toMillis()) return;
+    const campaignId = typeof data.campanhaId === "string" ? data.campanhaId : null;
+    const participantId = typeof data.participanteId === "string" ? data.participanteId : null;
+    const participantRef = campaignId && participantId
+      ? firestore.collection("campanhasWhatsapp").doc(campaignId).collection("destinatarios").doc(participantId)
+      : null;
+    const error = Array.isArray(status.errors) ? status.errors[0] as Record<string, unknown> | undefined : undefined;
+    const errorCode = typeof error?.code === "number" ? error.code : null;
+    const errorMessage = typeof error?.message === "string" ? error.message : null;
+    transaction.set(messageRef, {
+      status: translatedStatus,
+      statusMeta: statusName || null,
+      statusAtualizadoEm: occurredAt,
+      erroCodigo: errorCode,
+      erroMensagem: errorMessage,
+    }, {merge: true});
+    transaction.set(eventRef, {
+      tipo: "status",
+      messageId,
+      campanhaId: campaignId,
+      participanteId: participantId,
+      whatsapp: recipient || data.destinatarioWhatsApp || null,
+      status: translatedStatus,
+      statusMeta: statusName || null,
+      teste: data.teste === true,
+      ocorridoEm: occurredAt,
+      erroCodigo: errorCode,
+      erroMensagem: errorMessage,
+      registradoEm: FieldValue.serverTimestamp(),
+    }, {merge: true});
+    if (participantRef) {
+      const update: Record<string, unknown> = {
+        statusMensagem: translatedStatus,
+        ultimaMensagemId: messageId,
+        statusMensagemEm: occurredAt,
+      };
+      if (translatedStatus === "enviado") update.whatsappEnviadoEm = occurredAt;
+      if (translatedStatus === "entregue") update.whatsappEntregueEm = occurredAt;
+      if (translatedStatus === "lido") update.whatsappLidoEm = occurredAt;
+      if (translatedStatus === "falhou") {
+        update.whatsappFalhouEm = occurredAt;
+        update.erroEnvio = errorMessage ?? "A Meta não informou o motivo.";
+      }
+      transaction.set(participantRef, update, {merge: true});
+    }
+  });
+  return true;
+}
+
 async function saveStatus(status: Record<string, unknown>) {
   const messageId = typeof status.id === "string" ? status.id : "";
   if (!messageId) return;
+  if (await saveWhatsAppCampaignStatus(status)) return;
   if (await savePresenceReminderStatus(status)) return;
 
   const statusName = typeof status.status === "string" ? status.status : "";
