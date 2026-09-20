@@ -23,6 +23,7 @@ let configuredTopics = [];
 let configuredFields = [];
 let isAdmin = false;
 let editingFieldId = "";
+let orderSaving = false;
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
@@ -87,6 +88,116 @@ function fieldTypeLabel(type) {
   }[type] || "Pergunta";
 }
 
+function setOrderControlsDisabled(disabled) {
+  document.querySelectorAll("[data-order-control]").forEach((button) => {
+    button.disabled = disabled || button.dataset.boundary === "true";
+  });
+}
+
+function orderButton(direction, label, boundary, handler) {
+  const button = document.createElement("button");
+  button.className = "back-link lead-order-button";
+  button.type = "button";
+  button.textContent = direction < 0 ? "↑" : "↓";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.dataset.orderControl = "true";
+  button.dataset.boundary = String(boundary);
+  button.disabled = boundary || orderSaving;
+  button.addEventListener("click", handler);
+  return button;
+}
+
+function orderControls(upLabel, downLabel, atStart, atEnd, move) {
+  const controls = document.createElement("div");
+  controls.className = "lead-order-controls";
+  controls.append(
+    orderButton(-1, upLabel, atStart, () => move(-1)),
+    orderButton(1, downLabel, atEnd, () => move(1)),
+  );
+  return controls;
+}
+
+async function moveTopic(topicId, direction) {
+  if (orderSaving) return;
+  const index = configuredTopics.findIndex((topic) => topic.id === topicId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= configuredTopics.length) return;
+  const previousTopics = configuredTopics;
+  configuredTopics = [...configuredTopics];
+  [configuredTopics[index], configuredTopics[target]] = [configuredTopics[target], configuredTopics[index]];
+  orderSaving = true;
+  setOrderControlsDisabled(true);
+  setFeedback("Salvando nova ordem dos tópicos...");
+  try {
+    await saveQuestionnaire();
+    setFeedback("Ordem dos tópicos atualizada.", "success");
+  } catch (error) {
+    console.error(error);
+    configuredTopics = previousTopics;
+    setFeedback("Não foi possível alterar a ordem dos tópicos.", "error");
+  } finally {
+    orderSaving = false;
+    renderQuestionnaire();
+  }
+}
+
+function fieldsInParentOrder(parentFields) {
+  const fieldsById = new Map(configuredFields.map((field) => [field.id, field]));
+  const childrenByParent = new Map();
+  configuredFields.forEach((field) => {
+    if (!field.dependeDe) return;
+    const children = childrenByParent.get(field.dependeDe) || [];
+    children.push(field);
+    childrenByParent.set(field.dependeDe, children);
+  });
+  const ordered = [];
+  const visited = new Set();
+  const appendTree = (field) => {
+    if (!field || visited.has(field.id)) return;
+    visited.add(field.id);
+    ordered.push(field);
+    (childrenByParent.get(field.id) || []).forEach(appendTree);
+  };
+  parentFields.forEach(appendTree);
+  configuredFields.forEach((field) => {
+    if (!visited.has(field.id)) appendTree(fieldsById.get(field.id));
+  });
+  return ordered;
+}
+
+async function moveQuestion(fieldId, direction) {
+  if (orderSaving) return;
+  const field = configuredFields.find((item) => item.id === fieldId && !item.dependeDe);
+  if (!field) return;
+  const topicFields = configuredFields.filter((item) => !item.dependeDe && item.topicoId === field.topicoId);
+  const topicIndex = topicFields.findIndex((item) => item.id === fieldId);
+  const targetTopicIndex = topicIndex + direction;
+  if (topicIndex < 0 || targetTopicIndex < 0 || targetTopicIndex >= topicFields.length) return;
+
+  const parentFields = configuredFields.filter((item) => !item.dependeDe);
+  const currentIndex = parentFields.findIndex((item) => item.id === fieldId);
+  const targetIndex = parentFields.findIndex((item) => item.id === topicFields[targetTopicIndex].id);
+  const previousFields = configuredFields;
+  const reorderedParents = [...parentFields];
+  [reorderedParents[currentIndex], reorderedParents[targetIndex]] = [reorderedParents[targetIndex], reorderedParents[currentIndex]];
+  configuredFields = fieldsInParentOrder(reorderedParents);
+  orderSaving = true;
+  setOrderControlsDisabled(true);
+  setFeedback("Salvando nova ordem das perguntas...");
+  try {
+    await saveQuestionnaire();
+    setFeedback("Ordem das perguntas atualizada.", "success");
+  } catch (error) {
+    console.error(error);
+    configuredFields = previousFields;
+    setFeedback("Não foi possível alterar a ordem das perguntas.", "error");
+  } finally {
+    orderSaving = false;
+    renderQuestionnaire();
+  }
+}
+
 function renderTopics() {
   const selectedTopicId = fieldTopic.value;
   topicsTotal.textContent = `${configuredTopics.length} cadastrado(s)`;
@@ -110,6 +221,13 @@ function renderTopics() {
     details.textContent = `${count} pergunta(s)`;
     const actions = document.createElement("div");
     actions.className = "management-card-actions";
+    const ordering = orderControls(
+      `Mover o tópico ${topic.titulo} para cima`,
+      `Mover o tópico ${topic.titulo} para baixo`,
+      index === 0,
+      index === configuredTopics.length - 1,
+      (direction) => moveTopic(topic.id, direction),
+    );
     const remove = document.createElement("button");
     remove.className = "danger-delete";
     remove.type = "button";
@@ -134,7 +252,7 @@ function renderTopics() {
         setFeedback("Não foi possível remover o tópico.", "error");
       }
     });
-    actions.append(remove);
+    actions.append(ordering, remove);
     card.append(title, details, actions);
     topicsList.append(card);
   });
@@ -157,7 +275,7 @@ function renderQuestionnaire() {
     const heading = document.createElement("h3");
     heading.textContent = topic.titulo;
     group.append(heading);
-    topicFields.forEach((field) => {
+    topicFields.forEach((field, fieldIndex) => {
       const card = document.createElement("article");
       card.className = "management-card";
       const title = document.createElement("h3");
@@ -178,6 +296,13 @@ function renderQuestionnaire() {
       }
       const actions = document.createElement("div");
       actions.className = "management-card-actions";
+      const ordering = orderControls(
+        `Mover a pergunta ${field.rotulo} para cima`,
+        `Mover a pergunta ${field.rotulo} para baixo`,
+        fieldIndex === 0,
+        fieldIndex === topicFields.length - 1,
+        (direction) => moveQuestion(field.id, direction),
+      );
       const edit = document.createElement("button");
       edit.className = "back-link";
       edit.type = "button";
@@ -202,7 +327,7 @@ function renderQuestionnaire() {
           setFeedback("Não foi possível remover a pergunta.", "error");
         }
       });
-      actions.append(edit, remove);
+      actions.append(ordering, edit, remove);
       card.append(actions);
       group.append(card);
     });
