@@ -223,7 +223,11 @@ function previewSealRow(label, value, code = false) {
 }
 
 function updateConfirmationButton() {
-  previewConfirm.disabled = !currentPreviewId || confirmationInput.value.trim().toUpperCase() !== currentConfirmationCode;
+  previewConfirm.disabled = !currentPreviewId || normalizedConfirmationCode(confirmationInput.value) !== currentConfirmationCode;
+}
+
+function normalizedConfirmationCode(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
 }
 
 async function openPreview(group) {
@@ -273,7 +277,7 @@ async function openPreview(group) {
 
 confirmationInput.addEventListener("input", updateConfirmationButton);
 previewConfirm.addEventListener("click", async () => {
-  if (!currentPreviewId || confirmationInput.value.trim().toUpperCase() !== currentConfirmationCode) return;
+  if (!currentPreviewId || normalizedConfirmationCode(confirmationInput.value) !== currentConfirmationCode) return;
   previewConfirm.disabled = true;
   previewConfirm.textContent = "Enviando...";
   confirmationInput.disabled = true;
@@ -282,7 +286,7 @@ previewConfirm.addEventListener("click", async () => {
   try {
     const result = await callable("sendWhatsAppCampaignBatch", {
       previewId: currentPreviewId,
-      codigoConfirmacao: confirmationInput.value,
+      codigoConfirmacao: normalizedConfirmationCode(confirmationInput.value),
     });
     const failures = Array.isArray(result.failures) ? result.failures.length : 0;
     setFeedback(`Lote ${result.group}: ${result.sent} mensagem(ns) aceita(s), ${result.skipped} ignorada(s) e ${failures} falha(s). Cota de hoje: ${result.usedToday}/${result.dailyLimit}.`, failures ? "error" : "success");

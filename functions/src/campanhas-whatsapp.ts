@@ -546,7 +546,9 @@ export const sendWhatsAppCampaignBatch = onCall(
     const sender = await adminSender(request);
     const input = asRecord(request.data);
     const previewId = typeof input.previewId === "string" ? input.previewId : "";
-    const confirmationCode = typeof input.codigoConfirmacao === "string" ? input.codigoConfirmacao.trim() : "";
+    const confirmationCode = typeof input.codigoConfirmacao === "string"
+      ? input.codigoConfirmacao.trim().replace(/\s+/g, " ").toUpperCase()
+      : "";
     if (!previewId) throw new HttpsError("invalid-argument", "Gere uma prévia válida antes de enviar.");
     const firestore = getFirestore();
     const previewRef = firestore.collection(previewsCollection).doc(previewId);

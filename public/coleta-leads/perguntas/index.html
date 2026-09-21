@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3" />
-    <link rel="stylesheet" href="/css/gestao-evento.css?v=reordenar-leads-v1" />
+    <link rel="stylesheet" href="/css/gestao-evento.css?v=categorias-leads-v1" />
   </head>
   <body data-auth-page="protected" data-event-management-page="true">
     <div class="page-shell"><div class="glow glow-one"></div><div class="glow glow-two"></div>
@@ -35,10 +35,10 @@
             <div class="lead-field-editor-grid">
               <label class="management-field">Tópico<select name="topicoId" required data-field-topic><option value="">Crie um tópico primeiro</option></select></label>
               <label class="management-field">Pergunta ou campo<input name="rotulo" maxlength="120" required /></label>
-              <label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Lista de seleção</option><option value="multipla-escolha">Múltipla escolha</option><option value="checkbox">Checkbox</option></select></label>
+              <label class="management-field">Tipo<select name="tipo"><option value="texto">Texto curto</option><option value="texto-longo">Texto longo</option><option value="numero">Número</option><option value="selecao">Lista de seleção</option><option value="multipla-escolha">Múltipla escolha</option><option value="checkbox">Checkbox</option><option value="categoria">Categoria — abre tópico</option></select></label>
             </div>
-            <label class="management-field" data-field-options hidden>Opções <span>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label>
-            <div class="lead-field-flags"><label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label><label class="lead-checkbox" data-checkbox-behavior hidden><input name="abreDependentes" type="checkbox" /> Esse checkbox abre outras perguntas?</label></div>
+            <label class="management-field" data-field-options hidden>Opções <span data-field-options-hint>(uma por linha)</span><textarea name="opcoes" rows="3" maxlength="1000"></textarea></label>
+            <div class="lead-field-flags"><label class="lead-checkbox"><input name="obrigatorio" type="checkbox" /> Obrigatório</label><label class="lead-checkbox" data-multiple-selection-behavior hidden><input name="permiteMultiplaSelecao" type="checkbox" /> Permitir múltipla seleção</label><label class="lead-checkbox" data-checkbox-behavior hidden><input name="abreDependentes" type="checkbox" /> Esse checkbox abre outras perguntas?</label></div>
             <label class="management-field" data-dependent-questions hidden>Perguntas dependentes <span>(uma pergunta de texto por linha)</span><textarea name="perguntasDependentes" rows="4" maxlength="2000"></textarea></label>
             <div class="lead-questionnaire-submit-actions">
               <button class="button" type="submit" data-field-save>Adicionar pergunta</button>
@@ -52,6 +52,6 @@
       </main>
     </div>
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/coleta-leads-perguntas.js?v=reordenar-leads-v1"></script>
+    <script type="module" src="/js/coleta-leads-perguntas.js?v=selecao-flexivel-v1"></script>
   </body>
 </html>

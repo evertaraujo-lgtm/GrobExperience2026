@@ -203,7 +203,7 @@ async function synchronizeOfflineLeads() {
   }
 }
 
-const FIELD_TYPES = ["texto", "texto-longo", "numero", "selecao", "multipla-escolha", "checkbox"];
+const FIELD_TYPES = ["texto", "texto-longo", "numero", "selecao", "multipla-escolha", "checkbox", "categoria"];
 const LEGACY_TOPIC_ID = "topico_geral";
 
 function normalizedFields(value) {
@@ -218,6 +218,7 @@ function normalizedFields(value) {
       rotulo,
       tipo: field.tipo,
       obrigatorio: field.obrigatorio === true,
+      permiteMultiplaSelecao: field.permiteMultiplaSelecao === true,
       opcoes: Array.isArray(field.opcoes) ? field.opcoes.map((option) => String(option).trim()).filter(Boolean) : [],
       topicoId: typeof field.topicoId === "string" ? field.topicoId.trim() : "",
       dependeDe: typeof field.dependeDe === "string" ? field.dependeDe.trim() : "",
@@ -231,7 +232,13 @@ function normalizedTopics(value) {
     if (!topic || typeof topic !== "object") return [];
     const id = typeof topic.id === "string" ? topic.id.trim() : "";
     const titulo = typeof topic.titulo === "string" ? topic.titulo.trim() : "";
-    return id && titulo ? [{id, titulo}] : [];
+    if (!id || !titulo) return [];
+    return [{
+      id,
+      titulo,
+      acionadoPorCampoId: typeof topic.acionadoPorCampoId === "string" ? topic.acionadoPorCampoId.trim() : "",
+      acionadoPorValor: typeof topic.acionadoPorValor === "string" ? topic.acionadoPorValor.trim() : "",
+    }];
   });
 }
 
@@ -303,6 +310,7 @@ function fieldTypeLabel(type) {
     selecao: "Lista de seleção",
     "multipla-escolha": "Múltipla escolha",
     checkbox: "Checkbox",
+    categoria: "Categoria que abre tópico",
   }[type] || "Pergunta";
 }
 
@@ -426,6 +434,7 @@ function createLeadFieldControl(field) {
   if (field.tipo === "checkbox") {
     const label = document.createElement("label");
     label.className = "lead-answer-checkbox";
+    label.dataset.leadQuestion = field.id;
     const control = document.createElement("input");
     control.type = "checkbox";
     control.name = field.id;
@@ -440,6 +449,11 @@ function createLeadFieldControl(field) {
   if (field.tipo === "multipla-escolha") {
     const group = document.createElement("fieldset");
     group.className = "lead-choice-group";
+    group.dataset.leadQuestion = field.id;
+    if (field.permiteMultiplaSelecao) {
+      group.dataset.multipleField = field.id;
+      group.dataset.required = String(field.obrigatorio === true);
+    }
     const legend = document.createElement("legend");
     legend.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
     group.append(legend);
@@ -447,10 +461,15 @@ function createLeadFieldControl(field) {
     (field.opcoes || []).forEach((option, index) => {
       const label = document.createElement("label");
       const control = document.createElement("input");
-      control.type = "radio";
+      control.type = field.permiteMultiplaSelecao ? "checkbox" : "radio";
       control.name = field.id;
       control.value = option;
-      control.required = field.obrigatorio === true;
+      control.required = !field.permiteMultiplaSelecao && field.obrigatorio === true;
+      if (field.permiteMultiplaSelecao) {
+        control.addEventListener("change", () => {
+          group.querySelectorAll("input").forEach((item) => item.setCustomValidity(""));
+        });
+      }
       label.append(control, document.createTextNode(option));
       group.append(label);
       if (index === 0) firstControl = control;
@@ -460,6 +479,7 @@ function createLeadFieldControl(field) {
 
   const label = document.createElement("label");
   label.className = "management-field";
+  label.dataset.leadQuestion = field.id;
   const title = document.createElement("span");
   title.textContent = field.rotulo + (field.obrigatorio ? " *" : "");
   label.append(title);
@@ -467,9 +487,9 @@ function createLeadFieldControl(field) {
   if (field.tipo === "texto-longo") {
     control = document.createElement("textarea");
     control.rows = 4;
-  } else if (field.tipo === "selecao") {
+  } else if (field.tipo === "selecao" || field.tipo === "categoria") {
     control = document.createElement("select");
-    control.add(new Option("Selecione", ""));
+    control.add(new Option(field.tipo === "categoria" ? "Selecione a categoria" : "Selecione", ""));
     (field.opcoes || []).forEach((option) => control.add(new Option(option, option)));
   } else {
     control = document.createElement("input");
@@ -496,8 +516,76 @@ function updateDependentFields(parentId, checked) {
   });
 }
 
+function activeLeadSteps() {
+  const activeSteps = [...leadFields.querySelectorAll("[data-topic-step]")].filter((step) => step.dataset.topicActive === "true");
+  const stepsByTopic = new Map(activeSteps.map((step) => [step.dataset.topicId, step]));
+  const ordered = [];
+  const appended = new Set();
+  configuredTopics.filter((topic) => !topic.acionadoPorCampoId).forEach((topic) => {
+    const generalStep = stepsByTopic.get(topic.id);
+    if (generalStep) {
+      ordered.push(generalStep);
+      appended.add(topic.id);
+    }
+    const categoryFieldIds = new Set(configuredFields
+      .filter((field) => field.topicoId === topic.id && field.tipo === "categoria")
+      .map((field) => field.id));
+    configuredTopics.filter((candidate) => categoryFieldIds.has(candidate.acionadoPorCampoId)).forEach((candidate) => {
+      const conditionalStep = stepsByTopic.get(candidate.id);
+      if (!conditionalStep) return;
+      ordered.push(conditionalStep);
+      appended.add(candidate.id);
+    });
+  });
+  activeSteps.forEach((step) => {
+    if (!appended.has(step.dataset.topicId)) ordered.push(step);
+  });
+  return ordered;
+}
+
+function topicIsActive(topic) {
+  if (!topic.acionadoPorCampoId || !topic.acionadoPorValor) return true;
+  const control = leadForm.elements.namedItem(topic.acionadoPorCampoId);
+  return String(control?.value || "") === topic.acionadoPorValor;
+}
+
+function clearControls(container) {
+  container.querySelectorAll("[data-dependent-parent]").forEach((dependentContainer) => {
+    dependentContainer.hidden = true;
+  });
+  container.querySelectorAll("[data-lead-question]").forEach((question) => {
+    question.classList.remove("lead-question-invalid");
+    question.removeAttribute("aria-invalid");
+  });
+  container.querySelectorAll("input, textarea, select").forEach((control) => {
+    control.disabled = true;
+    control.setCustomValidity("");
+    if (control.type === "checkbox" || control.type === "radio") control.checked = false;
+    else control.value = "";
+  });
+}
+
+function refreshLeadTopicVisibility() {
+  const currentStep = activeLeadSteps()[currentTopicIndex];
+  const currentTopicId = currentStep?.dataset.topicId || "";
+  leadFields.querySelectorAll("[data-topic-step]").forEach((step) => {
+    const topic = configuredTopics.find((item) => item.id === step.dataset.topicId);
+    const active = topic ? topicIsActive(topic) : false;
+    const wasActive = step.dataset.topicActive === "true";
+    step.dataset.topicActive = String(active);
+    step.querySelectorAll("input, textarea, select").forEach((control) => {
+      const dependentContainer = control.closest("[data-dependent-parent]");
+      control.disabled = !active || Boolean(dependentContainer?.hidden);
+    });
+    if (!active && wasActive) clearControls(step);
+  });
+  const steps = activeLeadSteps();
+  const nextIndex = Math.max(0, steps.findIndex((step) => step.dataset.topicId === currentTopicId));
+  showLeadTopic(nextIndex);
+}
+
 function showLeadTopic(index) {
-  const steps = [...leadFields.querySelectorAll("[data-topic-step]")];
+  const steps = activeLeadSteps();
   if (!steps.length) {
     currentTopicIndex = 0;
     leadTopicProgress.hidden = true;
@@ -507,28 +595,52 @@ function showLeadTopic(index) {
     return;
   }
   currentTopicIndex = Math.max(0, Math.min(index, steps.length - 1));
+  leadFields.querySelectorAll("[data-topic-step]").forEach((step) => { step.hidden = true; });
   steps.forEach((step, stepIndex) => { step.hidden = stepIndex !== currentTopicIndex; });
-  const topic = configuredTopics[currentTopicIndex];
+  const currentStep = steps[currentTopicIndex];
   leadTopicProgress.hidden = false;
-  leadTopicProgress.textContent = `Tópico ${currentTopicIndex + 1} de ${steps.length} · ${topic?.titulo || "Perguntas"}`;
+  leadTopicProgress.textContent = `Tópico ${currentTopicIndex + 1} de ${steps.length} · ${currentStep?.dataset.topicTitle || "Perguntas"}`;
   leadPrevious.hidden = currentTopicIndex === 0;
   leadNext.hidden = currentTopicIndex === steps.length - 1;
   leadSave.hidden = currentTopicIndex !== steps.length - 1;
 }
 
 function validateTopic(index) {
-  const step = leadFields.querySelector(`[data-topic-step="${index}"]`);
+  const step = activeLeadSteps()[index];
   if (!step) return true;
-  const invalid = [...step.querySelectorAll("input, textarea, select")]
-    .find((control) => !control.disabled && !control.checkValidity());
-  if (!invalid) return true;
+  const missingMultipleChoices = [...step.querySelectorAll('[data-multiple-field][data-required="true"]')]
+    .filter((group) => {
+      const controls = [...group.querySelectorAll('input[type="checkbox"]')].filter((control) => !control.disabled);
+      return controls.length && !controls.some((control) => control.checked);
+    });
+  missingMultipleChoices.forEach((group) => {
+    const firstControl = group.querySelector('input[type="checkbox"]');
+    firstControl.setCustomValidity("Selecione pelo menos uma opção.");
+  });
+  const invalidControls = [...step.querySelectorAll("input, textarea, select")]
+    .filter((control) => !control.disabled && !control.checkValidity());
+  const invalidQuestions = new Set(invalidControls.map((control) => control.closest("[data-lead-question]")).filter(Boolean));
+  step.querySelectorAll("[data-lead-question]").forEach((question) => {
+    const invalid = invalidQuestions.has(question);
+    question.classList.toggle("lead-question-invalid", invalid);
+    if (invalid) question.setAttribute("aria-invalid", "true");
+    else question.removeAttribute("aria-invalid");
+  });
+  if (!invalidControls.length) {
+    setFeedback(leadFeedback, "");
+    return true;
+  }
   showLeadTopic(index);
-  invalid.reportValidity();
+  setFeedback(leadFeedback, "Responda às perguntas obrigatórias destacadas.", "error");
+  const firstInvalid = invalidControls[0];
+  const firstQuestion = firstInvalid.closest("[data-lead-question]");
+  firstQuestion?.scrollIntoView({behavior: "smooth", block: "center"});
+  firstInvalid.reportValidity();
   return false;
 }
 
 function validateAllTopics() {
-  const steps = [...leadFields.querySelectorAll("[data-topic-step]")];
+  const steps = activeLeadSteps();
   return steps.every((step, index) => validateTopic(index));
 }
 
@@ -544,6 +656,9 @@ function renderLeadFields() {
     const step = document.createElement("section");
     step.className = "lead-topic-step";
     step.dataset.topicStep = String(topicIndex);
+    step.dataset.topicId = topic.id;
+    step.dataset.topicTitle = topic.titulo;
+    step.dataset.topicActive = "false";
     const heading = document.createElement("h3");
     heading.textContent = topic.titulo;
     step.append(heading);
@@ -557,6 +672,9 @@ function renderLeadFields() {
     topicFields.forEach((field) => {
       const {wrapper, control} = createLeadFieldControl(field);
       step.append(wrapper);
+      if (field.tipo === "categoria") {
+        control?.addEventListener("change", refreshLeadTopicVisibility);
+      }
       const children = configuredFields.filter((child) => child.dependeDe === field.id);
       if (field.tipo === "checkbox" && children.length) {
         const dependentContainer = document.createElement("div");
@@ -575,7 +693,7 @@ function renderLeadFields() {
     });
     leadFields.append(step);
   });
-  showLeadTopic(0);
+  refreshLeadTopicVisibility();
 }
 
 function renderParticipant() {
@@ -1096,6 +1214,28 @@ leadNext.addEventListener("click", () => {
   leadTopicProgress.scrollIntoView({behavior: "smooth", block: "nearest"});
 });
 
+function refreshHighlightedQuestion(event) {
+  const question = event.target.closest?.("[data-lead-question]");
+  if (!question?.classList.contains("lead-question-invalid")) return;
+  const multipleChoice = question.matches('[data-multiple-field][data-required="true"]');
+  const enabledControls = [...question.querySelectorAll("input, textarea, select")]
+    .filter((control) => !control.disabled);
+  if (multipleChoice && enabledControls.some((control) => control.checked)) {
+    enabledControls.forEach((control) => control.setCustomValidity(""));
+  }
+  const isInvalid = multipleChoice
+    ? !enabledControls.some((control) => control.checked)
+    : enabledControls.some((control) => !control.checkValidity());
+  question.classList.toggle("lead-question-invalid", isInvalid);
+  if (isInvalid) question.setAttribute("aria-invalid", "true");
+  else question.removeAttribute("aria-invalid");
+  const currentStep = activeLeadSteps()[currentTopicIndex];
+  if (currentStep && !currentStep.querySelector(".lead-question-invalid")) setFeedback(leadFeedback, "");
+}
+
+leadForm.addEventListener("input", refreshHighlightedQuestion);
+leadForm.addEventListener("change", refreshHighlightedQuestion);
+
 leadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!isSeller || !selectedParticipant || !validateAllTopics()) return;
@@ -1103,6 +1243,9 @@ leadForm.addEventListener("submit", async (event) => {
   const respostas = Object.fromEntries(configuredFields.map((field) => {
     if (field.tipo === "checkbox") return [field.id, leadData.has(field.id) ? "true" : "false"];
     if (field.dependeDe && !leadData.has(field.dependeDe)) return [field.id, ""];
+    if (field.tipo === "multipla-escolha" && field.permiteMultiplaSelecao) {
+      return [field.id, leadData.getAll(field.id).map(String)];
+    }
     return [field.id, leadData.get(field.id) || ""];
   }));
   leadSave.disabled = true;

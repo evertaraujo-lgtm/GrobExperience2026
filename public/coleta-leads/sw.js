@@ -1,4 +1,4 @@
-const CACHE_NAME = "grob-leads-v6";
+const CACHE_NAME = "grob-leads-v10";
 const APP_SHELL = [
   "/coleta-leads/",
   "/css/app.css",

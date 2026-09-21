@@ -11,12 +11,14 @@ const fieldCancel = document.querySelector("[data-field-cancel]");
 const fieldType = fieldForm.elements.tipo;
 const fieldTopic = document.querySelector("[data-field-topic]");
 const fieldOptions = document.querySelector("[data-field-options]");
+const fieldOptionsHint = document.querySelector("[data-field-options-hint]");
+const multipleSelectionBehavior = document.querySelector("[data-multiple-selection-behavior]");
 const checkboxBehavior = document.querySelector("[data-checkbox-behavior]");
 const dependentQuestions = document.querySelector("[data-dependent-questions]");
 const fieldsList = document.querySelector("[data-fields-list]");
 const fieldsTotal = document.querySelector("[data-fields-total]");
 
-const FIELD_TYPES = ["texto", "texto-longo", "numero", "selecao", "multipla-escolha", "checkbox"];
+const FIELD_TYPES = ["texto", "texto-longo", "numero", "selecao", "multipla-escolha", "checkbox", "categoria"];
 const LEGACY_TOPIC_ID = "topico_geral";
 
 let configuredTopics = [];
@@ -42,6 +44,7 @@ function normalizedFields(value) {
       rotulo,
       tipo: field.tipo,
       obrigatorio: field.obrigatorio === true,
+      permiteMultiplaSelecao: field.permiteMultiplaSelecao === true,
       opcoes: Array.isArray(field.opcoes) ? field.opcoes.map((option) => String(option).trim()).filter(Boolean) : [],
       topicoId: typeof field.topicoId === "string" ? field.topicoId.trim() : "",
       dependeDe: typeof field.dependeDe === "string" ? field.dependeDe.trim() : "",
@@ -55,7 +58,13 @@ function normalizedTopics(value) {
     if (!topic || typeof topic !== "object") return [];
     const id = typeof topic.id === "string" ? topic.id.trim() : "";
     const titulo = typeof topic.titulo === "string" ? topic.titulo.trim() : "";
-    return id && titulo ? [{id, titulo}] : [];
+    if (!id || !titulo) return [];
+    return [{
+      id,
+      titulo,
+      acionadoPorCampoId: typeof topic.acionadoPorCampoId === "string" ? topic.acionadoPorCampoId.trim() : "",
+      acionadoPorValor: typeof topic.acionadoPorValor === "string" ? topic.acionadoPorValor.trim() : "",
+    }];
   });
 }
 
@@ -85,7 +94,52 @@ function fieldTypeLabel(type) {
     selecao: "Lista de seleção",
     "multipla-escolha": "Múltipla escolha",
     checkbox: "Checkbox",
+    categoria: "Categoria que abre tópico",
   }[type] || "Pergunta";
+}
+
+function isConditionalTopic(topic) {
+  return Boolean(topic.acionadoPorCampoId && topic.acionadoPorValor);
+}
+
+function normalizedOptionKey(value) {
+  return String(value || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+function synchronizeCategoryTopics(fieldId, options) {
+  const linkedTopics = configuredTopics.filter((topic) => topic.acionadoPorCampoId === fieldId);
+  const linkedByValue = new Map(linkedTopics.map((topic) => [normalizedOptionKey(topic.acionadoPorValor), topic]));
+  const assignedTopics = new Set();
+  const assignments = options.map((option) => {
+    const exact = linkedByValue.get(normalizedOptionKey(option));
+    if (exact) assignedTopics.add(exact.id);
+    return {option, topic: exact || null};
+  });
+  const unmatchedTopics = linkedTopics.filter((topic) => !assignedTopics.has(topic.id));
+  assignments.forEach((assignment) => {
+    if (assignment.topic || !unmatchedTopics.length) return;
+    assignment.topic = unmatchedTopics.shift();
+    assignedTopics.add(assignment.topic.id);
+  });
+  const removedTopics = linkedTopics.filter((topic) => !assignedTopics.has(topic.id));
+  const populatedRemovedTopic = removedTopics.find((topic) => configuredFields.some((field) => field.topicoId === topic.id));
+  if (populatedRemovedTopic) {
+    throw new Error(`O tópico “${populatedRemovedTopic.titulo}” ainda possui perguntas. Remova ou mova essas perguntas antes de excluir a opção.`);
+  }
+  configuredTopics = configuredTopics.filter((topic) => !removedTopics.some((removed) => removed.id === topic.id));
+  assignments.forEach(({option, topic: existing}) => {
+    if (existing) {
+      existing.titulo = option;
+      existing.acionadoPorValor = option;
+      return;
+    }
+    configuredTopics.push({
+      id: `topico_${crypto.randomUUID().replaceAll("-", "")}`,
+      titulo: option,
+      acionadoPorCampoId: fieldId,
+      acionadoPorValor: option,
+    });
+  });
 }
 
 function setOrderControlsDisabled(disabled) {
@@ -203,7 +257,10 @@ function renderTopics() {
   topicsTotal.textContent = `${configuredTopics.length} cadastrado(s)`;
   topicsList.replaceChildren();
   fieldTopic.replaceChildren(new Option(configuredTopics.length ? "Selecione o tópico" : "Crie um tópico primeiro", ""));
-  configuredTopics.forEach((topic) => fieldTopic.add(new Option(topic.titulo, topic.id)));
+  configuredTopics.forEach((topic) => fieldTopic.add(new Option(
+    isConditionalTopic(topic) ? `${topic.titulo} — exclusivo da categoria` : `${topic.titulo} — geral`,
+    topic.id,
+  )));
   if (configuredTopics.some((topic) => topic.id === selectedTopicId)) fieldTopic.value = selectedTopicId;
   fieldTopic.disabled = !configuredTopics.length;
   fieldSave.disabled = !configuredTopics.length;
@@ -218,7 +275,12 @@ function renderTopics() {
     title.textContent = `${index + 1}. ${topic.titulo}`;
     const details = document.createElement("p");
     const count = configuredFields.filter((field) => field.topicoId === topic.id).length;
-    details.textContent = `${count} pergunta(s)`;
+    if (isConditionalTopic(topic)) {
+      const categoryField = configuredFields.find((field) => field.id === topic.acionadoPorCampoId);
+      details.textContent = `${count} pergunta(s) · aparece quando “${categoryField?.rotulo || "Categoria"}” for “${topic.acionadoPorValor}”`;
+    } else {
+      details.textContent = `${count} pergunta(s) · geral, aparece para todos`;
+    }
     const actions = document.createElement("div");
     actions.className = "management-card-actions";
     const ordering = orderControls(
@@ -228,31 +290,43 @@ function renderTopics() {
       index === configuredTopics.length - 1,
       (direction) => moveTopic(topic.id, direction),
     );
-    const remove = document.createElement("button");
-    remove.className = "danger-delete";
-    remove.type = "button";
-    remove.textContent = "Remover tópico";
-    remove.addEventListener("click", async () => {
-      const topicFields = configuredFields.filter((field) => field.topicoId === topic.id);
-      const warning = topicFields.length ? ` e suas ${topicFields.length} pergunta(s)` : "";
-      if (!window.confirm(`Remover o tópico “${topic.titulo}”${warning}? As respostas já registradas serão preservadas.`)) return;
-      const previousTopics = configuredTopics;
-      const previousFields = configuredFields;
-      configuredTopics = configuredTopics.filter((item) => item.id !== topic.id);
-      configuredFields = configuredFields.filter((field) => field.topicoId !== topic.id);
-      try {
-        await saveQuestionnaire();
-        if (editingFieldId && configuredFields.every((field) => field.id !== editingFieldId)) resetFieldForm();
-        setFeedback("Tópico removido.", "success");
-      } catch (error) {
-        console.error(error);
-        configuredTopics = previousTopics;
-        configuredFields = previousFields;
-        renderQuestionnaire();
-        setFeedback("Não foi possível remover o tópico.", "error");
-      }
-    });
-    actions.append(ordering, remove);
+    actions.append(ordering);
+    if (isConditionalTopic(topic)) {
+      const managed = document.createElement("small");
+      managed.className = "lead-topic-managed";
+      managed.textContent = "Criado automaticamente";
+      actions.append(managed);
+    } else {
+      const remove = document.createElement("button");
+      remove.className = "danger-delete";
+      remove.type = "button";
+      remove.textContent = "Remover tópico";
+      remove.addEventListener("click", async () => {
+        const topicFields = configuredFields.filter((field) => field.topicoId === topic.id);
+        const categoryFieldIds = new Set(topicFields.filter((field) => field.tipo === "categoria").map((field) => field.id));
+        const linkedTopics = configuredTopics.filter((item) => categoryFieldIds.has(item.acionadoPorCampoId));
+        const removedTopicIds = new Set([topic.id, ...linkedTopics.map((item) => item.id)]);
+        const removedFieldCount = configuredFields.filter((field) => removedTopicIds.has(field.topicoId)).length;
+        const warning = removedFieldCount ? ` e suas ${removedFieldCount} pergunta(s)` : "";
+        if (!window.confirm(`Remover o tópico “${topic.titulo}”${warning}? As respostas já registradas serão preservadas.`)) return;
+        const previousTopics = configuredTopics;
+        const previousFields = configuredFields;
+        configuredTopics = configuredTopics.filter((item) => !removedTopicIds.has(item.id));
+        configuredFields = configuredFields.filter((field) => !removedTopicIds.has(field.topicoId));
+        try {
+          await saveQuestionnaire();
+          if (editingFieldId && configuredFields.every((field) => field.id !== editingFieldId)) resetFieldForm();
+          setFeedback("Tópico removido.", "success");
+        } catch (error) {
+          console.error(error);
+          configuredTopics = previousTopics;
+          configuredFields = previousFields;
+          renderQuestionnaire();
+          setFeedback("Não foi possível remover o tópico.", "error");
+        }
+      });
+      actions.append(remove);
+    }
     card.append(title, details, actions);
     topicsList.append(card);
   });
@@ -281,7 +355,10 @@ function renderQuestionnaire() {
       const title = document.createElement("h3");
       title.textContent = field.rotulo;
       const details = document.createElement("p");
-      details.textContent = `${fieldTypeLabel(field.tipo)}${field.obrigatorio ? " · obrigatório" : ""}${field.opcoes?.length ? ` · ${field.opcoes.join(", ")}` : ""}`;
+      const selectionMode = field.tipo === "multipla-escolha"
+        ? field.permiteMultiplaSelecao ? " · várias respostas" : " · resposta única"
+        : "";
+      details.textContent = `${fieldTypeLabel(field.tipo)}${selectionMode}${field.obrigatorio ? " · obrigatório" : ""}${field.opcoes?.length ? ` · ${field.opcoes.join(", ")}` : ""}`;
       card.append(title, details);
       const children = configuredFields.filter((item) => item.dependeDe === field.id);
       if (children.length) {
@@ -313,9 +390,17 @@ function renderQuestionnaire() {
       remove.type = "button";
       remove.textContent = "Remover";
       remove.addEventListener("click", async () => {
-        if (!window.confirm(`Remover a pergunta “${field.rotulo}”? As respostas já registradas serão preservadas.`)) return;
+        const linkedTopics = field.tipo === "categoria"
+          ? configuredTopics.filter((topic) => topic.acionadoPorCampoId === field.id)
+          : [];
+        const linkedFieldIds = new Set(linkedTopics.flatMap((topic) => configuredFields.filter((item) => item.topicoId === topic.id).map((item) => item.id)));
+        const linkedWarning = linkedFieldIds.size ? ` Também serão removidas ${linkedFieldIds.size} pergunta(s) dos tópicos vinculados.` : "";
+        if (!window.confirm(`Remover a pergunta “${field.rotulo}”?${linkedWarning} As respostas já registradas serão preservadas.`)) return;
         const previousFields = configuredFields;
-        configuredFields = configuredFields.filter((item) => item.id !== field.id && item.dependeDe !== field.id);
+        const previousTopics = configuredTopics;
+        const linkedTopicIds = new Set(linkedTopics.map((topic) => topic.id));
+        configuredFields = configuredFields.filter((item) => item.id !== field.id && item.dependeDe !== field.id && !linkedTopicIds.has(item.topicoId));
+        configuredTopics = configuredTopics.filter((topic) => !linkedTopicIds.has(topic.id));
         try {
           await saveQuestionnaire();
           if (editingFieldId === field.id) resetFieldForm();
@@ -323,6 +408,7 @@ function renderQuestionnaire() {
         } catch (error) {
           console.error(error);
           configuredFields = previousFields;
+          configuredTopics = previousTopics;
           renderQuestionnaire();
           setFeedback("Não foi possível remover a pergunta.", "error");
         }
@@ -360,10 +446,17 @@ async function loadQuestionnaire() {
 }
 
 function updateFieldFormVisibility() {
-  const hasOptions = fieldType.value === "selecao" || fieldType.value === "multipla-escolha";
+  const isCategory = fieldType.value === "categoria";
+  const isMultipleChoice = fieldType.value === "multipla-escolha";
+  const hasOptions = fieldType.value === "selecao" || fieldType.value === "multipla-escolha" || isCategory;
   const isCheckbox = fieldType.value === "checkbox";
   fieldOptions.hidden = !hasOptions;
+  fieldOptionsHint.textContent = isCategory
+    ? "(uma por linha; cada opção cria seu próprio tópico)"
+    : "(uma por linha)";
   fieldForm.elements.opcoes.required = hasOptions;
+  multipleSelectionBehavior.hidden = !isMultipleChoice;
+  if (!isMultipleChoice) fieldForm.elements.permiteMultiplaSelecao.checked = false;
   checkboxBehavior.hidden = !isCheckbox;
   if (!isCheckbox) fieldForm.elements.abreDependentes.checked = false;
   dependentQuestions.hidden = !isCheckbox || !fieldForm.elements.abreDependentes.checked;
@@ -386,6 +479,7 @@ function startFieldEditing(field) {
   fieldForm.elements.tipo.value = field.tipo;
   fieldForm.elements.opcoes.value = field.opcoes.join("\n");
   fieldForm.elements.obrigatorio.checked = field.obrigatorio;
+  fieldForm.elements.permiteMultiplaSelecao.checked = field.tipo === "multipla-escolha" && field.permiteMultiplaSelecao;
   fieldForm.elements.abreDependentes.checked = field.tipo === "checkbox" && children.length > 0;
   fieldForm.elements.perguntasDependentes.value = children.map((item) => item.rotulo).join("\n");
   fieldSave.textContent = "Salvar alterações";
@@ -432,7 +526,7 @@ fieldForm.addEventListener("submit", async (event) => {
   if (!isAdmin || !fieldForm.reportValidity()) return;
   const form = new FormData(fieldForm);
   const tipo = String(form.get("tipo"));
-  const acceptsOptions = tipo === "selecao" || tipo === "multipla-escolha";
+  const acceptsOptions = tipo === "selecao" || tipo === "multipla-escolha" || tipo === "categoria";
   const opcoes = acceptsOptions
     ? String(form.get("opcoes") || "").split("\n").map((option) => option.trim()).filter(Boolean)
     : [];
@@ -441,8 +535,16 @@ fieldForm.addEventListener("submit", async (event) => {
     setFeedback("Selecione um tópico válido.", "error");
     return;
   }
+  if (tipo === "categoria" && configuredTopics.some((topic) => topic.id === topicoId && isConditionalTopic(topic))) {
+    setFeedback("A pergunta de categoria deve ficar em um tópico geral, que aparece para todos.", "error");
+    return;
+  }
   if (acceptsOptions && !opcoes.length) {
     setFeedback("Informe ao menos uma opção para essa pergunta.", "error");
+    return;
+  }
+  if (tipo === "categoria" && new Set(opcoes.map(normalizedOptionKey)).size !== opcoes.length) {
+    setFeedback("As opções da categoria não podem se repetir.", "error");
     return;
   }
   const opensDependents = tipo === "checkbox" && form.get("abreDependentes") === "on";
@@ -455,6 +557,7 @@ fieldForm.addEventListener("submit", async (event) => {
   }
   fieldSave.disabled = true;
   const previousFields = configuredFields;
+  const previousTopics = configuredTopics.map((topic) => ({...topic}));
   const fieldBeingEdited = configuredFields.find((field) => field.id === editingFieldId && !field.dependeDe);
   try {
     const fieldId = fieldBeingEdited?.id || `campo_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -463,6 +566,7 @@ fieldForm.addEventListener("submit", async (event) => {
       rotulo: String(form.get("rotulo") || "").trim(),
       tipo,
       obrigatorio: form.get("obrigatorio") === "on",
+      permiteMultiplaSelecao: tipo === "multipla-escolha" && form.get("permiteMultiplaSelecao") === "on",
       opcoes,
       topicoId,
       dependeDe: "",
@@ -475,6 +579,7 @@ fieldForm.addEventListener("submit", async (event) => {
       rotulo,
       tipo: "texto",
       obrigatorio: false,
+      permiteMultiplaSelecao: false,
       opcoes: [],
       topicoId,
       dependeDe: fieldId,
@@ -488,6 +593,12 @@ fieldForm.addEventListener("submit", async (event) => {
     } else {
       configuredFields = [...configuredFields, updatedField, ...updatedDependents];
     }
+    const hadCategoryTopics = configuredTopics.some((topic) => topic.acionadoPorCampoId === fieldId);
+    if (tipo === "categoria") {
+      synchronizeCategoryTopics(fieldId, opcoes);
+    } else if (hadCategoryTopics) {
+      synchronizeCategoryTopics(fieldId, []);
+    }
     await saveQuestionnaire();
     const successMessage = fieldBeingEdited ? "Pergunta atualizada." : "Pergunta adicionada.";
     resetFieldForm();
@@ -495,8 +606,9 @@ fieldForm.addEventListener("submit", async (event) => {
   } catch (error) {
     console.error(error);
     configuredFields = previousFields;
+    configuredTopics = previousTopics;
     renderQuestionnaire();
-    setFeedback(fieldBeingEdited ? "Não foi possível atualizar a pergunta." : "Não foi possível adicionar a pergunta.", "error");
+    setFeedback(error.message || (fieldBeingEdited ? "Não foi possível atualizar a pergunta." : "Não foi possível adicionar a pergunta."), "error");
   } finally {
     fieldSave.disabled = !configuredTopics.length;
   }
