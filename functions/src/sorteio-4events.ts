@@ -469,6 +469,7 @@ export const draw4EventsRaffle = onCall(async (request) => {
     const selectedIndex = randomInt(pool.length);
     const candidate = pool[selectedIndex];
     const winner = participantValue(candidate);
+    const winnerResponse = {...winner, email: text(candidate.get("email"), 240)};
     const drawnAt = Timestamp.now();
 
     try {
@@ -516,7 +517,7 @@ export const draw4EventsRaffle = onCall(async (request) => {
         return {
           sorteioId: resultReference.id,
           modo: mode,
-          vencedor: winner,
+          vencedor: winnerResponse,
           quantidadeElegiveis: eligibleIds.length,
           indiceSorteado: selectedIndex,
           elegiveisHash: eligibleHash,
@@ -573,7 +574,7 @@ export const draw4EventsRaffle = onCall(async (request) => {
       return {
         sorteioId: resultReference.id,
         modo: mode,
-        vencedor: winner,
+        vencedor: winnerResponse,
         quantidadeElegiveis: eligibleIds.length,
         indiceSorteado: selectedIndex,
         elegiveisHash: eligibleHash,

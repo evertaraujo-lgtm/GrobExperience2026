@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" href="/img/LogoPNG.png">
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5">
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3">
-    <link rel="stylesheet" href="/css/sorteio-4events.css?v=raffle-v3">
+    <link rel="stylesheet" href="/css/sorteio-4events.css?v=raffle-v6">
   </head>
   <body data-auth-page="protected" data-admin-page="true">
     <div class="page-shell">
@@ -70,7 +70,7 @@
             <section class="pre-inscritos-card raffle-draw-card">
               <div class="raffle-section-heading"><div><p class="eyebrow">2. Executar</p><h2>Preparar sorteio</h2></div><span class="raffle-security-label">Resultado definido no servidor</span></div>
               <form class="raffle-draw-form" data-draw-form>
-                <label class="raffle-field">Nome do brinde<input name="brinde" maxlength="120" required placeholder="Ex.: Kit GROB Experience" data-prize></label>
+                <label class="raffle-field">Nome do brinde<input name="brinde" maxlength="120" required value="Brinde" autocomplete="off" placeholder="Ex.: Kit GROB Experience" data-prize></label>
                 <label class="raffle-field">Manifestação (segundos)<input type="number" min="0" max="600" step="5" value="30" list="raffle-manifestation-options" inputmode="numeric" required data-manifestation-time><small>Use 0 para desativar</small></label>
                 <datalist id="raffle-manifestation-options"><option value="15"></option><option value="30"></option><option value="45"></option><option value="60"></option><option value="90"></option><option value="120"></option></datalist>
                 <label class="raffle-fullscreen-option"><input type="checkbox" data-fullscreen checked> Abrir apresentação em tela cheia</label>
@@ -113,10 +113,13 @@
         <p class="raffle-stage-status" data-stage-status>Validando participantes elegíveis...</p>
       </div>
       <div class="raffle-confetti" data-confetti aria-hidden="true"></div>
-      <button class="raffle-stage-close" type="button" data-stage-close hidden>Fechar apresentação</button>
+      <div class="raffle-stage-actions">
+        <button class="button raffle-stage-new" type="button" data-stage-new hidden>Novo sorteio</button>
+        <button class="raffle-stage-close" type="button" data-stage-close hidden>Fechar apresentação</button>
+      </div>
     </dialog>
 
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/sorteio-4events.js?v=raffle-v8"></script>
+    <script type="module" src="/js/sorteio-4events.js?v=raffle-v12"></script>
   </body>
 </html>

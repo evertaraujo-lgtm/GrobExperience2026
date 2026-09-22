@@ -44,6 +44,7 @@ const manifestationLabel = document.querySelector("[data-manifestation-label]");
 const manifestationValue = document.querySelector("[data-manifestation-value]");
 const countdown = document.querySelector("[data-countdown]");
 const confetti = document.querySelector("[data-confetti]");
+const stageNewDraw = document.querySelector("[data-stage-new]");
 const stageClose = document.querySelector("[data-stage-close]");
 
 const apiCache = new Map();
@@ -70,6 +71,16 @@ function setFeedback(message, status = "neutral") {
 function errorText(error, fallback) {
   const message = typeof error?.message === "string" ? error.message.replace(/^FirebaseError:\s*/i, "") : "";
   return message || fallback;
+}
+
+function maskedEmail(value) {
+  if (typeof value !== "string") return "";
+  const email = value.trim();
+  const at = email.indexOf("@");
+  if (at < 1 || at === email.length - 1 || email.lastIndexOf("@") !== at) return "";
+  const local = Array.from(email.slice(0, at));
+  const visible = local.length < 3 ? 1 : 3;
+  return `${local.slice(0, visible).join("")}${"*".repeat(Math.max(1, local.length - visible))}${email.slice(at)}`;
 }
 
 async function callable(name, data = {}) {
@@ -301,6 +312,7 @@ function updateControls() {
   const finalReady = state.mode === "final" && state.data?.categoriaPermitidaHoje && state.data?.sincronizacaoHoje;
   const testReady = state.mode === "teste" && Boolean(state.sessionId);
   drawButton.disabled = !hasCategory || !eligible || !(finalReady || testReady);
+  stageNewDraw.disabled = state.stageBusy || drawButton.disabled;
 }
 
 function render() {
@@ -605,14 +617,21 @@ async function revealWinner(result) {
   stage.dataset.phase = "winner";
   stageName.textContent = winner.nome || "Vencedor";
   stageDetails.textContent = [winner.empresa, winner.cargo].filter(Boolean).join(" · ");
+  const emailText = maskedEmail(winner.email);
+  if (emailText) {
+    const email = document.createElement("small");
+    email.textContent = emailText;
+    stageDetails.append(email);
+  }
   stageStatus.textContent = `Vencedor do brinde ${prizeInput.value.trim()}`;
   createConfetti();
+  stageNewDraw.hidden = false;
   stageClose.hidden = false;
 }
 
 async function executeDraw(event) {
   event.preventDefault();
-  if (!drawForm.reportValidity() || drawButton.disabled) return;
+  if (state.stageBusy || !drawForm.reportValidity() || drawButton.disabled) return;
   if (state.mode === "final" && !window.confirm(`Confirmar o sorteio FINAL do brinde “${prizeInput.value.trim()}” para a categoria selecionada? O vencedor sairá dos próximos sorteios dessa categoria.`)) return;
 
   stopManifestationTimer();
@@ -624,12 +643,14 @@ async function executeDraw(event) {
   stageName.textContent = "Validando elegíveis";
   stageDetails.textContent = "";
   stageStatus.textContent = "O resultado será definido e registrado no servidor";
+  stageNewDraw.hidden = true;
+  stageNewDraw.disabled = true;
   stageClose.hidden = true;
   confetti.replaceChildren();
-  stage.showModal();
+  if (!stage.open) stage.showModal();
   state.stageBusy = true;
 
-  if (fullscreenInput.checked && stage.requestFullscreen) {
+  if (fullscreenInput.checked && !document.fullscreenElement && stage.requestFullscreen) {
     try { await stage.requestFullscreen(); } catch (error) { console.warn("Tela cheia não disponível.", error); }
   }
 
@@ -653,6 +674,7 @@ async function executeDraw(event) {
     stageName.textContent = "Sorteio não realizado";
     stageDetails.textContent = errorText(error, "Não foi possível realizar o sorteio.");
     stageStatus.textContent = "Nenhum vencedor foi registrado";
+    stageNewDraw.hidden = false;
     stageClose.hidden = false;
     setFeedback(errorText(error, "Não foi possível realizar o sorteio."), "error");
   } finally {
@@ -675,6 +697,7 @@ modeButtons.forEach((button) => button.addEventListener("click", async () => {
   const mode = button.dataset.mode;
   if (mode === state.mode) return;
   state.mode = mode;
+  if (mode === "final") prizeInput.value = "Brinde";
   localStorage.setItem("grob-raffle-mode", mode);
   state.data = null;
   state.participants = [];
@@ -704,6 +727,7 @@ clearAllButton.addEventListener("click", () => updateSimulatedPresence(state.par
 refreshButton.addEventListener("click", () => refreshState());
 searchInput.addEventListener("input", renderParticipants);
 drawForm.addEventListener("submit", executeDraw);
+stageNewDraw.addEventListener("click", () => drawForm.requestSubmit());
 stageClose.addEventListener("click", closeStage);
 stage.addEventListener("cancel", (event) => {
   if (state.stageBusy) event.preventDefault();
@@ -711,6 +735,7 @@ stage.addEventListener("cancel", (event) => {
 });
 
 eidInput.value = FIXED_EVENT_EID;
+if (state.mode === "final") prizeInput.value = "Brinde";
 testFilter.value = state.filter;
 manifestationTimeInput.value = localStorage.getItem("grob-raffle-manifestation-seconds") || "30";
 manifestationTimeInput.addEventListener("change", manifestationSeconds);

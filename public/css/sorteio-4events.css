@@ -73,7 +73,7 @@
 .raffle-stage-top img{width:clamp(130px,14vw,250px)}
 .raffle-stage-top span{padding:10px 16px;border:1px solid rgba(255,196,91,.55);border-radius:99px;color:#2c1700;background:#ffc868;font:700 clamp(.75rem,1.2vw,1rem) Rajdhani,sans-serif;letter-spacing:.16em}
 .raffle-stage[data-mode=final] .raffle-stage-top span{border-color:rgba(99,241,178,.6);color:#032619;background:#79efb7}
-.raffle-stage-content{position:relative;z-index:2;display:grid;align-content:center;justify-items:center;width:min(1500px,92vw);height:100%;margin:auto;text-align:center}
+.raffle-stage-content{position:relative;z-index:2;display:grid;align-content:center;justify-items:center;width:min(1500px,92vw);height:100%;margin:auto;padding:80px 0 100px;text-align:center}
 .raffle-stage-category{max-width:90vw;margin:0 0 2vh;color:#9cddff;font:600 clamp(.85rem,1.55vw,1.35rem) Rajdhani,sans-serif;letter-spacing:.08em;text-transform:uppercase}
 .raffle-stage-prize-label{margin:0;color:rgba(225,241,255,.68);font-size:clamp(.75rem,1.2vw,1rem);letter-spacing:.22em;text-transform:uppercase}
 .raffle-stage-content h2{max-width:90vw;margin:1vh 0 5vh;color:white;font-size:clamp(2rem,4.3vw,5rem)}
@@ -82,13 +82,17 @@
 .raffle-stage-name{max-width:94vw;font:700 clamp(3.1rem,9vw,10rem)/.92 Rajdhani,sans-serif;text-transform:uppercase;text-wrap:balance}
 .raffle-stage[data-phase=spinning] .raffle-stage-name{animation:raffle-name-pass .18s infinite}
 .raffle-stage[data-phase=winner] .raffle-stage-name{animation:raffle-winner 1.15s cubic-bezier(.17,.89,.32,1.35) both;text-shadow:0 0 22px #45c5ff,0 0 75px rgba(25,145,220,.9),0 0 150px rgba(10,91,160,.7)}
-.raffle-stage-details{min-height:2em;margin-top:2.6vh;color:#cdeaff;font-size:clamp(1rem,2vw,2rem)}
+.raffle-stage-details{display:grid;justify-items:center;gap:4px;max-width:90vw;min-height:2em;margin-top:2.6vh;color:#cdeaff;font-size:clamp(1rem,2vw,2rem);overflow-wrap:anywhere}
+.raffle-stage-details small{display:block;max-width:100%;color:rgba(218,235,255,.82);font-size:.85em;font-weight:400;line-height:1.2}
 .raffle-winner-timer{display:grid;justify-items:center;gap:.15em;margin-top:2.2vh;padding:clamp(9px,1.4vh,15px) clamp(18px,2.5vw,34px);border:1px solid rgba(255,200,104,.52);border-radius:18px;color:#fff1cb;background:rgba(95,55,4,.42);box-shadow:0 12px 40px rgba(0,0,0,.22)}
 .raffle-winner-timer span{font:700 clamp(.72rem,1.1vw,.95rem) Rajdhani,sans-serif;letter-spacing:.14em;text-transform:uppercase}
 .raffle-winner-timer strong{font:700 clamp(2.2rem,5vw,5rem)/.9 Rajdhani,sans-serif;font-variant-numeric:tabular-nums}
 .raffle-winner-timer[data-state=ended]{border-color:rgba(255,129,129,.65);color:#ffe0e0;background:rgba(122,25,38,.5);animation:raffle-timer-ended .75s ease both}
 .raffle-stage-status{margin:4vh 0 0;color:rgba(218,235,255,.66);font-size:clamp(.75rem,1.1vw,1rem);letter-spacing:.1em;text-transform:uppercase}
-.raffle-stage-close{position:absolute;z-index:5;right:clamp(22px,5vw,80px);bottom:clamp(20px,4vh,50px);min-height:46px;padding:0 20px;border:1px solid rgba(125,214,255,.4);border-radius:99px;color:white;background:rgba(3,19,43,.72);font:inherit;cursor:pointer}
+.raffle-stage-actions{position:absolute;z-index:5;right:clamp(22px,5vw,80px);bottom:clamp(20px,4vh,50px);display:flex;align-items:center;gap:10px}
+.raffle-stage-new{min-height:46px;margin:0}
+.raffle-stage-new:disabled{cursor:not-allowed;filter:grayscale(.6);opacity:.5}
+.raffle-stage-close{min-height:46px;padding:0 20px;border:1px solid rgba(125,214,255,.4);border-radius:99px;color:white;background:rgba(3,19,43,.72);font:inherit;cursor:pointer}
 .raffle-confetti{position:absolute;inset:0;z-index:3;overflow:hidden;pointer-events:none}
 .raffle-confetti i{position:absolute;top:-8vh;left:var(--x);width:var(--w);height:calc(var(--w)*2.2);background:var(--color);transform:rotate(var(--rotate));animation:raffle-confetti-fall var(--duration) var(--delay) cubic-bezier(.2,.65,.35,1) forwards}
 @keyframes raffle-count{0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}35%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
@@ -100,3 +104,4 @@
 @media(max-width:1050px){.raffle-layout{grid-template-columns:1fr}.raffle-history-card{position:static;max-height:none}.raffle-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.raffle-page,.raffle-layout,.raffle-main,.raffle-config-card,.raffle-draw-card,.raffle-participants-card,.raffle-history-card{min-width:0;max-width:100%}.raffle-heading{align-items:flex-start;flex-direction:column;min-width:0}.raffle-heading>div:first-child{min-width:0;max-width:100%}.raffle-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0}.raffle-mode-switch button{min-width:0;padding:0 8px;font-size:.75rem}.raffle-event-form,.raffle-draw-form{grid-template-columns:minmax(0,1fr)}.raffle-event-form>*,.raffle-draw-form>*{min-width:0}.raffle-event-form .button,.raffle-event-form .back-link,.raffle-draw-button{width:100%}.raffle-section-heading{flex-direction:column}.raffle-search{width:100%;grid-template-columns:minmax(0,1fr)}.raffle-participant-head{display:none}.raffle-participant{grid-template-columns:1fr 1fr}.raffle-participant-copy:first-child{grid-column:1/-1}.raffle-alert{align-items:flex-start;flex-direction:column}.raffle-alert span{overflow-wrap:anywhere}}
 @media(max-width:480px){.raffle-stats{grid-template-columns:1fr 1fr}.raffle-participant{grid-template-columns:1fr}.raffle-participant-copy:first-child{grid-column:auto}.raffle-presence-actions{flex-direction:column}.raffle-presence-actions .back-link{width:100%}}
+@media(max-width:600px){.raffle-stage-actions{left:18px;right:18px;bottom:18px}.raffle-stage-actions button{flex:1;min-width:0;padding:0 12px;font-size:.82rem}}
