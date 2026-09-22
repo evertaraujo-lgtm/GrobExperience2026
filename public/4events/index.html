@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
-    <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
+    <link rel="stylesheet" href="/css/importacao.css?v=presence-timer-v1" />
   </head>
   <body data-auth-page="protected">
     <div class="page-shell">
@@ -25,6 +25,7 @@
               <a class="back-link" href="/app/">Voltar aos pré-inscritos</a>
               <button class="back-link" data-import-toggle hidden>Importar visitantes</button>
               <button class="back-link" data-check-presence hidden>Checar presença</button>
+              <span class="presence-check-timer" data-check-timer hidden>Tempo <output data-check-elapsed aria-label="Tempo da checagem">00:00</output></span>
               <button class="back-link" data-search-4events hidden>Buscar na 4 Events</button>
               <button class="back-link danger-zone" data-delete-all hidden>Excluir lista</button>
               <button class="back-link" data-reload>Atualizar</button>
@@ -85,6 +86,6 @@
       </main>
     </div>
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/4events.js?v=visitor-delete-v1"></script>
+    <script type="module" src="/js/4events.js?v=presence-timer-v1"></script>
   </body>
 </html>

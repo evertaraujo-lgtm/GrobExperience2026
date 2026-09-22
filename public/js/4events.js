@@ -9,6 +9,8 @@ const search = document.querySelector("[data-search]");
 const more = document.querySelector("[data-load-more]");
 const importToggle = document.querySelector("[data-import-toggle]");
 const check = document.querySelector("[data-check-presence]");
+const checkTimer = document.querySelector("[data-check-timer]");
+const checkElapsed = document.querySelector("[data-check-elapsed]");
 const deleteAll = document.querySelector("[data-delete-all]");
 const editor = document.querySelector("[data-import-editor]");
 const file = document.querySelector("[data-import-file]");
@@ -332,19 +334,40 @@ search4EventsForm.addEventListener("submit", async (event) => {
 });
 
 check.addEventListener("click", async () => {
-  if (!admin || !window.confirm("Consultar a presença e notificar os coordenadores dos visitantes presentes? Cada linha será notificada no máximo uma vez.")) return;
+  if (!admin || !window.confirm("Consultar a presença e notificar os coordenadores dos visitantes presentes? Cada coordenador será notificado uma vez por inscrição.")) return;
   check.disabled = true;
   check.textContent = "Consultando...";
+  const startedAt = performance.now();
+  let timerId;
+  const updateTimer = () => {
+    const seconds = Math.floor((performance.now() - startedAt) / 1000);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+    const remainder = String(seconds % 60).padStart(2, "0");
+    checkElapsed.textContent = hours ? `${hours}:${minutes}:${remainder}` : `${minutes}:${remainder}`;
+  };
+  const stopTimer = () => {
+    if (!timerId) return;
+    window.clearInterval(timerId);
+    timerId = undefined;
+    updateTimer();
+  };
+  checkTimer.hidden = false;
+  updateTimer();
+  timerId = window.setInterval(updateTimer, 250);
   try {
     const {functions, functionsModule} = await getFunctionsServices();
     const result = await functionsModule.httpsCallable(functions, "check4EventsPresence")({});
+    stopTimer();
     const failures = Array.isArray(result.data.notificationFailures) ? result.data.notificationFailures.length : 0;
     setFeedback(`${result.data.checked} linha(s) consultada(s); ${result.data.attending} presença(s); ${result.data.notificationsSent} notificação(ões) enviada(s); ${result.data.notificationsSkipped} já enviada(s) ou sem dados válidos.${failures ? ` ${failures} falha(s) no envio.` : ""}`, failures ? "error" : "success");
     await load();
   } catch (error) {
+    stopTimer();
     console.error(error);
     setFeedback(error.message || "Não foi possível consultar a 4 Events.", "error");
   } finally {
+    stopTimer();
     check.disabled = false;
     check.textContent = "Checar presença";
   }
