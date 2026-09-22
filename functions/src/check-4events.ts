@@ -6,11 +6,10 @@ import {HttpsError, onCall} from "firebase-functions/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
 const fourEventsToken = defineSecret("FOUR_EVENTS_TOKEN");
-const metaWhatsAppAccessToken = defineSecret("META_WHATSAPP_ACCESS_TOKEN");
+const grobExperienceApiKey = defineSecret("GROB_EXPERIENCE_API_KEY");
 const endpoint = "https://api.4.events/attendees/2/search";
-const phoneNumberId = "1289110394284226";
-const graphVersion = "v23.0";
-const templateName = "notificacao_presenca_wpp";
+const venoEndpoint = "https://southamerica-east1-praxisagendamentos.cloudfunctions.net/sendGrobExperienceTemplate";
+const templateName = "notificacao_chegada";
 const automationConfigPath = "configuracoes/checagemPresenca4Events";
 const allowedIntervals = [5, 10, 15, 30, 60] as const;
 const executionLeaseMilliseconds = 12 * 60 * 1000;
@@ -89,6 +88,11 @@ function documentId(values: string[]) {
   return createHash("sha256").update(values.join("|")).digest("hex");
 }
 
+function registrationNotificationId(attendee: ApiAttendee) {
+  const identity = attendee.id4Events ? `id:${attendee.id4Events}` : `qr:${attendee.qrCode}`;
+  return documentId([attendee.email, identity]);
+}
+
 function eventId(messageId: string) {
   return `envio_${createHash("sha256").update(messageId).digest("hex")}`;
 }
@@ -122,32 +126,37 @@ async function query4EventsByEmail(email: string) {
   return response.json();
 }
 
-async function sendPresenceTemplate(to: string, coordinator: string, visitor: string, company: string, visitorPhone: string) {
-  const response = await fetch(`https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`, {
+async function sendPresenceTemplate(to: string, coordinator: string, visitor: string, company: string, visitorPhone: string, idempotencyKey: string) {
+  const response = await fetch(venoEndpoint, {
     method: "POST",
-    headers: {Authorization: `Bearer ${metaWhatsAppAccessToken.value()}`, "Content-Type": "application/json"},
+    headers: {
+      Authorization: `Bearer ${grobExperienceApiKey.value()}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
     body: JSON.stringify({
-      messaging_product: "whatsapp", to, type: "template",
-      template: {
-        name: templateName, language: {code: "en"},
-        components: [{type: "body", parameters: [
-          {type: "text", parameter_name: "nome", text: coordinator},
-          {type: "text", parameter_name: "visitor", text: visitor},
-          {type: "text", parameter_name: "empresa", text: company},
-          {type: "text", parameter_name: "numero", text: visitorPhone},
-        ]}],
+      template: templateName,
+      idioma: "en",
+      nome: coordinator,
+      numero: phoneWithoutCountry(to),
+      parametros: {
+        "body:visitor": visitor,
+        "body:empresa": company,
+        "body:numero": visitorPhone,
       },
     }),
   });
-  const payload = asRecord(await response.json());
+  const payload = asRecord(await response.json().catch(() => ({})));
   if (!response.ok) {
-    const error = asRecord(payload.error);
-    throw new Error(typeof error.message === "string" ? error.message : "A Meta recusou a notificação de presença.");
+    const error = typeof payload.error === "string" ? payload.error : "A VENO recusou a notificação de chegada.";
+    const message = typeof payload.message === "string" && payload.message ? ` — ${payload.message}` : "";
+    throw new Error(`${response.status}: ${error}${message}`);
   }
-  const message = asRecord(Array.isArray(payload.messages) ? payload.messages[0] : undefined);
-  const messageId = typeof message.id === "string" ? message.id : "";
-  if (!messageId) throw new Error("A Meta não retornou o identificador da mensagem.");
-  return {messageId, status: typeof message.message_status === "string" ? message.message_status : "accepted"};
+  const messageId = typeof payload.messageId === "string" ? payload.messageId : "";
+  if (payload.accepted !== true || !messageId.startsWith("wamid.")) {
+    throw new Error("A VENO não confirmou o envio com um identificador da Meta.");
+  }
+  return {messageId, status: "accepted"};
 }
 
 async function getAdminFirestore(request: {auth?: {uid: string}}) {
@@ -229,48 +238,70 @@ async function runPresenceCheck(firestore: Firestore): Promise<PresenceCheckResu
       const data = reference.data();
       const email = normalizeEmail(data.email);
       const attendees = attendeesByEmail.get(email) ?? [];
-      const presentAttendeeIds = attendees.filter((attendee) => attendee.presente === true)
-        .map((attendee) => documentId([attendee.email, attendee.qrCode, attendee.dataParticipacao ?? ""]));
-      const present = presentAttendeeIds.length > 0;
+      const presentAttendees = attendees.filter((attendee) => attendee.presente === true);
+      const present = presentAttendees.length > 0;
       await reference.ref.set({attendeeAttendingEvent: present, presenceCheckedAt: FieldValue.serverTimestamp()}, {merge: true});
       checked += 1;
       if (!present) continue;
       attending += 1;
 
-      const reservationId = randomUUID();
-      const notification = await firestore.runTransaction(async (transaction) => {
-        const current = await transaction.get(reference.ref);
-        const currentData = current.data() ?? {};
-        const reservedAt = timestamp(currentData.presenceNotificationReservedAt);
-        const activeReservation = typeof currentData.presenceNotificationReservationId === "string" && reservedAt && Timestamp.now().toMillis() - reservedAt.toMillis() < executionLeaseMilliseconds;
-        if (currentData.presenceNotificationSentAt || activeReservation) return null;
-        const coordinatorPhone = coordinatorDestination(currentData.whatsappCoordenador);
-        const coordinator = typeof currentData.coordenador === "string" ? currentData.coordenador.trim() : "";
-        const visitorName = typeof currentData.nome === "string" ? currentData.nome.trim() : "";
-        const company = typeof currentData.empresa === "string" ? currentData.empresa.trim() : "";
-        const visitorPhone = phoneWithoutCountry(currentData.whatsapp);
-        if (!coordinatorPhone || !coordinator || !visitorName || !company || !visitorPhone) return null;
-        transaction.update(reference.ref, {presenceNotificationReservationId: reservationId, presenceNotificationReservedAt: Timestamp.now()});
-        return {coordinatorPhone, coordinator, visitorName, company, visitorPhone};
-      });
-      if (!notification) { notificationsSkipped += 1; continue; }
-      try {
-        const result = await sendPresenceTemplate(notification.coordinatorPhone, notification.coordinator, notification.visitorName, notification.company, notification.visitorPhone);
-        const now = FieldValue.serverTimestamp();
-        const batch = firestore.batch();
-        batch.set(firestore.collection("whatsappMensagens").doc(result.messageId), {preInscritoId: null, destinatarioWhatsApp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", status: "aceito", statusMeta: result.status, visitanteEstrategicoId: reference.id, visitantes4EventsIds: presentAttendeeIds, solicitadoEm: now});
-        batch.set(firestore.collection("whatsappEventos").doc(eventId(result.messageId)), {tipo: "envio", messageId: result.messageId, preInscritoId: null, whatsapp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", visitanteEstrategicoId: reference.id, ocorridoEm: now, registradoEm: FieldValue.serverTimestamp()});
-        batch.set(reference.ref, {presenceNotificationSentAt: now, presenceNotificationMessageId: result.messageId, presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()}, {merge: true});
-        presentAttendeeIds.forEach((attendeeId) => batch.set(firestore.collection("visitantes4Events").doc(attendeeId), {notificacaoWhatsAppStatus: "aceito", notificacaoWhatsAppMensagemId: result.messageId, notificacaoWhatsAppAtualizadoEm: now}, {merge: true}));
-        await batch.commit();
-        notificationsSent += 1;
-      } catch (error) {
-        await firestore.runTransaction(async (transaction) => {
-          const current = await transaction.get(reference.ref);
-          if (current.data()?.presenceNotificationReservationId === reservationId) transaction.update(reference.ref, {presenceNotificationReservationId: FieldValue.delete(), presenceNotificationReservedAt: FieldValue.delete()});
+      // Envios antigos eram controlados pela linha de referência, não pela inscrição.
+      const legacyMessageId = typeof data.presenceNotificationMessageId === "string" ? data.presenceNotificationMessageId : "";
+      const legacyMessage = legacyMessageId ? await firestore.collection("whatsappMensagens").doc(legacyMessageId).get() : null;
+      const legacyAttendeeIds = new Set(Array.isArray(legacyMessage?.data()?.visitantes4EventsIds)
+        ? legacyMessage.data()?.visitantes4EventsIds as string[] : []);
+
+      for (const attendee of presentAttendees) {
+        const attendeeId = documentId([attendee.email, attendee.qrCode, attendee.dataParticipacao ?? ""]);
+        const attendeeRef = firestore.collection("visitantes4Events").doc(attendeeId);
+        if (legacyAttendeeIds.has(attendeeId)) { notificationsSkipped += 1; continue; }
+        const notificationId = registrationNotificationId(attendee);
+        const notificationRef = reference.ref.collection("notificacoesChegada").doc(notificationId);
+        const reservationId = randomUUID();
+        const notification = await firestore.runTransaction(async (transaction) => {
+          const [currentReference, currentNotification] = await Promise.all([
+            transaction.get(reference.ref), transaction.get(notificationRef),
+          ]);
+          const currentData = currentReference.data() ?? {};
+          const notificationData = currentNotification.data() ?? {};
+          const reservedAt = timestamp(notificationData.reservedAt);
+          const activeReservation = typeof notificationData.reservationId === "string" && reservedAt && Timestamp.now().toMillis() - reservedAt.toMillis() < executionLeaseMilliseconds;
+          if (notificationData.messageId || notificationData.sentAt || activeReservation) return null;
+          const coordinatorPhone = coordinatorDestination(currentData.whatsappCoordenador);
+          const coordinator = typeof currentData.coordenador === "string" ? currentData.coordenador.trim() : "";
+          const visitorName = typeof currentData.nome === "string" ? currentData.nome.trim() : "";
+          const company = typeof currentData.empresa === "string" ? currentData.empresa.trim() : "";
+          const visitorPhone = phoneWithoutCountry(currentData.whatsapp);
+          if (!coordinatorPhone || !coordinator || !visitorName || !company || !visitorPhone) return null;
+          transaction.set(notificationRef, {reservationId, reservedAt: Timestamp.now(), attendeeId, id4Events: attendee.id4Events}, {merge: true});
+          return {coordinatorPhone, coordinator, visitorName, company, visitorPhone};
         });
-        await Promise.all(presentAttendeeIds.map((attendeeId) => firestore.collection("visitantes4Events").doc(attendeeId).set({notificacaoWhatsAppStatus: "falhou", notificacaoWhatsAppErro: error instanceof Error ? error.message : "Não foi possível enviar a notificação.", notificacaoWhatsAppAtualizadoEm: FieldValue.serverTimestamp()}, {merge: true})));
-        notificationFailures.push({id: reference.id, message: error instanceof Error ? error.message : "Não foi possível enviar a notificação."});
+        if (!notification) { notificationsSkipped += 1; continue; }
+        try {
+          const idempotencyKey = `notificacao_chegada_${documentId([reference.id, notificationId])}`;
+          const result = await sendPresenceTemplate(notification.coordinatorPhone, notification.coordinator, notification.visitorName, notification.company, notification.visitorPhone, idempotencyKey);
+          const now = FieldValue.serverTimestamp();
+          const batch = firestore.batch();
+          batch.set(firestore.collection("whatsappMensagens").doc(result.messageId), {preInscritoId: null, destinatarioWhatsApp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", status: "aceito", statusMeta: result.status, visitanteEstrategicoId: reference.id, visitantes4EventsIds: [attendeeId], solicitadoEm: now});
+          batch.set(firestore.collection("whatsappEventos").doc(eventId(result.messageId)), {tipo: "envio", messageId: result.messageId, preInscritoId: null, whatsapp: notification.coordinatorPhone, template: templateName, categoria: "notificacao-presenca", visitanteEstrategicoId: reference.id, ocorridoEm: now, registradoEm: FieldValue.serverTimestamp()});
+          batch.set(notificationRef, {status: "aceito", messageId: result.messageId, sentAt: now, reservationId: FieldValue.delete(), reservedAt: FieldValue.delete(), error: FieldValue.delete()}, {merge: true});
+          batch.set(attendeeRef, {notificacaoWhatsAppStatus: "aceito", notificacaoWhatsAppMensagemId: result.messageId, notificacaoWhatsAppErro: FieldValue.delete(), notificacaoWhatsAppAtualizadoEm: now}, {merge: true});
+          await batch.commit();
+          notificationsSent += 1;
+        } catch (error) {
+          await firestore.runTransaction(async (transaction) => {
+            const [currentNotification, currentAttendee] = await Promise.all([
+              transaction.get(notificationRef), transaction.get(attendeeRef),
+            ]);
+            if (currentNotification.data()?.reservationId !== reservationId) return;
+            const errorMessage = error instanceof Error ? error.message : "Não foi possível enviar a notificação.";
+            transaction.set(notificationRef, {status: "falhou", error: errorMessage, updatedAt: FieldValue.serverTimestamp(), reservationId: FieldValue.delete(), reservedAt: FieldValue.delete()}, {merge: true});
+            if (!currentAttendee.data()?.notificacaoWhatsAppMensagemId) {
+              transaction.set(attendeeRef, {notificacaoWhatsAppStatus: "falhou", notificacaoWhatsAppErro: errorMessage, notificacaoWhatsAppAtualizadoEm: FieldValue.serverTimestamp()}, {merge: true});
+            }
+          });
+          notificationFailures.push({id: `${reference.id}/${notificationId}`, message: error instanceof Error ? error.message : "Não foi possível enviar a notificação."});
+        }
       }
     }
     return {checked, attending, attendeesSaved, notificationsSent, notificationsSkipped, notificationFailures};
@@ -290,7 +321,7 @@ async function executeTrackedPresenceCheck(firestore: Firestore, source: CheckSo
 }
 
 export const check4EventsPresence = onCall(
-  {secrets: [fourEventsToken, metaWhatsAppAccessToken], timeoutSeconds: 540},
+  {secrets: [fourEventsToken, grobExperienceApiKey], timeoutSeconds: 540},
   async (request) => {
     const firestore = await getAdminFirestore(request);
     const result = await executeTrackedPresenceCheck(firestore, "manual", false);
@@ -322,7 +353,7 @@ export const scheduled4EventsPresenceCheck = onSchedule(
   {
     schedule: "every 5 minutes",
     timeZone: "America/Sao_Paulo",
-    secrets: [fourEventsToken, metaWhatsAppAccessToken],
+    secrets: [fourEventsToken, grobExperienceApiKey],
     timeoutSeconds: 540,
   },
   async () => {
