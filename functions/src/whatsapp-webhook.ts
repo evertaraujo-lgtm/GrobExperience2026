@@ -165,6 +165,7 @@ async function saveWhatsAppCampaignStatus(status: Record<string, unknown>) {
     const participantRef = campaignId && participantId
       ? firestore.collection("campanhasWhatsapp").doc(campaignId).collection("destinatarios").doc(participantId)
       : null;
+    const participant = participantRef ? await transaction.get(participantRef) : null;
     const error = Array.isArray(status.errors) ? status.errors[0] as Record<string, unknown> | undefined : undefined;
     const errorCode = typeof error?.code === "number" ? error.code : null;
     const errorMessage = typeof error?.message === "string" ? error.message : null;
@@ -189,7 +190,11 @@ async function saveWhatsAppCampaignStatus(status: Record<string, unknown>) {
       erroMensagem: errorMessage,
       registradoEm: FieldValue.serverTimestamp(),
     }, {merge: true});
-    if (participantRef) {
+    const messageListVersion = typeof data.versaoLista === "string" ? data.versaoLista : null;
+    const updatesCurrentList = participantRef && participant?.exists
+      && participant.data()?.ultimaMensagemId === messageId
+      && (!messageListVersion || participant.data()?.versaoLista === messageListVersion);
+    if (updatesCurrentList) {
       const update: Record<string, unknown> = {
         statusMensagem: translatedStatus,
         ultimaMensagemId: messageId,

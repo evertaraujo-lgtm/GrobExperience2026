@@ -36,6 +36,10 @@ const testSubmit = document.querySelector("[data-test-submit]");
 const testApprove = document.querySelector("[data-test-approve]");
 const testFeedback = document.querySelector("[data-test-feedback]");
 const testClose = document.querySelectorAll("[data-test-close]");
+const nameComplementForm = document.querySelector("[data-name-complement-form]");
+const nameComplementInput = document.querySelector("[data-name-complement]");
+const nameComplementSubmit = document.querySelector("[data-name-complement-submit]");
+const nameComplementFeedback = document.querySelector("[data-name-complement-feedback]");
 
 let firestoreServices;
 let xlsxModule;
@@ -75,6 +79,7 @@ function statusLabel(status) {
 }
 
 function operationalStatus(data) {
+  if (data.statusOperacional === "importando") return {label: "Importando nova lista", state: "progress"};
   if (!data.versaoLista) return {label: "Sem planilha", state: "draft"};
   if (data.statusOperacional === "em_andamento") return {label: "Envios iniciados", state: "progress"};
   if (data.testeAprovadoEm) return {label: "Pronta para envio", state: "ready"};
@@ -91,8 +96,13 @@ function renderCampaign(data) {
   fileNameLabel.textContent = data.arquivoNome || "—";
   fileHashLabel.textContent = data.arquivoHash ? data.arquivoHash.slice(0, 16) : "—";
   testStatus.textContent = data.testeAprovadoEm ? `Aprovado em ${formatDateTime(data.testeAprovadoEm)}` : data.testeMensagemId ? "Aguardando aprovação" : "Não realizado";
-  importOpen.disabled = Number(data.enviosAceitos || 0) > 0;
-  importOpen.title = importOpen.disabled ? "A lista foi bloqueada após o primeiro envio." : "Importar planilha";
+  const hasAcceptedSends = Number(data.enviosAceitos || 0) > 0;
+  importOpen.disabled = data.statusOperacional === "importando";
+  importOpen.textContent = hasAcceptedSends ? "Importar nova lista" : "Importar planilha";
+  importOpen.title = hasAcceptedSends
+    ? "Abrir um novo ciclo de envios com outra planilha."
+    : "Importar planilha";
+  if (document.activeElement !== nameComplementInput) nameComplementInput.value = data.complementoNome || "";
   if (loadedParticipants.length) renderParticipants(loadedParticipants);
 }
 
@@ -150,8 +160,9 @@ function renderParticipants(participants) {
     const send = document.createElement("button");
     send.className = "button save-status";
     send.type = "button";
-    send.textContent = !eligible.length ? "Lote concluído" : currentCampaign.testeAprovadoEm ? `Prévia do Lote ${group}` : "Aguardando teste";
-    send.disabled = !eligible.length || !currentCampaign.testeAprovadoEm;
+    const campaignReady = currentCampaign.testeAprovadoEm && currentCampaign.statusOperacional !== "importando";
+    send.textContent = !eligible.length ? "Lote concluído" : campaignReady ? `Prévia do Lote ${group}` : "Aguardando campanha";
+    send.disabled = !eligible.length || !campaignReady;
     send.addEventListener("click", () => openPreview(group));
     header.append(title, send);
     const rows = document.createElement("div");
@@ -251,6 +262,7 @@ async function openPreview(group) {
     previewSeal.append(
       previewSealRow("Campanha", data.campaign.nome),
       previewSealRow("Template fixado", data.campaign.template, true),
+      previewSealRow("Frase após o nome", data.campaign.complementoNome || "Nenhuma"),
       previewSealRow("Planilha", data.file.nome),
       previewSealRow("Identificador da planilha", String(data.file.hash || "—").slice(0, 16), true),
       previewSealRow("Prévia", data.previewId.slice(0, 12), true),
@@ -259,7 +271,7 @@ async function openPreview(group) {
       const item = document.createElement("li");
       const name = document.createElement("strong");
       const phone = document.createElement("span");
-      name.textContent = recipient.nome;
+      name.textContent = recipient.nomeEnviado || recipient.nome;
       phone.textContent = recipient.whatsapp;
       item.append(name, phone);
       previewList.append(item);
@@ -289,7 +301,10 @@ previewConfirm.addEventListener("click", async () => {
       codigoConfirmacao: normalizedConfirmationCode(confirmationInput.value),
     });
     const failures = Array.isArray(result.failures) ? result.failures.length : 0;
-    setFeedback(`Lote ${result.group}: ${result.sent} mensagem(ns) aceita(s), ${result.skipped} ignorada(s) e ${failures} falha(s). Cota de hoje: ${result.usedToday}/${result.dailyLimit}.`, failures ? "error" : "success");
+    const interruption = result.stoppedByConsecutiveFailures
+      ? ` Envios interrompidos após ${result.consecutiveFailures} falhas consecutivas; ${result.remaining} destinatário(s) permanecem pendentes.`
+      : "";
+    setFeedback(`Lote ${result.group}: ${result.sent} mensagem(ns) aceita(s), ${result.skipped} ignorada(s) e ${failures} falha(s). Cota de hoje: ${result.usedToday}/${result.dailyLimit}.${interruption}`, failures ? "error" : "success");
     previewModal.close();
   } catch (error) {
     console.error(error);
@@ -356,7 +371,11 @@ importForm.addEventListener("submit", async (event) => {
     xlsxModule ??= await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
     const workbook = xlsxModule.read(bytes, {type: "array"});
     const parsed = spreadsheetParticipants(xlsxModule, workbook.Sheets[workbook.SheetNames[0]]);
-    const confirmation = `Campanha: Participação chegando\nTemplate: ${TEMPLATE_NAME}\nPlanilha: ${file.name}\nIdentificador: ${fileHash.slice(0, 16)}\nDestinatários válidos: ${parsed.participants.length}\nLotes de até 250: ${Math.ceil(parsed.participants.length / 250)}\n\nImportar esta combinação?`;
+    const startsNewCycle = Number(currentCampaign.enviosAceitos || 0) > 0;
+    const cycleWarning = startsNewCycle
+      ? "\nNovo ciclo: a lista ativa será substituída. O histórico anterior será preservado e a cota utilizada hoje continuará valendo.\n"
+      : "";
+    const confirmation = `Campanha: Participação chegando\nTemplate: ${TEMPLATE_NAME}\nPlanilha: ${file.name}\nIdentificador: ${fileHash.slice(0, 16)}\nDestinatários válidos: ${parsed.participants.length}\nLotes de até 250: ${Math.ceil(parsed.participants.length / 250)}\n${cycleWarning}\nImportar esta combinação?`;
     if (!window.confirm(confirmation)) return;
     importSubmit.textContent = "Importando...";
     const result = await callable("importWhatsAppCampaignParticipants", {
@@ -364,8 +383,9 @@ importForm.addEventListener("submit", async (event) => {
       participantes: parsed.participants,
       arquivoNome: file.name,
       arquivoHash: fileHash,
+      iniciarNovoCiclo: startsNewCycle,
     });
-    importFeedback.textContent = `${result.importados} destinatário(s) vinculados ao template ${TEMPLATE_NAME} em ${result.lotes} lote(s).${result.duplicadosIgnorados ? ` ${result.duplicadosIgnorados} duplicado(s) ignorado(s).` : ""}${parsed.invalid.length ? ` ${parsed.invalid.length} linha(s) inválida(s) ignorada(s).` : ""}`;
+    importFeedback.textContent = `${result.novoCiclo ? "Novo ciclo criado. " : ""}${result.importados} destinatário(s) vinculados ao template ${TEMPLATE_NAME} em ${result.lotes} lote(s).${result.duplicadosIgnorados ? ` ${result.duplicadosIgnorados} duplicado(s) ignorado(s).` : ""}${parsed.invalid.length ? ` ${parsed.invalid.length} linha(s) inválida(s) ignorada(s).` : ""}`;
     importFeedback.dataset.state = "success";
     setFeedback("Planilha vinculada. Confira o estado do teste antes de gerar a prévia.", "success");
     importFile.value = "";
@@ -401,7 +421,7 @@ testForm.addEventListener("submit", async (event) => {
       whatsapp: testForm.elements.whatsapp.value,
     });
     currentTestMessageId = result.messageId;
-    testFeedback.textContent = `Teste aceito pela Meta. Confira o texto e os botões “${result.botoesFixos.join("” e “")}” no aparelho antes de aprovar.`;
+    testFeedback.textContent = `Teste aceito pela Meta com “${result.nomeEnviado}” na variável nome. Confira o texto e os botões “${result.botoesFixos.join("” e “")}” no aparelho antes de aprovar.`;
     testFeedback.dataset.state = "success";
     testApprove.hidden = false;
   } catch (error) {
@@ -434,6 +454,31 @@ testApprove.addEventListener("click", async () => {
   } finally {
     testApprove.disabled = false;
     testApprove.textContent = "Recebi e aprovei o teste";
+  }
+});
+
+nameComplementForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  nameComplementSubmit.disabled = true;
+  nameComplementSubmit.textContent = "Salvando...";
+  nameComplementFeedback.textContent = "";
+  try {
+    const result = await callable("updateWhatsAppCampaignNameComplement", {
+      campanhaId: CAMPAIGN_ID,
+      complementoNome: nameComplementInput.value,
+    });
+    nameComplementInput.value = result.complementoNome;
+    nameComplementFeedback.textContent = result.complementoNome
+      ? `A variável nome será enviada como “Nome ${result.complementoNome}”.`
+      : "A variável voltará a usar somente o nome.";
+    nameComplementFeedback.dataset.state = "success";
+  } catch (error) {
+    console.error(error);
+    nameComplementFeedback.textContent = error.message || "Não foi possível salvar a frase.";
+    nameComplementFeedback.dataset.state = "error";
+  } finally {
+    nameComplementSubmit.disabled = false;
+    nameComplementSubmit.textContent = "Salvar";
   }
 });
 

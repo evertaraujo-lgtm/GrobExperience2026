@@ -2,7 +2,7 @@ import {initializeApp} from "firebase-admin/app";
 import {onRequest} from "firebase-functions/https";
 
 import {previewWhatsAppBatch, sendWhatsAppBatch} from "./envio-em-lote.js";
-import {approveWhatsAppCampaignTest, importWhatsAppCampaignParticipants, previewWhatsAppCampaignBatch, sendWhatsAppCampaignBatch, sendWhatsAppCampaignTest} from "./campanhas-whatsapp.js";
+import {approveWhatsAppCampaignTest, importWhatsAppCampaignParticipants, previewWhatsAppCampaignBatch, sendWhatsAppCampaignBatch, sendWhatsAppCampaignTest, updateWhatsAppCampaignNameComplement} from "./campanhas-whatsapp.js";
 import {marketingMessageStats, sendSelecaoDataMarketing} from "./envio-selecao-data.js";
 import {importPreInscritos} from "./pre-inscritos.js";
 import {importPresenceReminderParticipants, previewPresenceReminderDay, sendPresenceReminderDay, sendPresenceReminderTest} from "./lembrete-presenca.js";
@@ -64,5 +64,6 @@ export {
   scheduled4EventsPresenceCheck,
   sendWhatsAppTemplate,
   sync4EventsParticipants,
+  updateWhatsAppCampaignNameComplement,
   whatsappWebhook,
 };

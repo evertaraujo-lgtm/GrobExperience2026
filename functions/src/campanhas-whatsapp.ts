@@ -14,6 +14,7 @@ const previewsCollection = "campanhasWhatsappPreviews";
 const dailyControlCollection = "campanhasWhatsappControleDiario";
 const maximumImportSize = 10000;
 const previewLifetimeMs = 15 * 60 * 1000;
+const maximumConsecutiveFailures = 5;
 
 type CampaignDefinition = {
   id: string;
@@ -79,6 +80,18 @@ function normalizedPhone(value: unknown) {
     : "";
   if (phone.startsWith("55") && (phone.length === 12 || phone.length === 13)) phone = phone.slice(2);
   return phone;
+}
+
+function normalizedNameComplement(value: unknown) {
+  return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+}
+
+export function campaignTemplateName(name: string, complement: string) {
+  return [name.trim(), normalizedNameComplement(complement)].filter(Boolean).join(" ");
+}
+
+export function nextConsecutiveFailureCount(current: number, failed: boolean) {
+  return failed ? current + 1 : 0;
 }
 
 function participantInput(value: unknown): ImportedParticipant {
@@ -178,63 +191,84 @@ async function saveAcceptedMessage(
   whatsapp: string,
   response: {messageId: string; status: string},
   sender: Sender,
-  options: {batchId: string; group: number | null; dateKey: string; test: boolean; previewId: string | null},
+  options: {
+    batchId: string;
+    group: number | null;
+    dateKey: string;
+    test: boolean;
+    previewId: string | null;
+    listVersion: string | null;
+    sentName: string;
+  },
 ) {
   const firestore = getFirestore();
   const now = FieldValue.serverTimestamp();
-  const batch = firestore.batch();
-  batch.set(firestore.collection(messagesCollection).doc(response.messageId), {
-    campanhaId: campaign.id,
-    participanteId: participantId,
-    nome,
-    destinatarioWhatsApp: whatsapp,
-    template: campaign.templateName,
-    templateAssinatura: campaign.templateSignature,
-    teste: options.test,
-    lote: options.group,
-    loteEnvioId: options.batchId,
-    previewId: options.previewId,
-    dataOperacao: options.dateKey,
-    status: "aceito",
-    statusMeta: response.status,
-    enviadoPorUid: sender.uid,
-    enviadoPorNome: sender.name,
-    enviadoPorEmail: sender.email,
-    solicitadoEm: now,
-  });
-  batch.set(firestore.collection(eventsCollection).doc(eventId("envio", response.messageId)), {
-    tipo: "envio",
-    messageId: response.messageId,
-    campanhaId: campaign.id,
-    participanteId: participantId,
-    nome,
-    whatsapp,
-    template: campaign.templateName,
-    teste: options.test,
-    lote: options.group,
-    loteEnvioId: options.batchId,
-    previewId: options.previewId,
-    dataOperacao: options.dateKey,
-    ocorridoEm: now,
-    registradoEm: now,
-  });
-  if (participantId) {
-    batch.set(participantsCollection(firestore, campaign.id).doc(participantId), {
-      statusMensagem: "aceito",
-      ultimaMensagemId: response.messageId,
-      ultimoEnvioEm: now,
-      statusMensagemEm: now,
+  const messageRef = firestore.collection(messagesCollection).doc(response.messageId);
+  const eventRef = firestore.collection(eventsCollection).doc(eventId("envio", response.messageId));
+  const campaignRef = firestore.collection(campaignsCollection).doc(campaign.id);
+  const participantRef = participantId ? participantsCollection(firestore, campaign.id).doc(participantId) : null;
+  await firestore.runTransaction(async (transaction) => {
+    const [campaignDocument, participantDocument] = participantRef
+      ? await Promise.all([transaction.get(campaignRef), transaction.get(participantRef)])
+      : [null, null];
+    transaction.set(messageRef, {
+      campanhaId: campaign.id,
+      participanteId: participantId,
+      nome,
+      nomeEnviado: options.sentName,
+      destinatarioWhatsApp: whatsapp,
+      template: campaign.templateName,
+      templateAssinatura: campaign.templateSignature,
+      versaoLista: options.listVersion,
+      teste: options.test,
+      lote: options.group,
       loteEnvioId: options.batchId,
       previewId: options.previewId,
-      erroEnvio: FieldValue.delete(),
-    }, {merge: true});
-    batch.set(firestore.collection(campaignsCollection).doc(campaign.id), {
-      statusOperacional: "em_andamento",
-      enviosAceitos: FieldValue.increment(1),
-      ultimoEnvioEm: now,
-    }, {merge: true});
-  }
-  await batch.commit();
+      dataOperacao: options.dateKey,
+      status: "aceito",
+      statusMeta: response.status,
+      enviadoPorUid: sender.uid,
+      enviadoPorNome: sender.name,
+      enviadoPorEmail: sender.email,
+      solicitadoEm: now,
+    });
+    transaction.set(eventRef, {
+      tipo: "envio",
+      messageId: response.messageId,
+      campanhaId: campaign.id,
+      participanteId: participantId,
+      nome,
+      nomeEnviado: options.sentName,
+      whatsapp,
+      template: campaign.templateName,
+      versaoLista: options.listVersion,
+      teste: options.test,
+      lote: options.group,
+      loteEnvioId: options.batchId,
+      previewId: options.previewId,
+      dataOperacao: options.dateKey,
+      ocorridoEm: now,
+      registradoEm: now,
+    });
+    if (participantRef && campaignDocument?.data()?.versaoLista === options.listVersion
+      && participantDocument?.data()?.versaoLista === options.listVersion
+      && participantDocument?.data()?.loteEnvioId === options.batchId) {
+      transaction.set(participantRef, {
+        statusMensagem: "aceito",
+        ultimaMensagemId: response.messageId,
+        ultimoEnvioEm: now,
+        statusMensagemEm: now,
+        loteEnvioId: options.batchId,
+        previewId: options.previewId,
+        erroEnvio: FieldValue.delete(),
+      }, {merge: true});
+      transaction.set(campaignRef, {
+        statusOperacional: "em_andamento",
+        enviosAceitos: FieldValue.increment(1),
+        ultimoEnvioEm: now,
+      }, {merge: true});
+    }
+  });
 }
 
 async function reserveParticipant(
@@ -248,11 +282,15 @@ async function reserveParticipant(
   const participantRef = participantsCollection(firestore, campaign.id).doc(participantId);
   const quotaRef = firestore.collection(dailyControlCollection).doc(dailyControlId(campaign.id, dateKey));
   return firestore.runTransaction(async (transaction) => {
-    const [participant, quota] = await Promise.all([
+    const campaignRef = firestore.collection(campaignsCollection).doc(campaign.id);
+    const [campaignDocument, participant, quota] = await Promise.all([
+      transaction.get(campaignRef),
       transaction.get(participantRef),
       transaction.get(quotaRef),
     ]);
-    if (!participant.exists || participant.data()?.versaoLista !== listVersion) return {kind: "skip" as const};
+    if (campaignDocument.data()?.versaoLista !== listVersion
+      || campaignDocument.data()?.statusOperacional === "importando"
+      || !participant.exists || participant.data()?.versaoLista !== listVersion) return {kind: "skip" as const};
     const data = participant.data() ?? {};
     if (![undefined, null, "pendente", "falhou"].includes(data.statusMensagem)) return {kind: "skip" as const};
     const attempts = typeof quota.data()?.tentativas === "number" ? quota.data()?.tentativas as number : 0;
@@ -316,13 +354,31 @@ export const importWhatsAppCampaignParticipants = onCall(
     const campaignRef = firestore.collection(campaignsCollection).doc(campaign.id);
     const campaignDocument = await campaignRef.get();
     const campaignData = campaignDocument.data() ?? {};
-    if ((campaignData.enviosAceitos ?? 0) > 0) {
-      throw new HttpsError("failed-precondition", "Esta campanha já possui envios. A lista não pode mais ser substituída.");
+    const startsNewCycle = Number(campaignData.enviosAceitos ?? 0) > 0;
+    if (startsNewCycle && input.iniciarNovoCiclo !== true) {
+      throw new HttpsError("failed-precondition", "Confirme a abertura de um novo ciclo antes de substituir a lista.");
     }
     const existing = await participantsCollection(firestore, campaign.id).get();
-    if (existing.docs.some((document) => ![undefined, null, "pendente"].includes(document.data().statusMensagem))) {
+    if (existing.docs.some((document) => document.data().statusMensagem === "processando")) {
+      throw new HttpsError("failed-precondition", "Há um lote em processamento. Aguarde a conclusão antes de importar outra lista.");
+    }
+    if (!startsNewCycle && existing.docs.some((document) => ![undefined, null, "pendente"].includes(document.data().statusMensagem))) {
       throw new HttpsError("failed-precondition", "Esta campanha já iniciou o processamento. A lista não pode mais ser substituída.");
     }
+    await firestore.runTransaction(async (transaction) => {
+      const current = await transaction.get(campaignRef);
+      if (current.data()?.versaoLista !== campaignData.versaoLista
+        || Number(current.data()?.enviosAceitos ?? 0) !== Number(campaignData.enviosAceitos ?? 0)) {
+        throw new HttpsError("aborted", "A campanha mudou durante a importação. Tente novamente.");
+      }
+      transaction.set(campaignRef, {
+        statusOperacional: "importando",
+        versaoLista: listVersion,
+        listaHash: listHash,
+        importacaoIniciadaEm: FieldValue.serverTimestamp(),
+        importacaoIniciadaPorUid: sender.uid,
+      }, {merge: true});
+    });
     const incomingIds = new Set(participants.map((participant) => participant.whatsapp));
     const operations: ((batch: FirebaseFirestore.WriteBatch) => void)[] = [];
     existing.docs.filter((document) => !incomingIds.has(document.id))
@@ -363,9 +419,14 @@ export const importWhatsAppCampaignParticipants = onCall(
       totalDestinatarios: participants.length,
       totalLotes: Math.ceil(participants.length / campaign.batchSize),
       enviosAceitos: 0,
+      ciclo: Number(campaignData.ciclo ?? 1) + (startsNewCycle ? 1 : 0),
+      novoCicloEm: startsNewCycle ? FieldValue.serverTimestamp() : campaignData.novoCicloEm ?? FieldValue.delete(),
+      novoCicloPorUid: startsNewCycle ? sender.uid : campaignData.novoCicloPorUid ?? FieldValue.delete(),
       importadoEm: FieldValue.serverTimestamp(),
       importadoPorUid: sender.uid,
       importadoPorNome: sender.name,
+      importacaoIniciadaEm: FieldValue.delete(),
+      importacaoIniciadaPorUid: FieldValue.delete(),
       ...(hasCurrentTest ? {} : {
         testeMensagemId: FieldValue.delete(),
         testeTemplateAssinatura: FieldValue.delete(),
@@ -382,9 +443,27 @@ export const importWhatsAppCampaignParticipants = onCall(
       versaoLista: listVersion,
       listaHash: listHash,
       arquivoHash: fileHash,
+      novoCiclo: startsNewCycle,
     };
   },
 );
+
+export const updateWhatsAppCampaignNameComplement = onCall({region: "us-central1"}, async (request) => {
+  const sender = await adminSender(request);
+  const input = asRecord(request.data);
+  const campaign = campaignDefinition(input.campanhaId);
+  const complement = normalizedNameComplement(input.complementoNome);
+  if (complement.length > 160) {
+    throw new HttpsError("invalid-argument", "A frase deve ter no máximo 160 caracteres.");
+  }
+  await getFirestore().collection(campaignsCollection).doc(campaign.id).set({
+    complementoNome: complement,
+    complementoNomeAtualizadoEm: FieldValue.serverTimestamp(),
+    complementoNomeAtualizadoPorUid: sender.uid,
+    complementoNomeAtualizadoPorNome: sender.name,
+  }, {merge: true});
+  return {campanhaId: campaign.id, complementoNome: complement};
+});
 
 export const sendWhatsAppCampaignTest = onCall(
   {region: "us-central1", secrets: [metaWhatsAppAccessToken]},
@@ -398,7 +477,9 @@ export const sendWhatsAppCampaignTest = onCall(
       throw new HttpsError("invalid-argument", "Informe nome e WhatsApp com DDD para o teste.");
     }
     const campaignRef = getFirestore().collection(campaignsCollection).doc(campaign.id);
-    const response = await sendTemplate(campaign, nome, whatsapp);
+    const campaignDocument = await campaignRef.get();
+    const sentName = campaignTemplateName(nome, normalizedNameComplement(campaignDocument.data()?.complementoNome));
+    const response = await sendTemplate(campaign, sentName, whatsapp);
     const batchId = `teste_${randomUUID()}`;
     await saveAcceptedMessage(campaign, null, nome, whatsapp, response, sender, {
       batchId,
@@ -406,6 +487,8 @@ export const sendWhatsAppCampaignTest = onCall(
       dateKey: dateKeyInSaoPaulo(),
       test: true,
       previewId: null,
+      listVersion: null,
+      sentName,
     });
     await campaignRef.set({
       statusOperacional: "teste_enviado",
@@ -415,6 +498,7 @@ export const sendWhatsAppCampaignTest = onCall(
       templateAssinatura: campaign.templateSignature,
       variaveis: campaign.variables,
       botoesFixos: campaign.fixedButtons,
+      nomeEnviado: sentName,
       testeMensagemId: response.messageId,
       testeTemplateAssinatura: campaign.templateSignature,
       testeEnviadoEm: FieldValue.serverTimestamp(),
@@ -474,7 +558,8 @@ export const previewWhatsAppCampaignBatch = onCall({region: "us-central1"}, asyn
   const campaignRef = firestore.collection(campaignsCollection).doc(campaign.id);
   const campaignDocument = await campaignRef.get();
   const campaignData = campaignDocument.data() ?? {};
-  if (!campaignDocument.exists || !campaignData.versaoLista || !campaignData.testeAprovadoEm
+  if (!campaignDocument.exists || campaignData.statusOperacional === "importando"
+    || !campaignData.versaoLista || !campaignData.testeAprovadoEm
     || campaignData.testeTemplateAssinatura !== campaign.templateSignature) {
     throw new HttpsError("failed-precondition", "A campanha precisa de uma planilha e de um teste aprovado.");
   }
@@ -491,9 +576,11 @@ export const previewWhatsAppCampaignBatch = onCall({region: "us-central1"}, asyn
   const usedToday = typeof quota.data()?.tentativas === "number" ? quota.data()?.tentativas as number : 0;
   const availableToday = Math.max(0, campaign.dailyLimit - usedToday);
   const selected = eligible.slice(0, Math.min(campaign.batchSize, availableToday));
+  const nameComplement = normalizedNameComplement(campaignData.complementoNome);
   const recipients = selected.map((document) => ({
     id: document.id,
     nome: document.data().nome,
+    nomeEnviado: campaignTemplateName(document.data().nome, nameComplement),
     whatsapp: document.data().whatsapp,
     ordem: document.data().ordem,
   }));
@@ -509,6 +596,7 @@ export const previewWhatsAppCampaignBatch = onCall({region: "us-central1"}, asyn
     listaHash: campaignData.listaHash,
     arquivoNome: campaignData.arquivoNome,
     arquivoHash: campaignData.arquivoHash,
+    complementoNome: nameComplement,
     lote: group,
     destinatarioIds: recipients.map((recipient) => recipient.id),
     totalDestinatarios: recipients.length,
@@ -527,6 +615,7 @@ export const previewWhatsAppCampaignBatch = onCall({region: "us-central1"}, asyn
       idioma: campaign.language,
       codigoConfirmacao: campaign.confirmationCode,
       botoesFixos: campaign.fixedButtons,
+      complementoNome: nameComplement,
     },
     file: {nome: campaignData.arquivoNome, hash: campaignData.arquivoHash},
     group,
@@ -574,7 +663,9 @@ export const sendWhatsAppCampaignBatch = onCall(
         || previewData.templateAssinatura !== campaign.templateSignature
         || campaignData.templateAssinatura !== campaign.templateSignature
         || previewData.versaoLista !== campaignData.versaoLista
-        || previewData.listaHash !== campaignData.listaHash) {
+        || previewData.listaHash !== campaignData.listaHash
+        || normalizedNameComplement(previewData.complementoNome)
+          !== normalizedNameComplement(campaignData.complementoNome)) {
         throw new HttpsError("failed-precondition", "A lista ou o template mudou depois da prévia. Gere uma nova prévia.");
       }
       const recipientIds = Array.isArray(previewData.destinatarioIds)
@@ -595,6 +686,7 @@ export const sendWhatsAppCampaignBatch = onCall(
         recipientIds,
         batchId,
         listVersion: String(campaignData.versaoLista),
+        nameComplement: normalizedNameComplement(previewData.complementoNome),
         group: Number(previewData.lote),
       };
     });
@@ -602,6 +694,8 @@ export const sendWhatsAppCampaignBatch = onCall(
     let sent = 0;
     let skipped = 0;
     let quotaReached = false;
+    let consecutiveFailures = 0;
+    let stoppedByConsecutiveFailures = false;
     const failures: {id: string; message: string}[] = [];
     for (const participantId of prepared.recipientIds) {
       const reservation = await reserveParticipant(
@@ -614,7 +708,8 @@ export const sendWhatsAppCampaignBatch = onCall(
       if (reservation.kind === "quota") { quotaReached = true; break; }
       if (reservation.kind === "skip") { skipped += 1; continue; }
       try {
-        const response = await sendTemplate(prepared.campaign, reservation.nome, reservation.whatsapp);
+        const sentName = campaignTemplateName(reservation.nome, prepared.nameComplement);
+        const response = await sendTemplate(prepared.campaign, sentName, reservation.whatsapp);
         await saveAcceptedMessage(
           prepared.campaign,
           participantId,
@@ -628,15 +723,24 @@ export const sendWhatsAppCampaignBatch = onCall(
             dateKey,
             test: false,
             previewId,
+            listVersion: prepared.listVersion,
+            sentName,
           },
         );
         sent += 1;
+        consecutiveFailures = nextConsecutiveFailureCount(consecutiveFailures, false);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Não foi possível enviar a mensagem.";
         await markFailure(prepared.campaign.id, participantId, prepared.batchId, message);
         failures.push({id: participantId, message});
+        consecutiveFailures = nextConsecutiveFailureCount(consecutiveFailures, true);
+        if (consecutiveFailures >= maximumConsecutiveFailures) {
+          stoppedByConsecutiveFailures = true;
+          break;
+        }
       }
     }
+    const remaining = Math.max(0, prepared.recipientIds.length - sent - skipped - failures.length);
     const quota = await firestore.collection(dailyControlCollection)
       .doc(dailyControlId(prepared.campaign.id, dateKey)).get();
     await previewRef.set({
@@ -646,6 +750,9 @@ export const sendWhatsAppCampaignBatch = onCall(
       ignorados: skipped,
       falhas: failures.length,
       cotaAtingida: quotaReached,
+      falhasConsecutivas: consecutiveFailures,
+      interrompidoPorFalhasConsecutivas: stoppedByConsecutiveFailures,
+      destinatariosPendentes: remaining,
     }, {merge: true});
     return {
       previewId,
@@ -656,6 +763,9 @@ export const sendWhatsAppCampaignBatch = onCall(
       skipped,
       failures,
       quotaReached,
+      consecutiveFailures,
+      stoppedByConsecutiveFailures,
+      remaining,
       usedToday: quota.data()?.tentativas ?? 0,
       dailyLimit: prepared.campaign.dailyLimit,
     };

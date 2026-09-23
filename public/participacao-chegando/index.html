@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
     <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
     <link rel="stylesheet" href="/css/lembrete-presenca.css?v=1" />
-    <link rel="stylesheet" href="/css/campanhas-whatsapp.css?v=1" />
+    <link rel="stylesheet" href="/css/campanhas-whatsapp.css?v=2" />
   </head>
   <body data-auth-page="protected">
     <div class="page-shell">
@@ -54,7 +54,7 @@
             <input id="campaign-file" type="file" accept=".xlsx,.xls" data-import-file required />
             <p class="selected-file" data-import-file-name>Nenhuma planilha selecionada.</p>
             <p>Colunas obrigatórias: <code>Nome</code> e <code>WhatsApp</code> ou <code>Celular (WhatsApp)</code>.</p>
-            <p>A importação cria uma nova versão identificada da lista e invalida prévias anteriores. Um teste aprovado continua válido enquanto o template permanecer igual. Depois do primeiro envio, a lista não poderá ser substituída.</p>
+            <p>A importação cria uma nova versão identificada da lista e invalida prévias anteriores. Um teste aprovado continua válido enquanto o template permanecer igual. Depois do primeiro envio, outra planilha abre um novo ciclo e preserva o histórico anterior.</p>
             <div><button class="button save-status" type="submit" data-import-submit>Revisar e importar</button><button class="back-link" type="button" data-import-cancel>Cancelar</button></div>
             <p class="import-feedback" data-import-feedback></p>
           </form>
@@ -64,6 +64,11 @@
               <p class="eyebrow">Template Meta fixado</p>
               <h2 id="template-title">participacao_chegando <small>• English</small></h2>
               <div class="campaign-fixed-buttons"><span>Ver no mapa</span><span>Baixar o app</span></div>
+              <form class="campaign-name-complement" data-name-complement-form>
+                <label for="name-complement">Frase após o nome</label>
+                <div><input id="name-complement" type="text" maxlength="160" placeholder="Ex.: e família" data-name-complement /><button class="back-link" type="submit" data-name-complement-submit>Salvar</button></div>
+                <p data-name-complement-feedback></p>
+              </form>
             </div>
             <p>Olá, <b>{nome}</b>.<br /><br />O <b>GROB Experience</b> está chegando, e gostaríamos de compartilhar algumas orientações importantes para garantir a melhor experiência para você.<br /><br /><b>Ingresso/Ticket de Entrada</b><br />A apresentação do ingresso para entrada no evento é obrigatória. Por isso, no dia do evento, não se esqueça de trazer o ingresso enviado em seu e-mail no momento da confirmação.<br /><br /><b>Acesso e Estacionamento</b><br />A entrada de todos os participantes será realizada pela portaria principal da GROB:<br /><br /><b>B. GROB DO BRASIL S.A. – Portaria 1</b><br />Av. Caminho do Mar, 1811<br />São Bernardo do Campo, SP - BRASIL<br />CEP: 09609-000<br /><br /><b>Informações Gerais</b><br />• A GROB disponibilizará conexão WiFi durante o evento;<br />• Haverá serviço de chapelaria/guarda volumes;<br />• Recomendamos o uso de calçados fechados e confortáveis, devido à dinâmica do evento.<br /><br />Estamos ansiosos para recebê-lo(a) no GROB Experience e garantir que sua participação seja incrível!</p>
           </section>
@@ -108,6 +113,6 @@
     </dialog>
 
     <script type="module" src="/js/auth.js?v=campaign-nav-v1"></script>
-    <script type="module" src="/js/participacao-chegando.js?v=1"></script>
+    <script type="module" src="/js/participacao-chegando.js?v=4"></script>
   </body>
 </html>
