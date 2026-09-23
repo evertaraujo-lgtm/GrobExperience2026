@@ -13,7 +13,7 @@ import {consolidateCollectionStaff, createCollectionAssistant, listCollectionSta
 import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead} from "./coleta-leads.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
 import {import4EventsParticipantComplements, list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
-import {clear4EventsRaffleFinalHistory, clear4EventsRaffleTestHistory, create4EventsRaffleTestSession, draw4EventsRaffle, get4EventsRaffleState, set4EventsRaffleTestPresence} from "./sorteio-4events.js";
+import {clear4EventsRaffleFinalHistory, clear4EventsRaffleTestHistory, create4EventsRaffleTestSession, draw4EventsRaffle, get4EventsRafflePrizes, get4EventsRaffleState, save4EventsRafflePrize, set4EventsRaffleTestPresence} from "./sorteio-4events.js";
 import {whatsappWebhook} from "./whatsapp-webhook.js";
 
 initializeApp();
@@ -40,6 +40,7 @@ export {
   importPresenceReminderParticipants,
   import4EventsParticipantComplements,
   get4EventsParticipantByQrCode,
+  get4EventsRafflePrizes,
   get4EventsRaffleState,
   listCollectionStaff,
   list4EventsParticipants,
@@ -51,6 +52,7 @@ export {
   removeCollectionAssistant,
   removeLeadSeller,
   saveLead,
+  save4EventsRafflePrize,
   sendWhatsAppBatch,
   sendWhatsAppCampaignBatch,
   sendWhatsAppCampaignTest,

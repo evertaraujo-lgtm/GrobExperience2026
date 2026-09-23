@@ -23,6 +23,9 @@ const eligibleStat = document.querySelector("[data-stat-eligible]");
 const presenceStatLabel = document.querySelector("[data-stat-presence-label]");
 const drawForm = document.querySelector("[data-draw-form]");
 const prizeInput = document.querySelector("[data-prize]");
+const prizeSelect = document.querySelector("[data-prize-select]");
+const addPrizeButton = document.querySelector("[data-prize-add]");
+const savePrizeButton = document.querySelector("[data-prize-save]");
 const manifestationTimeInput = document.querySelector("[data-manifestation-time]");
 const fullscreenInput = document.querySelector("[data-fullscreen]");
 const drawButton = document.querySelector("[data-draw]");
@@ -48,6 +51,12 @@ const stageNewDraw = document.querySelector("[data-stage-new]");
 const stageClose = document.querySelector("[data-stage-close]");
 
 const apiCache = new Map();
+const LEGACY_PRIZE_LIST_KEY = "grob-raffle-prizes";
+const LEGACY_SELECTED_PRIZE_KEY = "grob-raffle-selected-prize";
+const SELECTED_PRIZE_KEY = "grob-raffle-selected-prize-id";
+let savedPrizes = [];
+let prizesLoaded = false;
+let prizeBusy = false;
 const state = {
   mode: localStorage.getItem("grob-raffle-mode") === "final" ? "final" : "teste",
   eid: FIXED_EVENT_EID,
@@ -62,6 +71,95 @@ const state = {
   stageBusy: false,
   manifestationInterval: null,
 };
+
+function loadLegacyPrizes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LEGACY_PRIZE_LIST_KEY) || "[]");
+    return Array.isArray(stored)
+      ? [...new Set(stored.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 120)).filter(Boolean))].slice(0, 200)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function updatePrizeControls() {
+  const selected = savedPrizes.find((item) => item.id === prizeSelect.value);
+  prizeSelect.disabled = prizeBusy || !prizesLoaded;
+  addPrizeButton.disabled = prizeBusy || !prizesLoaded || !prizeInput.value.trim();
+  savePrizeButton.disabled = prizeBusy || !selected || !prizeInput.value.trim() || prizeInput.value.trim() === selected.nome;
+}
+
+function renderPrizeOptions(selectedId = "") {
+  prizeSelect.replaceChildren(new Option("Selecione um brinde salvo", ""));
+  savedPrizes.forEach((prize) => prizeSelect.add(new Option(prize.nome, prize.id)));
+  const selected = savedPrizes.find((item) => item.id === selectedId);
+  prizeSelect.value = selected?.id || "";
+  if (selected) prizeInput.value = selected.nome;
+  if (selected) localStorage.setItem(SELECTED_PRIZE_KEY, selected.id);
+  else localStorage.removeItem(SELECTED_PRIZE_KEY);
+  updatePrizeControls();
+}
+
+async function loadPrizes() {
+  if (prizeBusy) return;
+  prizeBusy = true;
+  updatePrizeControls();
+  try {
+    let response = await callable("get4EventsRafflePrizes");
+    let selectedId = localStorage.getItem(SELECTED_PRIZE_KEY) || "";
+    const legacyPrizes = loadLegacyPrizes();
+    if (legacyPrizes.length) {
+      const oldSelection = localStorage.getItem(LEGACY_SELECTED_PRIZE_KEY);
+      const oldName = oldSelection === null ? "" : legacyPrizes[Number(oldSelection)] || "";
+      try {
+        response = await callable("save4EventsRafflePrize", {acao: "importar", brindes: legacyPrizes});
+        localStorage.removeItem(LEGACY_PRIZE_LIST_KEY);
+        localStorage.removeItem(LEGACY_SELECTED_PRIZE_KEY);
+        const migrated = response.brindes?.find((item) => item.nome.toLocaleLowerCase("pt-BR") === oldName.toLocaleLowerCase("pt-BR"));
+        if (migrated) selectedId = migrated.id;
+      } catch (error) {
+        console.error(error);
+        setFeedback(errorText(error, "Não foi possível importar os brindes deste navegador."), "error");
+      }
+    }
+    savedPrizes = Array.isArray(response.brindes) ? response.brindes : [];
+    prizesLoaded = true;
+    renderPrizeOptions(selectedId);
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível carregar os brindes salvos."), "error");
+    if (!prizesLoaded) renderPrizeOptions();
+  } finally {
+    prizeBusy = false;
+    updatePrizeControls();
+  }
+}
+
+async function savePrize(action) {
+  if (prizeBusy || !prizesLoaded) return;
+  const prize = prizeInput.value.trim().slice(0, 120);
+  if (!prize) {
+    prizeInput.focus();
+    return;
+  }
+  const selectedId = prizeSelect.value;
+  if (action === "editar" && !selectedId) return;
+  prizeBusy = true;
+  updatePrizeControls();
+  try {
+    const result = await callable("save4EventsRafflePrize", {acao: action, nome: prize, id: selectedId});
+    savedPrizes = Array.isArray(result.brindes) ? result.brindes : [];
+    renderPrizeOptions(result.selecionadoId || selectedId);
+    setFeedback(action === "editar" ? "Brinde atualizado no Firestore." : "Brinde salvo no Firestore.", "success");
+  } catch (error) {
+    console.error(error);
+    setFeedback(errorText(error, "Não foi possível salvar o brinde."), "error");
+  } finally {
+    prizeBusy = false;
+    updatePrizeControls();
+  }
+}
 
 function setFeedback(message, status = "neutral") {
   feedback.textContent = message;
@@ -514,6 +612,32 @@ function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+function openStage() {
+  if (stage.open) return;
+  try {
+    // Keep the presentation in the document instead of the dialog top layer.
+    // Edge can place a modal dialog behind a fullscreen document on later draws.
+    if (typeof stage.show === "function") stage.show();
+    else stage.setAttribute("open", "");
+  } catch (error) {
+    console.warn("Não foi possível abrir a apresentação.", error);
+    stage.setAttribute("open", "");
+  }
+  stage.classList.add("raffle-stage-fallback-open");
+}
+
+async function requestStageFullscreen() {
+  if (!fullscreenInput.checked || document.fullscreenElement) return;
+  const target = document.documentElement;
+  const request = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+  if (typeof request !== "function") return;
+  try {
+    await request.call(target);
+  } catch (error) {
+    console.warn("Tela cheia não disponível.", error);
+  }
+}
+
 function manifestationSeconds() {
   const supplied = Math.trunc(Number(manifestationTimeInput.value));
   const seconds = Number.isFinite(supplied) ? Math.min(600, Math.max(0, supplied)) : 30;
@@ -647,12 +771,12 @@ async function executeDraw(event) {
   stageNewDraw.disabled = true;
   stageClose.hidden = true;
   confetti.replaceChildren();
-  if (!stage.open) stage.showModal();
   state.stageBusy = true;
 
-  if (fullscreenInput.checked && !document.fullscreenElement && stage.requestFullscreen) {
-    try { await stage.requestFullscreen(); } catch (error) { console.warn("Tela cheia não disponível.", error); }
-  }
+  // Fullscreen must enter before the dialog. In Edge, entering it afterwards
+  // puts the document above the dialog in the browser's top layer.
+  await requestStageFullscreen();
+  openStage();
 
   drawButton.disabled = true;
   try {
@@ -689,7 +813,9 @@ async function closeStage() {
   if (document.fullscreenElement) {
     try { await document.exitFullscreen(); } catch (error) { console.warn(error); }
   }
-  stage.close();
+  if (typeof stage.close === "function") stage.close();
+  else stage.removeAttribute("open");
+  stage.classList.remove("raffle-stage-fallback-open");
   confetti.replaceChildren();
 }
 
@@ -697,7 +823,6 @@ modeButtons.forEach((button) => button.addEventListener("click", async () => {
   const mode = button.dataset.mode;
   if (mode === state.mode) return;
   state.mode = mode;
-  if (mode === "final") prizeInput.value = "Brinde";
   localStorage.setItem("grob-raffle-mode", mode);
   state.data = null;
   state.participants = [];
@@ -727,7 +852,16 @@ clearAllButton.addEventListener("click", () => updateSimulatedPresence(state.par
 refreshButton.addEventListener("click", () => refreshState());
 searchInput.addEventListener("input", renderParticipants);
 drawForm.addEventListener("submit", executeDraw);
-stageNewDraw.addEventListener("click", () => drawForm.requestSubmit());
+prizeSelect.addEventListener("change", () => {
+  renderPrizeOptions(prizeSelect.value);
+});
+prizeInput.addEventListener("input", updatePrizeControls);
+addPrizeButton.addEventListener("click", () => savePrize("adicionar"));
+savePrizeButton.addEventListener("click", () => savePrize("editar"));
+stageNewDraw.addEventListener("click", () => {
+  if (typeof drawForm.requestSubmit === "function") drawForm.requestSubmit();
+  else drawButton.click();
+});
 stageClose.addEventListener("click", closeStage);
 stage.addEventListener("cancel", (event) => {
   if (state.stageBusy) event.preventDefault();
@@ -735,7 +869,7 @@ stage.addEventListener("cancel", (event) => {
 });
 
 eidInput.value = FIXED_EVENT_EID;
-if (state.mode === "final") prizeInput.value = "Brinde";
+updatePrizeControls();
 testFilter.value = state.filter;
 manifestationTimeInput.value = localStorage.getItem("grob-raffle-manifestation-seconds") || "30";
 manifestationTimeInput.addEventListener("change", manifestationSeconds);
@@ -748,4 +882,8 @@ await new Promise((resolve) => {
     resolve();
   });
 });
+window.addEventListener("focus", () => {
+  if (!prizeBusy && !state.stageBusy && document.activeElement !== prizeInput && savePrizeButton.disabled) loadPrizes();
+});
+loadPrizes();
 loadEvent();

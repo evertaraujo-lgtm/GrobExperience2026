@@ -35,6 +35,8 @@
 .raffle-stats .eligible{border-color:rgba(86,240,177,.4);background:linear-gradient(145deg,rgba(26,142,91,.25),rgba(4,16,39,.72))}
 .raffle-security-label{padding:7px 10px;border:1px solid rgba(86,240,177,.32);border-radius:999px;color:#bff9db;font-size:.67rem;text-transform:uppercase}
 .raffle-draw-form{display:grid;grid-template-columns:minmax(240px,1fr) minmax(165px,.45fr) auto auto;gap:13px;align-items:end}
+.raffle-prize-manager{grid-column:1/-1;display:grid;grid-template-columns:minmax(180px,.8fr) minmax(240px,1.2fr) auto auto;gap:10px;align-items:end}
+.raffle-prize-manager button{min-height:46px;margin:0;white-space:nowrap}
 .raffle-draw-form .raffle-field small{color:var(--muted);font:400 .67rem Sora,sans-serif;letter-spacing:normal;text-transform:none}
 .raffle-fullscreen-option{display:flex;align-items:center;gap:8px;min-height:46px;color:var(--muted);font-size:.78rem}
 .raffle-fullscreen-option input{accent-color:#59caff}
@@ -65,8 +67,9 @@
 .raffle-history-item span,.raffle-history-item small{color:var(--muted);font-size:.72rem}
 .raffle-history-item .raffle-history-prize{color:var(--cyan)}
 .raffle-stage{width:100vw;max-width:none;height:100vh;max-height:none;margin:0;padding:0;border:0;color:white;background:#020a17;overflow:hidden}
+.raffle-stage.raffle-stage-fallback-open{position:fixed;inset:0;z-index:2147483647}
 .raffle-stage::backdrop{background:#020a17}
-.raffle-stage[open]{display:block}
+.raffle-stage[open]{position:fixed;inset:0;z-index:2147483647;display:block}
 .raffle-stage-background{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(24,142,222,.5),transparent 31%),radial-gradient(circle at 14% 12%,rgba(43,196,255,.18),transparent 25%),linear-gradient(145deg,#010710,#04162f 52%,#062b56)}
 .raffle-stage-background:after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:6vw 6vw;mask-image:linear-gradient(to bottom,black,transparent 88%)}
 .raffle-stage-top{position:absolute;z-index:2;top:clamp(20px,4vh,50px);left:clamp(22px,5vw,80px);right:clamp(22px,5vw,80px);display:flex;align-items:center;justify-content:space-between}
@@ -100,8 +103,8 @@
 @keyframes raffle-winner{0%{opacity:0;transform:scale(.42);filter:blur(18px)}68%{opacity:1;transform:scale(1.1);filter:blur(0)}100%{transform:scale(1)}}
 @keyframes raffle-timer-ended{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 @keyframes raffle-confetti-fall{0%{transform:translate3d(0,-10vh,0) rotate(0);opacity:1}100%{transform:translate3d(var(--drift),110vh,0) rotate(900deg);opacity:.9}}
-@media(prefers-reduced-motion:reduce){.raffle-stage[data-phase=spinning] .raffle-stage-name,.raffle-stage[data-phase=winner] .raffle-stage-name,.raffle-countdown.active,.raffle-confetti i{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+@media(prefers-reduced-motion:reduce){.raffle-stage[data-phase=spinning] .raffle-stage-name,.raffle-stage[data-phase=winner] .raffle-stage-name,.raffle-countdown.active{animation:none!important;opacity:1;filter:none;transform:translate(-50%,-50%)}.raffle-stage[data-phase=spinning] .raffle-stage-name,.raffle-stage[data-phase=winner] .raffle-stage-name{transform:none}.raffle-confetti i{display:none}}
 @media(max-width:1050px){.raffle-layout{grid-template-columns:1fr}.raffle-history-card{position:static;max-height:none}.raffle-stats{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:760px){.raffle-page,.raffle-layout,.raffle-main,.raffle-config-card,.raffle-draw-card,.raffle-participants-card,.raffle-history-card{min-width:0;max-width:100%}.raffle-heading{align-items:flex-start;flex-direction:column;min-width:0}.raffle-heading>div:first-child{min-width:0;max-width:100%}.raffle-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0}.raffle-mode-switch button{min-width:0;padding:0 8px;font-size:.75rem}.raffle-event-form,.raffle-draw-form{grid-template-columns:minmax(0,1fr)}.raffle-event-form>*,.raffle-draw-form>*{min-width:0}.raffle-event-form .button,.raffle-event-form .back-link,.raffle-draw-button{width:100%}.raffle-section-heading{flex-direction:column}.raffle-search{width:100%;grid-template-columns:minmax(0,1fr)}.raffle-participant-head{display:none}.raffle-participant{grid-template-columns:1fr 1fr}.raffle-participant-copy:first-child{grid-column:1/-1}.raffle-alert{align-items:flex-start;flex-direction:column}.raffle-alert span{overflow-wrap:anywhere}}
+@media(max-width:760px){.raffle-page,.raffle-layout,.raffle-main,.raffle-config-card,.raffle-draw-card,.raffle-participants-card,.raffle-history-card{min-width:0;max-width:100%}.raffle-heading{align-items:flex-start;flex-direction:column;min-width:0}.raffle-heading>div:first-child{min-width:0;max-width:100%}.raffle-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0}.raffle-mode-switch button{min-width:0;padding:0 8px;font-size:.75rem}.raffle-event-form,.raffle-draw-form{grid-template-columns:minmax(0,1fr)}.raffle-event-form>*,.raffle-draw-form>*,.raffle-prize-manager>*{min-width:0}.raffle-prize-manager{grid-template-columns:minmax(0,1fr)}.raffle-event-form .button,.raffle-event-form .back-link,.raffle-draw-button,.raffle-prize-manager button{width:100%}.raffle-section-heading{flex-direction:column}.raffle-search{width:100%;grid-template-columns:minmax(0,1fr)}.raffle-participant-head{display:none}.raffle-participant{grid-template-columns:1fr 1fr}.raffle-participant-copy:first-child{grid-column:1/-1}.raffle-alert{align-items:flex-start;flex-direction:column}.raffle-alert span{overflow-wrap:anywhere}}
 @media(max-width:480px){.raffle-stats{grid-template-columns:1fr 1fr}.raffle-participant{grid-template-columns:1fr}.raffle-participant-copy:first-child{grid-column:auto}.raffle-presence-actions{flex-direction:column}.raffle-presence-actions .back-link{width:100%}}
 @media(max-width:600px){.raffle-stage-actions{left:18px;right:18px;bottom:18px}.raffle-stage-actions button{flex:1;min-width:0;padding:0 12px;font-size:.82rem}}

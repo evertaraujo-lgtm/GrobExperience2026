@@ -1,4 +1,4 @@
-import {createHash, randomInt} from "node:crypto";
+import {createHash, randomInt, randomUUID} from "node:crypto";
 
 import {Timestamp, getFirestore} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/https";
@@ -8,10 +8,12 @@ const raffleCollection = "sorteios4Events";
 const winnerCollection = "sorteios4EventsVencedores";
 const testCollection = "sorteios4EventsTestes";
 const integrationCollection = "integracoes4Events";
+const prizeDocument = "configuracoesSorteio4Events/brindes";
 const saoPauloTimeZone = "America/Sao_Paulo";
 
 type RaffleMode = "teste" | "final";
 type TestEligibilityMode = "todos" | "presenca_simulada";
+type RafflePrize = {id: string; nome: string};
 
 class CandidateUnavailableError extends Error {}
 
@@ -135,6 +137,82 @@ async function requireAdmin(uid: string) {
   }
   return firestore;
 }
+
+function rafflePrizes(value: unknown): RafflePrize[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is RafflePrize =>
+    typeof item?.id === "string" && typeof item?.nome === "string" && Boolean(item.id && item.nome.trim()));
+}
+
+function samePrizeName(left: string, right: string) {
+  return left.toLocaleLowerCase("pt-BR") === right.toLocaleLowerCase("pt-BR");
+}
+
+export const get4EventsRafflePrizes = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para acessar os brindes.");
+  const firestore = await requireAdmin(request.auth.uid);
+  const snapshot = await firestore.doc(prizeDocument).get();
+  return {brindes: rafflePrizes(snapshot.get("itens"))};
+});
+
+export const save4EventsRafflePrize = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para editar os brindes.");
+  const firestore = await requireAdmin(request.auth.uid);
+  const supplied = asRecord(request.data);
+  const action = supplied.acao;
+  if (action !== "adicionar" && action !== "editar" && action !== "importar") {
+    throw new HttpsError("invalid-argument", "Ação de brinde inválida.");
+  }
+  const name = text(supplied.nome, 120);
+  const prizeId = text(supplied.id, 100);
+  const imported = supplied.brindes;
+  if (action !== "importar" && !name) throw new HttpsError("invalid-argument", "Informe o nome do brinde.");
+  if (action === "editar" && !prizeId) throw new HttpsError("invalid-argument", "Selecione um brinde para editar.");
+  if (action === "importar" && (!Array.isArray(imported) || imported.length > 200 ||
+    imported.some((item) => typeof item !== "string"))) {
+    throw new HttpsError("invalid-argument", "Lista de brindes inválida.");
+  }
+
+  const reference = firestore.doc(prizeDocument);
+  return firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(reference);
+    const prizes = rafflePrizes(snapshot.get("itens"));
+    let selectedId = "";
+    let changed = false;
+
+    if (action === "editar") {
+      const selected = prizes.find((item) => item.id === prizeId);
+      if (!selected) throw new HttpsError("not-found", "O brinde selecionado não existe mais.");
+      if (prizes.some((item) => item.id !== prizeId && samePrizeName(item.nome, name))) {
+        throw new HttpsError("already-exists", "Já existe um brinde com esse nome.");
+      }
+      changed = selected.nome !== name;
+      selected.nome = name;
+      selectedId = selected.id;
+    } else {
+      const names = action === "importar" ? (imported as string[]).map((item) => text(item, 120)).filter(Boolean) : [name];
+      for (const candidate of names) {
+        const existing = prizes.find((item) => samePrizeName(item.nome, candidate));
+        if (existing) {
+          if (action === "adicionar") selectedId = existing.id;
+          continue;
+        }
+        if (prizes.length >= 200) throw new HttpsError("resource-exhausted", "Limite de 200 brindes atingido.");
+        const created = {id: randomUUID(), nome: candidate};
+        prizes.push(created);
+        changed = true;
+        if (action === "adicionar") selectedId = created.id;
+      }
+    }
+
+    if (changed) transaction.set(reference, {
+      itens: prizes,
+      atualizadoEm: Timestamp.now(),
+      atualizadoPor: request.auth?.uid,
+    }, {merge: true});
+    return {brindes: prizes, selecionadoId: selectedId};
+  });
+});
 
 function participantCategoryQuery(firestore: FirebaseFirestore.Firestore, eid: string, category: string) {
   return firestore.collection(participantsCollection)
