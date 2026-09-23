@@ -1,7 +1,8 @@
 import {getAuthServices, getFirestoreServices, getFunctionsServices} from "/js/firebase-client.js";
 
 const CAMPAIGN_ID = "participacao-chegando";
-const TEMPLATE_NAME = "participacao_chegando";
+const TEMPLATE_NAME = "lembrete_presenca";
+const TEMPLATE_SIGNATURE = "lembrete_presenca|en|body:nome|v2";
 const total = document.querySelector("[data-total]");
 const quotaUsed = document.querySelector("[data-quota-used]");
 const daysContainer = document.querySelector("[data-days]");
@@ -81,6 +82,9 @@ function statusLabel(status) {
 function operationalStatus(data) {
   if (data.statusOperacional === "importando") return {label: "Importando nova lista", state: "progress"};
   if (!data.versaoLista) return {label: "Sem planilha", state: "draft"};
+  if (data.testeTemplateAssinatura !== TEMPLATE_SIGNATURE || data.templateAssinatura !== TEMPLATE_SIGNATURE) {
+    return {label: "Novo teste obrigatório", state: "draft"};
+  }
   if (data.statusOperacional === "em_andamento") return {label: "Envios iniciados", state: "progress"};
   if (data.testeAprovadoEm) return {label: "Pronta para envio", state: "ready"};
   if (data.testeMensagemId) return {label: "Teste aguardando aprovação", state: "draft"};
@@ -95,7 +99,8 @@ function renderCampaign(data) {
   fileSeal.hidden = !data.versaoLista;
   fileNameLabel.textContent = data.arquivoNome || "—";
   fileHashLabel.textContent = data.arquivoHash ? data.arquivoHash.slice(0, 16) : "—";
-  testStatus.textContent = data.testeAprovadoEm ? `Aprovado em ${formatDateTime(data.testeAprovadoEm)}` : data.testeMensagemId ? "Aguardando aprovação" : "Não realizado";
+  const currentTest = data.testeTemplateAssinatura === TEMPLATE_SIGNATURE && data.templateAssinatura === TEMPLATE_SIGNATURE;
+  testStatus.textContent = !currentTest ? "Novo teste obrigatório" : data.testeAprovadoEm ? `Aprovado em ${formatDateTime(data.testeAprovadoEm)}` : data.testeMensagemId ? "Aguardando aprovação" : "Não realizado";
   const hasAcceptedSends = Number(data.enviosAceitos || 0) > 0;
   importOpen.disabled = data.statusOperacional === "importando";
   importOpen.textContent = hasAcceptedSends ? "Importar nova lista" : "Importar planilha";
@@ -160,7 +165,10 @@ function renderParticipants(participants) {
     const send = document.createElement("button");
     send.className = "button save-status";
     send.type = "button";
-    const campaignReady = currentCampaign.testeAprovadoEm && currentCampaign.statusOperacional !== "importando";
+    const campaignReady = currentCampaign.testeAprovadoEm
+      && currentCampaign.testeTemplateAssinatura === TEMPLATE_SIGNATURE
+      && currentCampaign.templateAssinatura === TEMPLATE_SIGNATURE
+      && currentCampaign.statusOperacional !== "importando";
     send.textContent = !eligible.length ? "Lote concluído" : campaignReady ? `Prévia do Lote ${group}` : "Aguardando campanha";
     send.disabled = !eligible.length || !campaignReady;
     send.addEventListener("click", () => openPreview(group));
@@ -421,7 +429,7 @@ testForm.addEventListener("submit", async (event) => {
       whatsapp: testForm.elements.whatsapp.value,
     });
     currentTestMessageId = result.messageId;
-    testFeedback.textContent = `Teste aceito pela Meta com “${result.nomeEnviado}” na variável nome. Confira o texto e os botões “${result.botoesFixos.join("” e “")}” no aparelho antes de aprovar.`;
+    testFeedback.textContent = `Teste aceito pela Meta com “${result.nomeEnviado}” na variável nome. Confira a mensagem no aparelho antes de aprovar.`;
     testFeedback.dataset.state = "success";
     testApprove.hidden = false;
   } catch (error) {

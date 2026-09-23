@@ -46,15 +46,15 @@ const campaigns: Record<string, CampaignDefinition> = {
   "participacao-chegando": {
     id: "participacao-chegando",
     name: "Participação chegando",
-    templateName: "participacao_chegando",
+    templateName: "lembrete_presenca",
     category: "UTILIDADE",
     language: "en",
-    templateSignature: "participacao_chegando|en|body:nome|url-fixa:ver-no-mapa,baixar-o-app|v1",
+    templateSignature: "lembrete_presenca|en|body:nome|v2",
     confirmationCode: "PARTICIPACAO CHEGANDO",
     dailyLimit: 500,
     batchSize: 250,
     variables: ["nome"],
-    fixedButtons: ["Ver no mapa", "Baixar o app"],
+    fixedButtons: [],
   },
 };
 
@@ -499,6 +499,7 @@ export const sendWhatsAppCampaignTest = onCall(
       variaveis: campaign.variables,
       botoesFixos: campaign.fixedButtons,
       nomeEnviado: sentName,
+      link: FieldValue.delete(),
       testeMensagemId: response.messageId,
       testeTemplateAssinatura: campaign.templateSignature,
       testeEnviadoEm: FieldValue.serverTimestamp(),
@@ -511,6 +512,7 @@ export const sendWhatsAppCampaignTest = onCall(
       status: response.status,
       template: campaign.templateName,
       botoesFixos: campaign.fixedButtons,
+      nomeEnviado: sentName,
     };
   },
 );

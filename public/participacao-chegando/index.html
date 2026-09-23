@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=visitor-delete-v1" />
     <link rel="stylesheet" href="/css/importacao.css?v=presence-automation-v1" />
     <link rel="stylesheet" href="/css/lembrete-presenca.css?v=1" />
-    <link rel="stylesheet" href="/css/campanhas-whatsapp.css?v=2" />
+    <link rel="stylesheet" href="/css/campanhas-whatsapp.css?v=4" />
   </head>
   <body data-auth-page="protected">
     <div class="page-shell">
@@ -29,7 +29,7 @@
           <section class="campaign-identity" aria-labelledby="campaign-identity-title">
             <div><p class="eyebrow">Identidade da campanha</p><h2 id="campaign-identity-title">Participação chegando</h2></div>
             <dl>
-              <div><dt>Template autorizado</dt><dd>participacao_chegando</dd></div>
+              <div><dt>Template autorizado</dt><dd>lembrete_presenca</dd></div>
               <div><dt>Idioma Meta</dt><dd>English (en)</dd></div>
               <div><dt>Variável</dt><dd>nome</dd></div>
               <div><dt>Limites</dt><dd>250 por lote • 500 por dia</dd></div>
@@ -62,15 +62,14 @@
           <section class="reminder-template campaign-template" aria-labelledby="template-title">
             <div>
               <p class="eyebrow">Template Meta fixado</p>
-              <h2 id="template-title">participacao_chegando <small>• English</small></h2>
-              <div class="campaign-fixed-buttons"><span>Ver no mapa</span><span>Baixar o app</span></div>
+              <h2 id="template-title">lembrete_presenca <small>• English (en)</small></h2>
               <form class="campaign-name-complement" data-name-complement-form>
                 <label for="name-complement">Frase após o nome</label>
                 <div><input id="name-complement" type="text" maxlength="160" placeholder="Ex.: e família" data-name-complement /><button class="back-link" type="submit" data-name-complement-submit>Salvar</button></div>
                 <p data-name-complement-feedback></p>
               </form>
             </div>
-            <p>Olá, <b>{nome}</b>.<br /><br />O <b>GROB Experience</b> está chegando, e gostaríamos de compartilhar algumas orientações importantes para garantir a melhor experiência para você.<br /><br /><b>Ingresso/Ticket de Entrada</b><br />A apresentação do ingresso para entrada no evento é obrigatória. Por isso, no dia do evento, não se esqueça de trazer o ingresso enviado em seu e-mail no momento da confirmação.<br /><br /><b>Acesso e Estacionamento</b><br />A entrada de todos os participantes será realizada pela portaria principal da GROB:<br /><br /><b>B. GROB DO BRASIL S.A. – Portaria 1</b><br />Av. Caminho do Mar, 1811<br />São Bernardo do Campo, SP - BRASIL<br />CEP: 09609-000<br /><br /><b>Informações Gerais</b><br />• A GROB disponibilizará conexão WiFi durante o evento;<br />• Haverá serviço de chapelaria/guarda volumes;<br />• Recomendamos o uso de calçados fechados e confortáveis, devido à dinâmica do evento.<br /><br />Estamos ansiosos para recebê-lo(a) no GROB Experience e garantir que sua participação seja incrível!</p>
+            <p>Olá, <b>{{nome}}</b>.<br /><br /><b>O GROB Experience</b> já começou e está acontecendo nos dias 22, 23 e 24 de setembro (terça, quarta e quinta) <b>a partir das 7:30</b> .Gostaríamos de compartilhar algumas orientações importantes para garantir a melhor experiência para você.<br /><br /><b>Ingresso/Ticket de Entrada</b><br />A apresentação do ingresso para entrada no evento é obrigatória. Por isso, no dia do evento, não se esqueça de trazer o ingresso enviado em seu e-mail no momento da confirmação.<br /><br /><b>Acesso e Estacionamento</b><br />A entrada de todos os participantes será realizada pela portaria principal da GROB:<br /><br /><b>B. GROB DO BRASIL S.A. – Portaria 1</b><br />Av. Caminho do Mar, 1811<br />São Bernardo do Campo, SP - BRASIL<br />CEP: 09609-000<br /><br /><b>Informações Gerais</b><br />• A GROB disponibilizará conexão WiFi durante o evento;<br />• Haverá serviço de chapelaria/guarda volumes;<br />• Recomendamos o uso de calçados fechados e confortáveis, devido à dinâmica do evento.<br /><br />Estamos ansiosos para recebê-lo(a) no GROB Experience e garantir que sua participação seja incrível!</p>
           </section>
 
           <section class="campaign-file-seal" data-file-seal hidden>
@@ -100,19 +99,19 @@
 
     <dialog class="message-modal reminder-test-modal" data-test-modal aria-labelledby="test-title">
       <form class="message-editor" data-test-form>
-        <div class="message-modal-heading"><div><p class="eyebrow">Validação obrigatória</p><h2 id="test-title">Testar participacao_chegando</h2></div><button class="modal-close" type="button" data-test-close aria-label="Fechar">×</button></div>
-        <p>O teste usa exatamente o template fixado nesta campanha, com a variável <code>nome</code> e os dois botões de URL fixa.</p>
+        <div class="message-modal-heading"><div><p class="eyebrow">Validação obrigatória</p><h2 id="test-title">Testar lembrete_presenca</h2></div><button class="modal-close" type="button" data-test-close aria-label="Fechar">×</button></div>
+        <p>O teste usa o template em inglês (<code>en</code>) com apenas a variável <code>nome</code>.</p>
         <div class="participant-form-fields">
           <label>Nome do participante<input name="nome" type="text" autocomplete="name" required /></label>
           <label>WhatsApp com DDD<input name="whatsapp" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(11) 99999-9999" required /></label>
         </div>
-        <div class="reminder-test-preview"><span>Botões fixos configurados na Meta</span><strong>Ver no mapa • Baixar o app</strong></div>
+        <div class="reminder-test-preview"><span>Variável enviada</span><strong>nome</strong></div>
         <div class="message-modal-actions"><button class="button save-status" type="submit" data-test-submit>Enviar teste</button><button class="button campaign-approve-test" type="button" data-test-approve hidden>Recebi e aprovei o teste</button><button class="back-link" type="button" data-test-close>Cancelar</button></div>
         <p class="message-modal-feedback" data-test-feedback></p>
       </form>
     </dialog>
 
     <script type="module" src="/js/auth.js?v=campaign-nav-v1"></script>
-    <script type="module" src="/js/participacao-chegando.js?v=4"></script>
+    <script type="module" src="/js/participacao-chegando.js?v=6"></script>
   </body>
 </html>

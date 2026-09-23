@@ -8,7 +8,6 @@ const metaWhatsAppAccessToken = defineSecret("META_WHATSAPP_ACCESS_TOKEN");
 const phoneNumberId = "1289110394284226";
 const graphVersion = "v23.0";
 const templateName = "lembrete_presenca";
-const appLink = "https://grobexperience.web.app/baixar-app/";
 const dailyLimit = 500;
 const groupSize = 250;
 const maximumImportSize = 10000;
@@ -96,7 +95,7 @@ async function commitOperations(
   }
 }
 
-async function sendTemplate(nome: string, whatsapp: string, link: string) {
+async function sendTemplate(nome: string, whatsapp: string) {
   const response = await fetch(`https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`, {
     method: "POST",
     headers: {
@@ -112,10 +111,7 @@ async function sendTemplate(nome: string, whatsapp: string, link: string) {
         language: {code: "en"},
         components: [{
           type: "body",
-          parameters: [
-            {type: "text", parameter_name: "nome", text: nome},
-            {type: "text", parameter_name: "link", text: link},
-          ],
+          parameters: [{type: "text", parameter_name: "nome", text: nome}],
         }],
       },
     }),
@@ -137,7 +133,7 @@ async function saveAcceptedMessage(
   whatsapp: string,
   response: {messageId: string; status: string},
   sender: Sender,
-  options: {batchId: string; day: number | null; dateKey: string; test: boolean; link: string},
+  options: {batchId: string; day: number | null; dateKey: string; test: boolean},
 ) {
   const firestore = getFirestore();
   const now = FieldValue.serverTimestamp();
@@ -147,7 +143,6 @@ async function saveAcceptedMessage(
     nome,
     destinatarioWhatsApp: whatsapp,
     template: templateName,
-    link: options.link,
     teste: options.test,
     dia: options.day,
     dataOperacao: options.dateKey,
@@ -342,9 +337,9 @@ export const sendPresenceReminderDay = onCall(
       if (reservation.kind === "quota") { quotaReached = true; break; }
       if (reservation.kind === "skip") { skipped += 1; continue; }
       try {
-        const response = await sendTemplate(reservation.nome, reservation.whatsapp, appLink);
+        const response = await sendTemplate(reservation.nome, reservation.whatsapp);
         await saveAcceptedMessage(participant.id, reservation.nome, reservation.whatsapp, response, sender, {
-          batchId, day, dateKey, test: false, link: appLink,
+          batchId, day, dateKey, test: false,
         });
         sent += 1;
       } catch (error) {
@@ -378,15 +373,14 @@ export const sendPresenceReminderTest = onCall(
     if (!nome || whatsapp.length < 10 || whatsapp.length > 11) {
       throw new HttpsError("invalid-argument", "Informe nome e WhatsApp com DDD para o teste.");
     }
-    const response = await sendTemplate(nome, whatsapp, appLink);
+    const response = await sendTemplate(nome, whatsapp);
     const batchId = `teste_${randomUUID()}`;
     await saveAcceptedMessage(null, nome, whatsapp, response, sender, {
       batchId,
       day: null,
       dateKey: dateKeyInSaoPaulo(),
       test: true,
-      link: appLink,
     });
-    return {messageId: response.messageId, status: response.status, template: templateName, link: appLink};
+    return {messageId: response.messageId, status: response.status, template: templateName};
   },
 );
