@@ -47,6 +47,9 @@ const manifestationLabel = document.querySelector("[data-manifestation-label]");
 const manifestationValue = document.querySelector("[data-manifestation-value]");
 const countdown = document.querySelector("[data-countdown]");
 const confetti = document.querySelector("[data-confetti]");
+const stageNextPrize = document.querySelector("[data-stage-next-prize]");
+const stagePrizeSelect = document.querySelector("[data-stage-prize-select]");
+const stagePrizeInput = document.querySelector("[data-stage-prize-input]");
 const stageNewDraw = document.querySelector("[data-stage-new]");
 const stageClose = document.querySelector("[data-stage-close]");
 
@@ -88,11 +91,19 @@ function updatePrizeControls() {
   prizeSelect.disabled = prizeBusy || !prizesLoaded;
   addPrizeButton.disabled = prizeBusy || !prizesLoaded || !prizeInput.value.trim();
   savePrizeButton.disabled = prizeBusy || !selected || !prizeInput.value.trim() || prizeInput.value.trim() === selected.nome;
+  stagePrizeSelect.disabled = prizeBusy || !prizesLoaded || state.stageBusy;
+  stagePrizeSelect.value = prizeSelect.value;
+  stagePrizeInput.disabled = prizeBusy || state.stageBusy;
+  stagePrizeInput.value = prizeInput.value;
 }
 
 function renderPrizeOptions(selectedId = "") {
   prizeSelect.replaceChildren(new Option("Selecione um brinde salvo", ""));
-  savedPrizes.forEach((prize) => prizeSelect.add(new Option(prize.nome, prize.id)));
+  stagePrizeSelect.replaceChildren(new Option("Selecione um brinde salvo", ""));
+  savedPrizes.forEach((prize) => {
+    prizeSelect.add(new Option(prize.nome, prize.id));
+    stagePrizeSelect.add(new Option(prize.nome, prize.id));
+  });
   const selected = savedPrizes.find((item) => item.id === selectedId);
   prizeSelect.value = selected?.id || "";
   if (selected) prizeInput.value = selected.nome;
@@ -410,7 +421,7 @@ function updateControls() {
   const finalReady = state.mode === "final" && state.data?.categoriaPermitidaHoje && state.data?.sincronizacaoHoje;
   const testReady = state.mode === "teste" && Boolean(state.sessionId);
   drawButton.disabled = !hasCategory || !eligible || !(finalReady || testReady);
-  stageNewDraw.disabled = state.stageBusy || drawButton.disabled;
+  stageNewDraw.disabled = state.stageBusy || drawButton.disabled || !prizeInput.value.trim();
 }
 
 function render() {
@@ -724,7 +735,7 @@ function createConfetti() {
   }
 }
 
-async function revealWinner(result) {
+async function revealWinner(result, drawnPrize) {
   const winner = result.vencedor || {};
   const names = state.participants.filter((participant) => participant.elegivel).map((participant) => participant.nome);
   if (!names.length) names.push(winner.nome || "Participante");
@@ -747,7 +758,7 @@ async function revealWinner(result) {
     email.textContent = emailText;
     stageDetails.append(email);
   }
-  stageStatus.textContent = `Vencedor do brinde ${prizeInput.value.trim()}`;
+  stageStatus.textContent = `Vencedor do brinde ${drawnPrize}`;
   createConfetti();
   stageNewDraw.hidden = false;
   stageClose.hidden = false;
@@ -756,22 +767,26 @@ async function revealWinner(result) {
 async function executeDraw(event) {
   event.preventDefault();
   if (state.stageBusy || !drawForm.reportValidity() || drawButton.disabled) return;
-  if (state.mode === "final" && !window.confirm(`Confirmar o sorteio FINAL do brinde “${prizeInput.value.trim()}” para a categoria selecionada? O vencedor sairá dos próximos sorteios dessa categoria.`)) return;
+  const drawnPrize = prizeInput.value.trim();
+  if (!drawnPrize) return;
+  if (state.mode === "final" && !window.confirm(`Confirmar o sorteio FINAL do brinde “${drawnPrize}” para a categoria selecionada? O vencedor sairá dos próximos sorteios dessa categoria.`)) return;
 
   stopManifestationTimer();
   stage.dataset.mode = state.mode;
   stage.dataset.phase = "loading";
   stageMode.textContent = state.mode === "teste" ? "MODO TESTE" : "SORTEIO FINAL";
   stageCategory.textContent = state.category;
-  stagePrize.textContent = prizeInput.value.trim();
+  stagePrize.textContent = drawnPrize;
   stageName.textContent = "Validando elegíveis";
   stageDetails.textContent = "";
   stageStatus.textContent = "O resultado será definido e registrado no servidor";
   stageNewDraw.hidden = true;
   stageNewDraw.disabled = true;
   stageClose.hidden = true;
+  stageNextPrize.hidden = true;
   confetti.replaceChildren();
   state.stageBusy = true;
+  updatePrizeControls();
 
   // Fullscreen must enter before the dialog. In Edge, entering it afterwards
   // puts the document above the dialog in the browser's top layer.
@@ -786,11 +801,11 @@ async function executeDraw(event) {
       categoria: state.category,
       sessaoTesteId: state.mode === "teste" ? state.sessionId : "",
       filtroTeste: state.filter,
-      brinde: prizeInput.value.trim(),
+      brinde: drawnPrize,
     });
-    await revealWinner(result);
+    await revealWinner(result, drawnPrize);
     startManifestationTimer(manifestationSeconds());
-    setFeedback(`${result.vencedor?.nome || "Participante"} venceu o sorteio de ${prizeInput.value.trim()}.`, "success");
+    setFeedback(`${result.vencedor?.nome || "Participante"} venceu o sorteio de ${drawnPrize}.`, "success");
     await refreshState();
   } catch (error) {
     console.error(error);
@@ -803,6 +818,8 @@ async function executeDraw(event) {
     setFeedback(errorText(error, "Não foi possível realizar o sorteio."), "error");
   } finally {
     state.stageBusy = false;
+    stageNextPrize.hidden = false;
+    updatePrizeControls();
     updateControls();
   }
 }
@@ -816,6 +833,7 @@ async function closeStage() {
   if (typeof stage.close === "function") stage.close();
   else stage.removeAttribute("open");
   stage.classList.remove("raffle-stage-fallback-open");
+  stageNextPrize.hidden = true;
   confetti.replaceChildren();
 }
 
@@ -855,9 +873,24 @@ drawForm.addEventListener("submit", executeDraw);
 prizeSelect.addEventListener("change", () => {
   renderPrizeOptions(prizeSelect.value);
 });
-prizeInput.addEventListener("input", updatePrizeControls);
+prizeInput.addEventListener("input", () => { updatePrizeControls(); updateControls(); });
 addPrizeButton.addEventListener("click", () => savePrize("adicionar"));
 savePrizeButton.addEventListener("click", () => savePrize("editar"));
+stagePrizeSelect.addEventListener("change", () => {
+  renderPrizeOptions(stagePrizeSelect.value);
+  updateControls();
+});
+stagePrizeInput.addEventListener("input", () => {
+  prizeInput.value = stagePrizeInput.value;
+  const selected = savedPrizes.find((item) => item.id === prizeSelect.value);
+  if (selected && stagePrizeInput.value.trim() !== selected.nome) {
+    prizeSelect.value = "";
+    stagePrizeSelect.value = "";
+    localStorage.removeItem(SELECTED_PRIZE_KEY);
+  }
+  updatePrizeControls();
+  updateControls();
+});
 stageNewDraw.addEventListener("click", () => {
   if (typeof drawForm.requestSubmit === "function") drawForm.requestSubmit();
   else drawButton.click();
@@ -883,7 +916,7 @@ await new Promise((resolve) => {
   });
 });
 window.addEventListener("focus", () => {
-  if (!prizeBusy && !state.stageBusy && document.activeElement !== prizeInput && savePrizeButton.disabled) loadPrizes();
+  if (!stage.open && !prizeBusy && !state.stageBusy && document.activeElement !== prizeInput && savePrizeButton.disabled) loadPrizes();
 });
 loadPrizes();
 loadEvent();

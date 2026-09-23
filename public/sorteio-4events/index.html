@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" href="/img/LogoPNG.png">
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5">
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3">
-  <link rel="stylesheet" href="/css/sorteio-4events.css?v=raffle-v10">
+  <link rel="stylesheet" href="/css/sorteio-4events.css?v=raffle-v11">
   </head>
   <body data-auth-page="protected" data-admin-page="true">
     <div class="page-shell">
@@ -118,6 +118,11 @@
         <p class="raffle-stage-status" data-stage-status>Validando participantes elegíveis...</p>
       </div>
       <div class="raffle-confetti" data-confetti aria-hidden="true"></div>
+      <div class="raffle-stage-next-prize" data-stage-next-prize hidden>
+        <strong>Próximo sorteio</strong>
+        <label>Brinde salvo<select data-stage-prize-select disabled><option value="">Selecione um brinde salvo</option></select></label>
+        <label>Nome do brinde<input type="text" maxlength="120" autocomplete="off" placeholder="Brinde do próximo sorteio" data-stage-prize-input></label>
+      </div>
       <div class="raffle-stage-actions">
         <button class="button raffle-stage-new" type="button" data-stage-new hidden>Novo sorteio</button>
         <button class="raffle-stage-close" type="button" data-stage-close hidden>Fechar apresentação</button>
@@ -125,6 +130,6 @@
     </dialog>
 
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-  <script type="module" src="/js/sorteio-4events.js?v=raffle-v17"></script>
+  <script type="module" src="/js/sorteio-4events.js?v=raffle-v18"></script>
   </body>
 </html>

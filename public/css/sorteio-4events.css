@@ -92,6 +92,13 @@
 .raffle-winner-timer strong{font:700 clamp(2.2rem,5vw,5rem)/.9 Rajdhani,sans-serif;font-variant-numeric:tabular-nums}
 .raffle-winner-timer[data-state=ended]{border-color:rgba(255,129,129,.65);color:#ffe0e0;background:rgba(122,25,38,.5);animation:raffle-timer-ended .75s ease both}
 .raffle-stage-status{margin:4vh 0 0;color:rgba(218,235,255,.66);font-size:clamp(.75rem,1.1vw,1rem);letter-spacing:.1em;text-transform:uppercase}
+.raffle-stage-next-prize{position:absolute;z-index:5;left:clamp(22px,5vw,80px);bottom:clamp(20px,4vh,50px);display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;width:min(420px,calc(100vw - 44px));padding:14px;border:1px solid rgba(125,214,255,.35);border-radius:18px;background:rgba(3,19,43,.84);box-shadow:0 12px 35px rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.raffle-stage-next-prize[hidden]{display:none}
+.raffle-stage-next-prize>strong{grid-column:1/-1;color:#fff;font:700 1rem Rajdhani,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.raffle-stage-next-prize label{display:grid;gap:5px;min-width:0;color:#a9dfff;font:600 .72rem Sora,sans-serif}
+.raffle-stage-next-prize select,.raffle-stage-next-prize input{width:100%;min-width:0;min-height:42px;padding:8px 10px;border:1px solid rgba(125,214,255,.4);border-radius:10px;outline:none;color:white;background:#0a2344;font:500 .83rem Sora,sans-serif}
+.raffle-stage-next-prize select:focus-visible,.raffle-stage-next-prize input:focus-visible{border-color:#8edfff;box-shadow:0 0 0 3px rgba(77,191,255,.25)}
+.raffle-stage-next-prize select:disabled,.raffle-stage-next-prize input:disabled{opacity:.55}
 .raffle-stage-actions{position:absolute;z-index:5;right:clamp(22px,5vw,80px);bottom:clamp(20px,4vh,50px);display:flex;align-items:center;gap:10px}
 .raffle-stage-new{min-height:46px;margin:0}
 .raffle-stage-new:disabled{cursor:not-allowed;filter:grayscale(.6);opacity:.5}
@@ -107,4 +114,5 @@
 @media(max-width:1050px){.raffle-layout{grid-template-columns:1fr}.raffle-history-card{position:static;max-height:none}.raffle-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.raffle-page,.raffle-layout,.raffle-main,.raffle-config-card,.raffle-draw-card,.raffle-participants-card,.raffle-history-card{min-width:0;max-width:100%}.raffle-heading{align-items:flex-start;flex-direction:column;min-width:0}.raffle-heading>div:first-child{min-width:0;max-width:100%}.raffle-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0}.raffle-mode-switch button{min-width:0;padding:0 8px;font-size:.75rem}.raffle-event-form,.raffle-draw-form{grid-template-columns:minmax(0,1fr)}.raffle-event-form>*,.raffle-draw-form>*,.raffle-prize-manager>*{min-width:0}.raffle-prize-manager{grid-template-columns:minmax(0,1fr)}.raffle-event-form .button,.raffle-event-form .back-link,.raffle-draw-button,.raffle-prize-manager button{width:100%}.raffle-section-heading{flex-direction:column}.raffle-search{width:100%;grid-template-columns:minmax(0,1fr)}.raffle-participant-head{display:none}.raffle-participant{grid-template-columns:1fr 1fr}.raffle-participant-copy:first-child{grid-column:1/-1}.raffle-alert{align-items:flex-start;flex-direction:column}.raffle-alert span{overflow-wrap:anywhere}}
 @media(max-width:480px){.raffle-stats{grid-template-columns:1fr 1fr}.raffle-participant{grid-template-columns:1fr}.raffle-participant-copy:first-child{grid-column:auto}.raffle-presence-actions{flex-direction:column}.raffle-presence-actions .back-link{width:100%}}
-@media(max-width:600px){.raffle-stage-actions{left:18px;right:18px;bottom:18px}.raffle-stage-actions button{flex:1;min-width:0;padding:0 12px;font-size:.82rem}}
+@media(max-width:900px){.raffle-stage-next-prize{left:18px;right:18px;bottom:82px;width:auto}.raffle-stage-actions{left:18px;right:18px;bottom:18px;justify-content:flex-end}}
+@media(max-width:600px){.raffle-stage-next-prize{padding:10px;gap:6px}.raffle-stage-next-prize select,.raffle-stage-next-prize input{min-height:38px;font-size:.75rem}.raffle-stage-actions button{flex:1;min-width:0;padding:0 12px;font-size:.82rem}}
