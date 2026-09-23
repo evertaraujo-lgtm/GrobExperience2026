@@ -20,13 +20,13 @@
       <section class="message-editor">
         <div class="message-modal-heading"><div><p class="eyebrow">Registro de presença</p><h2 id="collect-title">Coletar participante</h2></div><button class="modal-close" type="button" data-collect-cancel aria-label="Fechar">×</button></div>
         <p data-collect-activity></p>
-        <div class="qr-scanner"><div class="qr-camera-wrap"><div id="qr-reader" data-qr-reader></div><div class="scan-success" data-scan-success hidden aria-live="polite"><span aria-hidden="true">✓</span><small data-scan-success-message></small><strong data-scan-success-code></strong></div></div><button class="back-link" type="button" data-start-qr-reader>Ler QRCode pela câmera</button></div>
+        <div class="qr-scanner"><div class="qr-camera-wrap"><div id="qr-reader" data-qr-reader></div><div class="scan-success" data-scan-success hidden aria-live="polite"><span aria-hidden="true">✓</span><small data-scan-success-message></small><strong data-scan-success-code></strong></div></div><button class="back-link" type="button" data-start-qr-reader>Ler QRCode pela câmera</button><button class="back-link" type="button" data-switch-qr-camera disabled>Trocar câmera</button></div>
         <p>Após a leitura, a participação será registrada neste aparelho e sincronizada automaticamente.</p>
         <div class="message-modal-actions"><button class="back-link" type="button" data-collect-cancel>Cancelar</button></div>
         <p class="message-modal-feedback" data-collect-feedback></p>
       </section>
     </dialog>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script><script type="module" src="/js/coleta-atividades.js?v=activity-cooldown-v1"></script>
+    <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script><script type="module" src="/js/coleta-atividades.js?v=activity-camera-switch-v1"></script>
   </body>
 </html>

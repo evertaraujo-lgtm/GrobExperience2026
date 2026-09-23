@@ -10,6 +10,7 @@ const activityLabel = document.querySelector("[data-collect-activity]");
 const formFeedback = document.querySelector("[data-collect-feedback]");
 const qrReader = document.querySelector("[data-qr-reader]");
 const startQrReader = document.querySelector("[data-start-qr-reader]");
+const switchQrCameraButton = document.querySelector("[data-switch-qr-camera]");
 const syncStatus = document.querySelector("[data-sync-status]");
 const scanSuccess = document.querySelector("[data-scan-success]");
 const scanSuccessCode = document.querySelector("[data-scan-success-code]");
@@ -18,6 +19,8 @@ let activityId = "";
 let userId = "";
 let scanner;
 let scanning = false;
+let cameraSwitching = false;
+let selectedCameraId = "";
 let scanLocked = false;
 let scanSuccessTimer;
 let recordsUnsubscribe;
@@ -151,6 +154,7 @@ async function syncPendingRecords() {
   }
 }
 async function stopQrReader() {
+  switchQrCameraButton.disabled = true;
   if (!scanner || !scanning) return;
   try { await scanner.stop(); } catch (error) { console.warn("Não foi possível encerrar a câmera.", error); }
   scanning = false;
@@ -246,19 +250,20 @@ function registerOfflineShell() {
   }
 }
 
-async function startQrReaderFromCamera() {
-  if (scanning) return;
+async function startQrReaderFromCamera(cameraId = selectedCameraId) {
+  if (scanning) return true;
   if (!window.Html5Qrcode) {
     setFormFeedback("O leitor de QRCode não foi carregado. Verifique sua conexão e tente novamente.", "error");
-    return;
+    return false;
   }
   startQrReader.disabled = true;
   startQrReader.textContent = "Abrindo câmera...";
+  switchQrCameraButton.disabled = true;
   setFormFeedback("");
   try {
     scanner ??= new window.Html5Qrcode(qrReader.id);
     await scanner.start(
-      {facingMode: "environment"},
+      cameraId || {facingMode: "environment"},
       {fps: 10, qrbox: {width: 220, height: 220}},
       async (decodedText) => {
         if (scanLocked) return;
@@ -271,11 +276,73 @@ async function startQrReaderFromCamera() {
     scanning = true;
     scanLocked = false;
     startQrReader.textContent = "Câmera ativa — aponte para o QRCode";
+    switchQrCameraButton.disabled = cameraSwitching;
+    if (!modal.open) {
+      await stopQrReader();
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error(error);
     startQrReader.disabled = false;
     startQrReader.textContent = "Ler QRCode pela câmera";
+    switchQrCameraButton.disabled = true;
     setFormFeedback("Não foi possível acessar a câmera. Verifique a permissão do navegador.", "error");
+    return false;
+  }
+}
+
+function runningCamera() {
+  let settings = {};
+  try { settings = scanner?.getRunningTrackSettings?.() || {}; } catch { /* Alguns navegadores não expõem os ajustes da câmera. */ }
+  const track = qrReader.querySelector("video")?.srcObject?.getVideoTracks?.()[0];
+  let trackSettings = {};
+  try { trackSettings = track?.getSettings?.() || {}; } catch { /* O ID pode não estar disponível. */ }
+  return {id: settings.deviceId || trackSettings.deviceId || "", label: track?.label || "", facingMode: settings.facingMode || trackSettings.facingMode || ""};
+}
+
+async function switchQrCamera() {
+  if (!scanning || cameraSwitching) return;
+  cameraSwitching = true;
+  switchQrCameraButton.disabled = true;
+  switchQrCameraButton.textContent = "Trocando câmera...";
+  try {
+    const active = runningCamera();
+    let cameras = [];
+    try {
+      cameras = (await navigator.mediaDevices.enumerateDevices())
+        .filter((device) => device.kind === "videoinput" && device.deviceId)
+        .map((device) => ({id: device.deviceId, label: device.label}));
+    } catch (error) {
+      console.warn("Não foi possível listar as câmeras pelo navegador.", error);
+    }
+    if (cameras.length < 2) cameras = await window.Html5Qrcode.getCameras();
+    if (cameras.length < 2) {
+      setFormFeedback("Não há outra câmera disponível neste navegador.", "error");
+      return;
+    }
+    const currentIndex = cameras.findIndex((camera) => camera.id === active.id || (active.label && camera.label === active.label));
+    const backCamera = cameras.find((camera) => camera.id !== active.id && /back|rear|traseir|environment/i.test(camera.label));
+    const frontCameraActive = active.facingMode === "user" || /front|frontal|facetime/i.test(active.label);
+    const nextCamera = frontCameraActive && backCamera
+      ? backCamera
+      : cameras[currentIndex < 0 ? cameras.length - 1 : (currentIndex + 1) % cameras.length];
+    const previousCameraId = selectedCameraId || active.id;
+    await stopQrReader();
+    if (!modal.open) return;
+    if (await startQrReaderFromCamera(nextCamera.id)) {
+      selectedCameraId = nextCamera.id;
+      setFormFeedback(`Câmera alterada${nextCamera.label ? `: ${nextCamera.label}` : "."}`, "success");
+    } else if (modal.open && await startQrReaderFromCamera(previousCameraId)) {
+      setFormFeedback("Não foi possível trocar a câmera. A anterior foi restaurada.", "error");
+    }
+  } catch (error) {
+    console.error(error);
+    setFormFeedback("Não foi possível listar as câmeras deste aparelho.", "error");
+  } finally {
+    cameraSwitching = false;
+    switchQrCameraButton.textContent = "Trocar câmera";
+    switchQrCameraButton.disabled = !scanning;
   }
 }
 
@@ -322,7 +389,8 @@ async function load() {
 
 document.querySelectorAll("[data-collect-cancel]").forEach((button) => button.addEventListener("click", () => modal.close()));
 modal.addEventListener("close", stopQrReader);
-startQrReader.addEventListener("click", startQrReaderFromCamera);
+startQrReader.addEventListener("click", () => startQrReaderFromCamera());
+switchQrCameraButton.addEventListener("click", switchQrCamera);
 
 const {auth, authModule} = await getAuthServices();
 authModule.onAuthStateChanged(auth, async (user) => {
