@@ -1,4 +1,6 @@
-import {getAuthServices, getFirestoreServices} from "/js/firebase-client.js";
+import {getAuthServices, getFirestoreServices, getFunctionsServices} from "/js/firebase-client.js";
+
+const cooldownMilliseconds = 30 * 60 * 1000;
 
 const list = document.querySelector("[data-list]");
 const total = document.querySelector("[data-total]");
@@ -19,14 +21,16 @@ let scanning = false;
 let scanLocked = false;
 let scanSuccessTimer;
 let recordsUnsubscribe;
+let syncRunning = false;
+let syncRetryTimer;
 const localRecords = new Map();
 
 function setFeedback(message, state = "neutral") { feedback.textContent = message; feedback.dataset.state = state; }
 function setFormFeedback(message, state = "neutral") { formFeedback.textContent = message; formFeedback.dataset.state = state; }
-function showScanSuccess(qrcode, repeated = false) {
+function showScanSuccess(qrcode, repeated = false, message = repeated ? "Este QRCode já foi lido" : "Leitura registrada") {
   clearTimeout(scanSuccessTimer);
   scanSuccessCode.textContent = qrcode;
-  scanSuccessMessage.textContent = repeated ? "Este QRCode já foi lido" : "Leitura registrada";
+  scanSuccessMessage.textContent = message;
   scanSuccess.classList.toggle("is-repeated", repeated);
   scanSuccess.hidden = false;
   scanSuccess.classList.remove("is-visible");
@@ -41,7 +45,10 @@ function showScanSuccess(qrcode, repeated = false) {
 }
 function storageKey() { return `grob-coleta-registros-${userId}`; }
 function saveLocalRecords() {
-  localStorage.setItem(storageKey(), JSON.stringify([...localRecords.values()].slice(-500)));
+  const records = [...localRecords.values()];
+  const unresolved = records.filter((record) => record.status === "pending" || record.status === "error");
+  const finished = records.filter((record) => record.status !== "pending" && record.status !== "error").slice(-500);
+  localStorage.setItem(storageKey(), JSON.stringify([...unresolved, ...finished].sort((a, b) => a.createdAt - b.createdAt)));
 }
 function loadLocalRecords() {
   try {
@@ -55,6 +62,7 @@ function renderSyncStatus() {
   const pending = records.filter((record) => record.status === "pending").length;
   const failed = records.filter((record) => record.status === "error").length;
   const synced = records.filter((record) => record.status === "synced").length;
+  const repeated = records.filter((record) => record.status === "duplicate").length;
   const online = navigator.onLine;
   if (failed) {
     syncStatus.textContent = `${synced} sincronizada(s), ${pending} pendente(s) e ${failed} com erro.`;
@@ -65,6 +73,9 @@ function renderSyncStatus() {
   } else if (pending) {
     syncStatus.textContent = `${synced} sincronizada(s) e ${pending} pendente(s) de sincronização.`;
     syncStatus.dataset.state = "pending";
+  } else if (repeated) {
+    syncStatus.textContent = `${synced} sincronizada(s) e ${repeated} repetida(s) ignorada(s).`;
+    syncStatus.dataset.state = "synced";
   } else {
     syncStatus.textContent = `${synced} coleta(s) sincronizada(s). Pronto para funcionar offline.`;
     syncStatus.dataset.state = "synced";
@@ -77,11 +88,67 @@ function updateLocalRecord(id, changes) {
   saveLocalRecords();
   renderSyncStatus();
 }
-async function recordIdFor(activity, qrcode) {
-  const value = `${activity}:${qrcode}`;
-  const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return `presenca_${[...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+function retryMessage(nextAllowedAt) {
+  if (!Number.isFinite(nextAllowedAt) || nextAllowedAt <= Date.now()) {
+    return "Esta leitura coincidiu com outra coleta. O QRCode já pode ser lido novamente.";
+  }
+  const minutes = Math.max(1, Math.ceil((nextAllowedAt - Date.now()) / 60000));
+  return `Este QRCode poderá ser coletado novamente em ${minutes} minuto(s).`;
+}
+
+function scheduleSyncRetry() {
+  if (syncRetryTimer) return;
+  syncRetryTimer = window.setTimeout(() => {
+    syncRetryTimer = undefined;
+    syncPendingRecords();
+  }, 15000);
+}
+
+async function syncPendingRecords() {
+  if (syncRunning || !navigator.onLine || !userId ||
+      ![...localRecords.values()].some((record) => record.status === "pending" && record.id.startsWith("leitura_"))) return;
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = undefined;
+  syncRunning = true;
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const registerScan = functionsModule.httpsCallable(functions, "registerActivityScan", {timeout: 30000});
+    while (navigator.onLine) {
+      const record = [...localRecords.values()]
+        .filter((item) => item.status === "pending" && item.id.startsWith("leitura_"))
+        .sort((a, b) => a.createdAt - b.createdAt)[0];
+      if (!record) break;
+      try {
+        const response = await registerScan({
+          registroId: record.id,
+          atividadeId: record.activityId,
+          qrcode: record.qrcode,
+          coletadoNoDispositivoEm: record.createdAt,
+        });
+        if (response.data.status === "aceito") updateLocalRecord(record.id, {status: "synced"});
+        else if (response.data.status === "aguardar") {
+          const retryAt = Date.parse(response.data.proximaLeituraEm);
+          updateLocalRecord(record.id, {status: "duplicate", retryAt});
+          setFeedback(`Leitura de ${record.qrcode} ignorada. ${retryMessage(retryAt)}`, "error");
+        } else throw new Error("Resposta inesperada ao registrar a leitura.");
+      } catch (error) {
+        console.error("Falha ao sincronizar a coleta.", error);
+        if (["functions/invalid-argument", "functions/permission-denied", "functions/unauthenticated", "functions/already-exists"].includes(error?.code)) {
+          updateLocalRecord(record.id, {status: "error"});
+          setFeedback("Uma coleta não pôde ser sincronizada. Verifique o painel de status.", "error");
+          continue;
+        }
+        scheduleSyncRetry();
+        break;
+      }
+    }
+  } catch (error) {
+    console.error("Não foi possível iniciar a sincronização da coleta.", error);
+    scheduleSyncRetry();
+  } finally {
+    syncRunning = false;
+    renderSyncStatus();
+  }
 }
 async function stopQrReader() {
   if (!scanner || !scanning) return;
@@ -95,41 +162,51 @@ async function stopQrReader() {
 
 async function registerQrcode(qrcode) {
   try {
-    const {db, firestoreModule} = await getFirestoreServices();
     const normalizedQrcode = String(qrcode).trim();
-    const recordId = await recordIdFor(activityId, normalizedQrcode);
-    const reference = firestoreModule.doc(db, "coletaAtividadesRegistros", recordId);
-    const existing = await firestoreModule.getDocFromCache(reference).catch(() => null);
-    if (existing?.exists() || localRecords.has(recordId)) {
+    if (!normalizedQrcode) throw new Error("QRCode vazio.");
+    const now = Date.now();
+    const previous = [...localRecords.values()]
+      .filter((record) => record.activityId === activityId && record.qrcode === normalizedQrcode &&
+        ["pending", "synced"].includes(record.status) && Number.isFinite(record.createdAt))
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (previous && now - previous.createdAt < cooldownMilliseconds) {
       await showScanSuccess(normalizedQrcode, true);
-      setFormFeedback("Este QRCode já foi coletado nesta atividade. Aponte para o próximo.", "error");
+      setFormFeedback(retryMessage(previous.createdAt + cooldownMilliseconds), "error");
       return;
     }
+    const recordId = `leitura_${crypto.randomUUID()}`;
     localRecords.set(recordId, {
       id: recordId,
       activityId,
       qrcode: normalizedQrcode,
       status: "pending",
-      createdAt: Date.now(),
+      createdAt: now,
     });
     saveLocalRecords();
     renderSyncStatus();
-    const write = firestoreModule.setDoc(reference, {
-      atividadeId: activityId,
-      assistenteId: userId,
-      qrcode: normalizedQrcode,
-      registradoEm: firestoreModule.serverTimestamp(),
-    });
-    write.then(() => updateLocalRecord(recordId, {status: "synced"})).catch((error) => {
-      console.error("Falha ao sincronizar a coleta.", error);
-      updateLocalRecord(recordId, {status: "error"});
-      setFeedback("Uma coleta não pôde ser sincronizada. Verifique o painel de status.", "error");
-    });
-    setFeedback(navigator.onLine
-      ? "Participação registrada neste aparelho e aguardando sincronização."
-      : "Participação salva offline. Ela será enviada quando a internet voltar.");
-    await showScanSuccess(normalizedQrcode);
-    setFormFeedback("Participação registrada. Aponte a câmera para o próximo QRCode.", "success");
+    if (navigator.onLine) {
+      await Promise.race([
+        syncPendingRecords(),
+        new Promise((resolve) => window.setTimeout(resolve, 3000)),
+      ]);
+    }
+    const result = localRecords.get(recordId);
+    if (result?.status === "duplicate") {
+      await showScanSuccess(normalizedQrcode, true);
+      setFormFeedback(retryMessage(result.retryAt), "error");
+    } else if (result?.status === "error") {
+      await showScanSuccess(normalizedQrcode, true, "Leitura não registrada");
+      setFormFeedback("Não foi possível confirmar a leitura. Verifique o painel de status.", "error");
+    } else if (result?.status === "synced") {
+      await showScanSuccess(normalizedQrcode);
+      setFormFeedback("Participação registrada. Aponte a câmera para o próximo QRCode.", "success");
+    } else {
+      setFeedback(navigator.onLine
+        ? "Leitura salva neste aparelho e aguardando confirmação."
+        : "Leitura salva offline. Ela será sincronizada quando a internet voltar.");
+      await showScanSuccess(normalizedQrcode, false, "Leitura salva no aparelho");
+      setFormFeedback("Leitura pendente de sincronização. Aponte a câmera para o próximo QRCode.", "success");
+    }
   } catch (error) {
     console.error(error);
     setFormFeedback("Não foi possível registrar o QRCode. Tente novamente.", "error");
@@ -261,8 +338,9 @@ authModule.onAuthStateChanged(auth, async (user) => {
   renderSyncStatus();
   subscribeToRecords();
   await load();
+  syncPendingRecords();
 });
 
-window.addEventListener("online", renderSyncStatus);
+window.addEventListener("online", () => { renderSyncStatus(); syncPendingRecords(); });
 window.addEventListener("offline", renderSyncStatus);
 registerOfflineShell();

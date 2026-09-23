@@ -1,4 +1,4 @@
-const CACHE_NAME = "grob-coleta-v1";
+const CACHE_NAME = "grob-coleta-v2";
 const APP_SHELL = [
   "/coleta-atividades/",
   "/coleta-atividades/manifest.webmanifest",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "/css/pre-inscritos.css",
   "/css/gestao-evento.css",
   "/js/auth.js",
-  "/js/coleta-atividades.js",
+  "/js/coleta-atividades.js?v=activity-cooldown-v1",
   "/js/firebase-client.js",
   "/img/LogoPNG.png",
 ];

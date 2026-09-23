@@ -10,6 +10,7 @@ import {repopulatePreInscritoMessages} from "./mensagens.js";
 import {backfillPreInscritoSortOrder} from "./ordenacao.js";
 import {check4EventsPresence, configure4EventsPresenceAutomation, scheduled4EventsPresenceCheck, search4Events} from "./check-4events.js";
 import {consolidateCollectionStaff, createCollectionAssistant, listCollectionStaff, removeCollectionAssistant} from "./gestao-atividades.js";
+import {registerActivityScan} from "./coleta-atividades.js";
 import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead} from "./coleta-leads.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
 import {import4EventsParticipantComplements, list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
@@ -50,6 +51,7 @@ export {
   previewPresenceReminderDay,
   repopulatePreInscritoMessages,
   removeCollectionAssistant,
+  registerActivityScan,
   removeLeadSeller,
   saveLead,
   save4EventsRafflePrize,
