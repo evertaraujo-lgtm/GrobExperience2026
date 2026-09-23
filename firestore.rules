@@ -253,6 +253,11 @@ service cloud.firestore {
 
     match /whatsappEventos/{eventId} {
       allow read: if request.auth != null && !isCollectionAssistant();
+      allow update: if isAdmin()
+        && request.resource.data.respondido is bool
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "respondido", "respondidoEm", "respondidoPorUid"
+        ]);
     }
 
     match /whatsappMensagens/{messageId} {
