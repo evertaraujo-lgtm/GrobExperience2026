@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
-    <link rel="stylesheet" href="/css/webhooks.css?v=responded-v1" />
+    <link rel="stylesheet" href="/css/webhooks.css?v=all-events-v1" />
   </head>
   <body data-auth-page="protected">
     <div class="page-shell">
@@ -19,7 +19,7 @@
       <main class="webhooks-page">
         <section class="dashboard-heading"><p class="eyebrow">Monitoramento</p><h1>Eventos WhatsApp</h1><p>Retornos recebidos pelo webhook desde a ativação deste acompanhamento.</p></section>
         <section class="webhooks-card" aria-live="polite">
-          <div class="webhooks-toolbar"><strong data-total>Carregando...</strong><label class="event-filter"><span>Exibir</span><select data-type-filter aria-label="Filtrar eventos"><option value="todos">Todos os eventos</option><option value="mensagens">Mensagens recebidas</option></select></label><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><button class="back-link" type="button" data-reload>Atualizar</button></div>
+          <div class="webhooks-toolbar"><strong data-total>Carregando...</strong><label class="event-filter"><span>Exibir</span><select data-type-filter aria-label="Filtrar eventos"><option value="todos">Todos os eventos</option><option value="campanhas">Campanhas</option><option value="lembretes">Lembretes</option><option value="gerais">Eventos gerais</option><option value="mensagens">Mensagens recebidas</option></select></label><a class="back-link" href="/app/">Voltar aos pré-inscritos</a><button class="back-link" type="button" data-reload>Atualizar</button></div>
           <div class="events-list" data-list></div>
           <div class="load-more"><button class="back-link" type="button" data-load-more hidden>Carregar mais</button></div>
           <p class="dashboard-feedback" data-feedback></p>
@@ -27,6 +27,6 @@
       </main>
     </div>
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/webhooks.js?v=responded-v1"></script>
+    <script type="module" src="/js/webhooks.js?v=all-events-v1"></script>
   </body>
 </html>
