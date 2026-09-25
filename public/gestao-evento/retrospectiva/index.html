@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Retrospectiva do GROB Experience 2026" />
+    <title>Retrospectiva | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
+    <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3" />
+    <link rel="stylesheet" href="/css/gestao-evento.css" />
+    <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v1" />
+  </head>
+  <body data-auth-page="protected" data-event-management-page="true">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <main class="event-management-page retrospective-page">
+        <section class="dashboard-heading">
+          <p class="eyebrow">22 a 24 de setembro · São Bernardo do Campo</p>
+          <h1>O evento em números</h1>
+          <p>Uma retrospectiva com dados do evento e comentários gerados pelo Gemini.</p>
+        </section>
+        <section class="pre-inscritos-card retrospective-card">
+          <div class="dashboard-toolbar"><strong>Retrospectiva 2026</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/participacao/">Voltar à participação</a><button class="button" type="button" data-generate disabled>Gerar com Gemini</button></div></div>
+          <p class="retrospective-status" data-status>Carregando retrospectiva...</p>
+          <p class="retrospective-note">Gerar novamente recalcula os números e faz uma nova chamada ao Gemini. Abrir esta página usa o resultado salvo.</p>
+          <div class="retrospective-content" data-content hidden>
+            <header class="retrospective-intro"><p class="eyebrow">A história dos dados</p><h2 data-story-title></h2><p data-story-summary></p><small data-generated-at></small></header>
+            <div class="retrospective-metrics">
+              <article><small>Leituras nas atividades</small><strong data-scans>—</strong><span>Registros de QR Code entre 22 e 24/09</span></article>
+              <article><small>Códigos distintos</small><strong data-codes>—</strong><span>Não equivale a pessoas únicas</span></article>
+              <article><small>Presenças na 4Events</small><strong data-presence>—</strong><span>Última importação do evento</span></article>
+              <article><small>Respostas à pesquisa</small><strong data-survey-count>—</strong><span>Respostas anônimas recebidas</span></article>
+            </div>
+            <div class="retrospective-grid">
+              <section class="retrospective-panel"><h3>O ritmo dos três dias</h3><div class="retrospective-bars" data-days></div></section>
+              <section class="retrospective-panel"><h3>Atividades mais movimentadas</h3><div class="retrospective-bars" data-activities></div></section>
+              <section class="retrospective-panel"><h3>Horas de maior movimento</h3><div class="retrospective-peaks" data-peaks></div></section>
+              <section class="retrospective-panel"><h3>Vozes da pesquisa</h3><div class="retrospective-survey" data-survey></div></section>
+            </div>
+            <section class="retrospective-insights"><div class="management-title"><h2>O olhar do Gemini</h2><small>Comentários gerados a partir dos números acima</small></div><div class="retrospective-insight-list" data-insights></div></section>
+          </div>
+          <p class="dashboard-feedback" data-feedback role="status"></p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
+    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v1"></script>
+  </body>
+</html>

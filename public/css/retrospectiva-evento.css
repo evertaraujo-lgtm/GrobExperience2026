@@ -1,0 +1,44 @@
+.retrospective-page { width: min(1180px, 100%); }
+.retrospective-card { display: grid; gap: 22px; }
+.retrospective-card .dashboard-toolbar .button { margin: 0; }
+.retrospective-status { margin: 0; color: var(--muted); font-size: .9rem; }
+.retrospective-note { margin: -12px 0 0; color: var(--muted); font-size: .72rem; line-height: 1.5; }
+.retrospective-content { display: grid; gap: 22px; }
+.retrospective-content[hidden] { display: none; }
+.retrospective-intro { padding: 26px; border: 1px solid rgba(125,214,255,.28); border-radius: 20px; background: radial-gradient(circle at top right, rgba(40,164,215,.24), transparent 48%), rgba(4,18,42,.66); }
+.retrospective-intro .eyebrow { margin: 0 0 8px; }
+.retrospective-intro h2 { margin: 0 0 8px; font: 700 clamp(2rem, 5vw, 3.4rem)/1 Rajdhani, sans-serif; }
+.retrospective-intro p { max-width: 72ch; margin: 0 0 14px; line-height: 1.6; }
+.retrospective-intro small { color: var(--muted); }
+.retrospective-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.retrospective-metrics article { display: grid; align-content: start; gap: 6px; padding: 18px; border: 1px solid rgba(125,214,255,.2); border-radius: 16px; background: rgba(4,18,42,.58); }
+.retrospective-metrics small { color: var(--muted); font-size: .75rem; }
+.retrospective-metrics strong { color: #8be8ff; font: 700 clamp(2rem, 4vw, 3rem)/1 Rajdhani, sans-serif; }
+.retrospective-metrics span { color: var(--muted); font-size: .7rem; line-height: 1.5; }
+.retrospective-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.retrospective-panel { padding: 20px; border: 1px solid rgba(125,214,255,.18); border-radius: 17px; background: rgba(4,18,42,.52); }
+.retrospective-panel h3 { margin: 0 0 16px; font: 700 1.4rem Rajdhani, sans-serif; }
+.retrospective-bars { display: grid; gap: 13px; }
+.retrospective-bar { display: grid; gap: 5px; }
+.retrospective-bar-head { display: flex; justify-content: space-between; gap: 10px; font-size: .78rem; }
+.retrospective-bar-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.retrospective-bar-head strong { color: #b9f0ff; white-space: nowrap; }
+.retrospective-bar-track { height: 9px; overflow: hidden; border-radius: 99px; background: rgba(125,214,255,.12); }
+.retrospective-bar-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #31b7dc, #8df1d7); }
+.retrospective-peaks { display: grid; gap: 9px; }
+.retrospective-peaks article { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(125,214,255,.08); font-size: .8rem; }
+.retrospective-peaks strong { color: #b9f0ff; }
+.retrospective-survey { display: grid; gap: 14px; }
+.retrospective-survey article { display: grid; gap: 8px; }
+.retrospective-survey article > strong { font-size: .8rem; line-height: 1.4; }
+.retrospective-survey ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.retrospective-survey li { padding: 6px 8px; border: 1px solid rgba(125,214,255,.18); border-radius: 99px; color: var(--muted); font-size: .72rem; }
+.retrospective-insights { display: grid; gap: 12px; }
+.retrospective-insights .management-title { margin: 0; }
+.retrospective-insight-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.retrospective-insight-list article { padding: 18px; border: 1px solid rgba(125,214,255,.24); border-radius: 15px; background: linear-gradient(145deg, rgba(20,88,130,.35), rgba(4,18,42,.66)); }
+.retrospective-insight-list h3 { margin: 0 0 8px; color: #b9f0ff; font: 700 1.35rem Rajdhani, sans-serif; }
+.retrospective-insight-list p { margin: 0; line-height: 1.6; font-size: .83rem; }
+.retrospective-empty { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.6; }
+@media (max-width: 850px) { .retrospective-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .retrospective-grid, .retrospective-insight-list { grid-template-columns: 1fr; } .retrospective-intro { padding: 20px; } .retrospective-metrics article { padding: 14px; } }

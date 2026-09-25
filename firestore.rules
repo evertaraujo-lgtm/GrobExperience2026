@@ -240,6 +240,11 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // O resumo é gerado apenas pela Cloud Function; administradores consultam o resultado.
+    match /retrospectivasEvento/{retrospectivaId} {
+      allow read: if isAdmin();
+    }
+
     match /coletaLeadsConfiguracoes/{configuracaoId} {
       allow read: if isAdmin() || isLeadSeller();
       allow create, update, delete: if isAdmin();

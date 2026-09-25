@@ -101,7 +101,14 @@ O webhook recebe status e respostas dos participantes. Requisições `POST` da M
 | `coletaAtividades` | Atividades presenciais e responsáveis |
 | `coletaAtividadesRegistros` | Leituras de QR Code por atividade |
 | `coletaLeads` | Leads coletados pela equipe |
+| `retrospectivasEvento` | Resumo estatístico e texto gerado para a retrospectiva administrativa |
 | `users` | Perfis e papéis internos |
+
+### Retrospectiva do evento com Gemini
+
+A página administrativa `/gestao-evento/retrospectiva/` gera, sob demanda, um resumo dos dias 22 a 24 de setembro de 2026. A Cloud Function `generateEventRetrospective` calcula as leituras de atividades, a presença importada do EID 2 da 4Events e as distribuições das respostas de múltipla escolha da pesquisa. Códigos QR, nomes de participantes, telefones e respostas abertas não são enviados ao Gemini. O resultado fica salvo em `retrospectivasEvento/grob-experience-2026`, e abrir a página novamente não relê todas as coleções nem chama o modelo.
+
+Antes de publicar a função, configure uma chave da Gemini Developer API no Secret Manager do Firebase com `firebase functions:secrets:set GEMINI_API_KEY --project grobexperience`. A chave não deve ser colocada no código nem no navegador. O modelo configurado no código é `gemini-3.8-flash`. A função e a página exigem um usuário administrador; a coleção de resultados permite somente leitura administrativa pelo cliente.
 
 ### Complementos dos participantes 4 Events
 
