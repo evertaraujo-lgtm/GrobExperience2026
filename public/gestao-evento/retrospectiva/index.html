@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3" />
     <link rel="stylesheet" href="/css/gestao-evento.css" />
-    <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v1" />
+    <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v3" />
   </head>
   <body data-auth-page="protected" data-event-management-page="true">
     <div class="page-shell">
@@ -27,21 +27,35 @@
         <section class="pre-inscritos-card retrospective-card">
           <div class="dashboard-toolbar"><strong>Retrospectiva 2026</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/participacao/">Voltar à participação</a><button class="button" type="button" data-generate disabled>Gerar com Gemini</button></div></div>
           <p class="retrospective-status" data-status>Carregando retrospectiva...</p>
-          <p class="retrospective-note">Gerar novamente recalcula os números e faz uma nova chamada ao Gemini. Abrir esta página usa o resultado salvo.</p>
+          <p class="retrospective-note">Atualizar recalcula os números e pede novos comentários ao Gemini. A última análise concluída continua disponível se a atualização falhar.</p>
+          <label class="retrospective-version" data-version-wrap hidden>Versão exibida <select data-version><option value="latest">Mais recente</option></select></label>
           <div class="retrospective-content" data-content hidden>
             <header class="retrospective-intro"><p class="eyebrow">A história dos dados</p><h2 data-story-title></h2><p data-story-summary></p><small data-generated-at></small></header>
             <div class="retrospective-metrics">
               <article><small>Leituras nas atividades</small><strong data-scans>—</strong><span>Registros de QR Code entre 22 e 24/09</span></article>
               <article><small>Códigos distintos</small><strong data-codes>—</strong><span>Não equivale a pessoas únicas</span></article>
-              <article><small>Presenças na 4Events</small><strong data-presence>—</strong><span>Última importação do evento</span></article>
+              <article><small>Inscrições nos três dias</small><strong data-registrations>—</strong><span>Todos os públicos · 4Events</span></article>
+              <article><small>Presenças nos três dias</small><strong data-presence>—</strong><span>Todos os públicos · última importação</span></article>
+              <article><small>Visitantes presentes</small><strong data-visitor-presence>—</strong><span>Categorias VISITANTE · três dias</span></article>
+              <article><small>Leads registrados</small><strong data-lead-count>—</strong><span>Coleta comercial e pós-vendas</span></article>
+              <article><small>WhatsApp enviados</small><strong data-whatsapp-sent>—</strong><span>Mensagens aceitas pela API · sem testes</span></article>
+              <article><small>WhatsApp recebidos</small><strong data-whatsapp-received>—</strong><span>Mensagens recebidas pelo webhook</span></article>
               <article><small>Respostas à pesquisa</small><strong data-survey-count>—</strong><span>Respostas anônimas recebidas</span></article>
             </div>
+            <section class="retrospective-section"><div class="management-title"><h2>Público por dia</h2><small>Inscrições e presenças da 4Events · todas as categorias e só visitantes</small></div><div class="retrospective-table-wrap"><table class="retrospective-table"><thead><tr><th>Dia</th><th>Público</th><th>Inscritos</th><th>Presentes</th><th>Sem informação</th><th>Presença</th></tr></thead><tbody data-audience></tbody></table></div><p class="retrospective-note" data-audience-note></p></section>
             <div class="retrospective-grid">
               <section class="retrospective-panel"><h3>O ritmo dos três dias</h3><div class="retrospective-bars" data-days></div></section>
               <section class="retrospective-panel"><h3>Atividades mais movimentadas</h3><div class="retrospective-bars" data-activities></div></section>
+              <section class="retrospective-panel"><h3>Revisitas às atividades</h3><div class="retrospective-bars" data-revisits></div><p class="retrospective-note">Nova leitura do mesmo QR Code na mesma atividade.</p></section>
               <section class="retrospective-panel"><h3>Horas de maior movimento</h3><div class="retrospective-peaks" data-peaks></div></section>
               <section class="retrospective-panel"><h3>Vozes da pesquisa</h3><div class="retrospective-survey" data-survey></div></section>
+              <section class="retrospective-panel"><h3>Leads por vendedor</h3><div class="retrospective-bars" data-sellers></div></section>
             </div>
+            <section class="retrospective-section"><div class="management-title"><h2>Categorias dos três dias</h2><small>Quantidade por categoria, conforme a última importação da 4Events</small></div><div class="retrospective-category-grid" data-categories></div></section>
+            <section class="retrospective-section"><div class="management-title"><h2>Oportunidades da coleta de leads</h2><small>Respostas estruturadas; cada pergunta usa seus próprios respondentes</small></div><div class="retrospective-category-grid" data-lead-fields></div></section>
+            <section class="retrospective-section"><div class="management-title"><h2>Comunicação por WhatsApp</h2><small>Volumes enviados e recebidos por finalidade</small></div><div class="retrospective-category-grid" data-whatsapp></div></section>
+            <section class="retrospective-section"><div class="management-title"><h2>O que chegou pelo WhatsApp</h2><small>Dúvidas, problemas e motivos de desistência identificados nos textos recebidos</small></div><p class="retrospective-note" data-message-sample-note></p><div class="retrospective-category-grid"><article><h3>Maiores dúvidas</h3><div class="retrospective-themes" data-doubts></div></article><article><h3>Problemas relatados</h3><div class="retrospective-themes" data-problems></div></article><article><h3>Não participação ou desistência</h3><div class="retrospective-themes" data-dropouts></div></article></div></section>
+            <section class="retrospective-section"><div class="management-title"><h2>Mensagens recebidas</h2><small>Até 40 textos mais recentes, com ocultação automática de nomes e contatos · acesso administrativo</small></div><div class="retrospective-message-list" data-received-texts></div></section>
             <section class="retrospective-insights"><div class="management-title"><h2>O olhar do Gemini</h2><small>Comentários gerados a partir dos números acima</small></div><div class="retrospective-insight-list" data-insights></div></section>
           </div>
           <p class="dashboard-feedback" data-feedback role="status"></p>
@@ -49,6 +63,6 @@
       </main>
     </div>
     <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v2"></script>
+    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v3"></script>
   </body>
 </html>

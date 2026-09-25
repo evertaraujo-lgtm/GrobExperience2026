@@ -40,5 +40,37 @@
 .retrospective-insight-list h3 { margin: 0 0 8px; color: #b9f0ff; font: 700 1.35rem Rajdhani, sans-serif; }
 .retrospective-insight-list p { margin: 0; line-height: 1.6; font-size: .83rem; }
 .retrospective-empty { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.6; }
+.retrospective-version { display: flex; align-items: center; gap: 10px; width: fit-content; color: var(--muted); font-size: .8rem; }
+.retrospective-version[hidden] { display: none; }
+.retrospective-version select { min-width: 220px; padding: 9px 12px; border: 1px solid rgba(125,214,255,.28); border-radius: 10px; background: #10263d; color: #fff; font: inherit; }
+.retrospective-section { display: grid; gap: 14px; }
+.retrospective-section .management-title { margin: 0; }
+.retrospective-section .management-title h2 { margin: 0; }
+.retrospective-table-wrap { overflow-x: auto; border: 1px solid rgba(125,214,255,.18); border-radius: 16px; }
+.retrospective-table { width: 100%; border-collapse: collapse; min-width: 580px; font-size: .82rem; }
+.retrospective-table th, .retrospective-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(125,214,255,.12); }
+.retrospective-table th { color: #b9f0ff; background: rgba(125,214,255,.08); }
+.retrospective-table td { color: var(--muted); }
+.retrospective-table tr:last-child td { border-bottom: none; }
+.retrospective-table tr.is-total td { color: #fff; font-weight: 700; background: rgba(125,214,255,.05); }
+.retrospective-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.retrospective-category-grid article { padding: 18px; border: 1px solid rgba(125,214,255,.18); border-radius: 16px; background: rgba(4,18,42,.52); }
+.retrospective-category-grid h3 { margin: 0 0 12px; font: 700 1.3rem Rajdhani, sans-serif; }
+.retrospective-category-grid ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.retrospective-category-grid li { display: flex; justify-content: space-between; gap: 12px; font-size: .78rem; }
+.retrospective-category-grid li span { color: var(--muted); }
+.retrospective-category-grid li strong { color: #b9f0ff; white-space: nowrap; }
+.retrospective-category-grid small { color: var(--muted); }
+.retrospective-insight-group { display: inline-block; margin-bottom: 8px; color: #8df1d7; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+.retrospective-themes { display: grid; gap: 12px; }
+.retrospective-themes article { padding: 0 0 12px; border: 0; border-bottom: 1px solid rgba(125,214,255,.14); border-radius: 0; background: transparent; }
+.retrospective-themes article:last-child { padding-bottom: 0; border-bottom: 0; }
+.retrospective-themes h4 { margin: 0 0 4px; color: #b9f0ff; font-size: .85rem; }
+.retrospective-themes p { margin: 0 0 5px; font-size: .78rem; line-height: 1.5; }
+.retrospective-themes blockquote { margin: 8px 0 0; padding-left: 10px; border-left: 2px solid rgba(141,241,215,.5); color: var(--muted); font-size: .72rem; line-height: 1.45; overflow-wrap: anywhere; }
+.retrospective-message-list { display: grid; gap: 9px; max-height: 490px; overflow-y: auto; }
+.retrospective-message-list article { padding: 12px 15px; border: 1px solid rgba(125,214,255,.16); border-radius: 12px; background: rgba(4,18,42,.52); }
+.retrospective-message-list p { margin: 0 0 5px; font-size: .8rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.retrospective-message-list small { color: var(--muted); font-size: .68rem; }
 @media (max-width: 850px) { .retrospective-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .retrospective-grid, .retrospective-insight-list { grid-template-columns: 1fr; } .retrospective-intro { padding: 20px; } .retrospective-metrics article { padding: 14px; } }
+@media (max-width: 620px) { .retrospective-grid, .retrospective-insight-list, .retrospective-category-grid { grid-template-columns: 1fr; } .retrospective-intro { padding: 20px; } .retrospective-metrics article { padding: 14px; } }

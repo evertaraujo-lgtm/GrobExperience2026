@@ -243,6 +243,9 @@ service cloud.firestore {
     // O resumo é gerado apenas pela Cloud Function; administradores consultam o resultado.
     match /retrospectivasEvento/{retrospectivaId} {
       allow read: if isAdmin();
+      match /versoes/{versaoId} {
+        allow read: if isAdmin();
+      }
     }
 
     match /coletaLeadsConfiguracoes/{configuracaoId} {
