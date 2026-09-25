@@ -14,10 +14,10 @@
     <link rel="stylesheet" href="/css/gestao-evento.css" />
     <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v3" />
   </head>
-  <body data-auth-page="protected" data-event-management-page="true">
+  <body data-event-management-page="true">
     <div class="page-shell">
       <div class="glow glow-one"></div><div class="glow glow-two"></div>
-      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><button class="back-link logout" type="button" data-logout>Sair</button></header>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a><a class="back-link" href="/login/" data-login hidden>Entrar</a><button class="back-link logout" type="button" data-logout hidden>Sair</button></header>
       <main class="event-management-page retrospective-page">
         <section class="dashboard-heading">
           <p class="eyebrow">22 a 24 de setembro · São Bernardo do Campo</p>
@@ -25,9 +25,9 @@
           <p>Uma retrospectiva com dados do evento e comentários gerados pelo Gemini.</p>
         </section>
         <section class="pre-inscritos-card retrospective-card">
-          <div class="dashboard-toolbar"><strong>Retrospectiva 2026</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/participacao/">Voltar à participação</a><button class="button" type="button" data-generate disabled>Gerar com Gemini</button></div></div>
+          <div class="dashboard-toolbar"><strong>Retrospectiva 2026</strong><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/participacao/" data-admin-control hidden>Voltar à participação</a><button class="button" type="button" data-generate data-admin-control hidden disabled>Gerar com Gemini</button></div></div>
           <p class="retrospective-status" data-status>Carregando retrospectiva...</p>
-          <p class="retrospective-note">Atualizar recalcula os números e pede novos comentários ao Gemini. A última análise concluída continua disponível se a atualização falhar.</p>
+          <p class="retrospective-note" data-admin-control hidden>Atualizar recalcula os números e pede novos comentários ao Gemini. A última análise concluída continua disponível se a atualização falhar.</p>
           <label class="retrospective-version" data-version-wrap hidden>Versão exibida <select data-version><option value="latest">Mais recente</option></select></label>
           <div class="retrospective-content" data-content hidden>
             <header class="retrospective-intro"><p class="eyebrow">A história dos dados</p><h2 data-story-title></h2><p data-story-summary></p><small data-generated-at></small></header>
@@ -49,20 +49,19 @@
               <section class="retrospective-panel"><h3>Revisitas às atividades</h3><div class="retrospective-bars" data-revisits></div><p class="retrospective-note">Nova leitura do mesmo QR Code na mesma atividade.</p></section>
               <section class="retrospective-panel"><h3>Horas de maior movimento</h3><div class="retrospective-peaks" data-peaks></div></section>
               <section class="retrospective-panel"><h3>Vozes da pesquisa</h3><div class="retrospective-survey" data-survey></div></section>
-              <section class="retrospective-panel"><h3>Leads por vendedor</h3><div class="retrospective-bars" data-sellers></div></section>
+              <section class="retrospective-panel" data-private-section hidden><h3>Leads por vendedor</h3><div class="retrospective-bars" data-sellers></div></section>
             </div>
             <section class="retrospective-section"><div class="management-title"><h2>Categorias dos três dias</h2><small>Quantidade por categoria, conforme a última importação da 4Events</small></div><div class="retrospective-category-grid" data-categories></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>Oportunidades da coleta de leads</h2><small>Respostas estruturadas; cada pergunta usa seus próprios respondentes</small></div><div class="retrospective-category-grid" data-lead-fields></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>Comunicação por WhatsApp</h2><small>Volumes enviados e recebidos por finalidade</small></div><div class="retrospective-category-grid" data-whatsapp></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>O que chegou pelo WhatsApp</h2><small>Dúvidas, problemas e motivos de desistência identificados nos textos recebidos</small></div><p class="retrospective-note" data-message-sample-note></p><div class="retrospective-category-grid"><article><h3>Maiores dúvidas</h3><div class="retrospective-themes" data-doubts></div></article><article><h3>Problemas relatados</h3><div class="retrospective-themes" data-problems></div></article><article><h3>Não participação ou desistência</h3><div class="retrospective-themes" data-dropouts></div></article></div></section>
-            <section class="retrospective-section"><div class="management-title"><h2>Mensagens recebidas</h2><small>Até 40 textos mais recentes, com ocultação automática de nomes e contatos · acesso administrativo</small></div><div class="retrospective-message-list" data-received-texts></div></section>
+            <section class="retrospective-section" data-private-section hidden><div class="management-title"><h2>Mensagens recebidas</h2><small>Até 40 textos mais recentes, com ocultação automática de nomes e contatos · acesso administrativo</small></div><div class="retrospective-message-list" data-received-texts></div></section>
             <section class="retrospective-insights"><div class="management-title"><h2>O olhar do Gemini</h2><small>Comentários gerados a partir dos números acima</small></div><div class="retrospective-insight-list" data-insights></div></section>
           </div>
           <p class="dashboard-feedback" data-feedback role="status"></p>
         </section>
       </main>
     </div>
-    <script type="module" src="/js/auth.js?v=raffle-nav-v1"></script>
-    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v3"></script>
+    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v4"></script>
   </body>
 </html>

@@ -9,8 +9,11 @@ const versionWrap = document.querySelector("[data-version-wrap]");
 const number = new Intl.NumberFormat("pt-BR");
 const percentFormat = new Intl.NumberFormat("pt-BR", {maximumFractionDigits: 1});
 let currentData = null;
+let publicData = null;
 let versions = [];
 let generating = false;
+let adminMode = false;
+let adminReady = false;
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
@@ -51,6 +54,15 @@ function empty(container, message) {
 
 function percentage(part, total) {
   return total > 0 ? `${percentFormat.format(part / total * 100)}%` : "—";
+}
+
+function asDate(value) {
+  if (typeof value?.toDate === "function") return value.toDate();
+  if (typeof value === "string") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return null;
 }
 
 function listCard(container, title, rows, note = "") {
@@ -119,8 +131,9 @@ function renderThemes(container, themes, emptyMessage) {
 function renderSummary(summary, narrative, generatedAt) {
   document.querySelector("[data-story-title]").textContent = narrative.titulo || "O GROB Experience em números";
   document.querySelector("[data-story-summary]").textContent = narrative.resumo || "Os números já estão disponíveis. A análise do Gemini ainda não foi gerada.";
-  document.querySelector("[data-generated-at]").textContent = generatedAt?.toDate
-    ? `${narrative.titulo ? "Gerada" : "Números calculados"} em ${generatedAt.toDate().toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"})}` : "";
+  const generationDate = asDate(generatedAt);
+  document.querySelector("[data-generated-at]").textContent = generationDate
+    ? `${narrative.titulo ? "Gerada" : "Números calculados"} em ${generationDate.toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"})}` : "";
   document.querySelector("[data-scans]").textContent = number.format(summary.leituras?.total || 0);
   document.querySelector("[data-codes]").textContent = number.format(summary.leituras?.codigosDistintos || 0);
   document.querySelector("[data-registrations]").textContent = number.format(summary.quatroEventos?.importados || 0);
@@ -250,9 +263,11 @@ function renderSummary(summary, narrative, generatedAt) {
   } else empty(whatsapp, "Atualize a análise para ver os volumes de WhatsApp.");
 
   const sample = Array.isArray(summary.whatsapp?.amostraAnalise) ? summary.whatsapp.amostraAnalise : [];
-  const represented = sample.reduce((sum, item) => sum + (item.ocorrencias || 0), 0);
+  const sampleSize = summary.whatsapp?.amostraTamanho ?? sample.length;
+  const represented = summary.whatsapp?.amostraCobertura ??
+    sample.reduce((sum, item) => sum + (item.ocorrencias || 0), 0);
   document.querySelector("[data-message-sample-note]").textContent = summary.whatsapp
-    ? `${number.format(summary.whatsapp.comTexto || 0)} mensagens com texto foram registradas. A análise temática usa até ${number.format(sample.length)} textos distintos, representando ${number.format(represented)} mensagem(ns). Um texto pode sustentar mais de um tema; motivos só aparecem quando declarados explicitamente.`
+    ? `${number.format(summary.whatsapp.comTexto || 0)} mensagens com texto foram registradas. A análise temática usa até ${number.format(sampleSize)} textos distintos, representando ${number.format(represented)} mensagem(ns). Um texto pode sustentar mais de um tema; motivos só aparecem quando declarados explicitamente.`
     : "Atualize a análise para avaliar os textos recebidos.";
   renderThemes(document.querySelector("[data-doubts]"), narrative.duvidas,
     "Nenhuma dúvida recorrente identificada ou análise do Gemini indisponível.");
@@ -304,7 +319,7 @@ function render(data) {
   content.hidden = !hasSummary;
   if (hasSummary) renderSummary(displayed.resumo, displayed.narrativa || {}, displayed.geradoEm || displayed.resumoGeradoEm);
   generateButton.textContent = hasRetrospective ? "Atualizar análise" : "Gerar com Gemini";
-  generateButton.disabled = generating || data?.status === "generating";
+  generateButton.disabled = !adminMode || !adminReady || generating || data?.status === "generating";
   status.textContent = selectedVersion ? "Exibindo uma versão anterior da retrospectiva."
     : data?.status === "generating"
     ? "Calculando os números e escrevendo a retrospectiva..."
@@ -312,7 +327,7 @@ function render(data) {
       : hasRetrospective ? "Números calculados a partir dos registros do evento."
       : hasSummary ? "Números calculados. Os comentários do Gemini ainda não estão disponíveis."
         : "A retrospectiva ainda não foi gerada.";
-  if (data?.status === "error") setFeedback(data.erro || "Não foi possível gerar a retrospectiva.", "error");
+  if (adminMode && data?.status === "error") setFeedback(data.erro || "Não foi possível gerar a retrospectiva.", "error");
 }
 
 function renderVersions() {
@@ -324,14 +339,14 @@ function renderVersions() {
       versionSelect.add(new Option(date ? date.toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"}) : item.id, item.id));
     });
   versionSelect.value = [...versionSelect.options].some((option) => option.value === selected) ? selected : "latest";
-  versionWrap.hidden = versionSelect.options.length < 2;
+  versionWrap.hidden = !adminMode || versionSelect.options.length < 2;
   render(currentData);
 }
 
 versionSelect.addEventListener("change", () => render(currentData));
 
 generateButton.addEventListener("click", async () => {
-  if (generating) return;
+  if (!adminMode || !adminReady || generating) return;
   generating = true;
   generateButton.disabled = true;
   status.textContent = "Calculando os números e escrevendo a retrospectiva...";
@@ -350,19 +365,74 @@ generateButton.addEventListener("click", async () => {
   }
 });
 
+async function loadPublicRetrospective() {
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const getPublic = functionsModule.httpsCallable(functions, "getPublicEventRetrospective");
+    const result = await getPublic();
+    publicData = result.data?.available ? result.data : null;
+    if (!adminMode) render(publicData);
+  } catch (error) {
+    console.error("Não foi possível carregar a retrospectiva pública.", error);
+    if (!adminMode) {
+      status.textContent = "Não foi possível carregar a retrospectiva.";
+      setFeedback("Tente abrir esta página novamente em instantes.", "error");
+    }
+  }
+}
+
+loadPublicRetrospective();
+
 const {auth, authModule} = await getAuthServices();
+let stopCurrent = () => {};
+let stopHistory = () => {};
+let authRevision = 0;
+document.querySelector("[data-logout]").addEventListener("click", () => authModule.signOut(auth));
 authModule.onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
+  const revision = ++authRevision;
+  stopCurrent();
+  stopHistory();
+  adminMode = false;
+  adminReady = false;
+  let isAdmin = false;
+  if (user) {
+    try {
+      const {db, firestoreModule} = await getFirestoreServices();
+      const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
+      isAdmin = profile.exists() && profile.data()?.active !== false && profile.data()?.roles?.admin === true;
+    } catch (error) {
+      console.warn("Não foi possível consultar o perfil administrativo.", error);
+    }
+  }
+  if (revision !== authRevision) return;
+  adminMode = isAdmin;
+  document.querySelector("[data-login]").hidden = Boolean(user);
+  document.querySelector("[data-logout]").hidden = !user;
+  document.querySelectorAll("[data-admin-control], [data-private-section]")
+    .forEach((element) => { element.hidden = !isAdmin; });
+  versions = [];
+  versionSelect.value = "latest";
+  versionWrap.hidden = true;
+  setFeedback("");
+  if (!isAdmin) {
+    render(publicData);
+    return;
+  }
+  render(null);
+  status.textContent = "Carregando retrospectiva...";
   try {
     const {db, firestoreModule} = await getFirestoreServices();
-    const profile = await firestoreModule.getDoc(firestoreModule.doc(db, "users", user.uid));
-    if (!profile.exists() || profile.data()?.active === false || profile.data()?.roles?.admin !== true) {
-      window.location.replace("/app/");
-      return;
-    }
-    firestoreModule.onSnapshot(firestoreModule.doc(db, "retrospectivasEvento", "grob-experience-2026"),
-      (snapshot) => { render(snapshot.exists() ? snapshot.data() : null); renderVersions(); },
+    if (revision !== authRevision) return;
+    stopCurrent = firestoreModule.onSnapshot(
+      firestoreModule.doc(db, "retrospectivasEvento", "grob-experience-2026"),
+      (snapshot) => {
+        if (revision !== authRevision || !adminMode) return;
+        adminReady = true;
+        render(snapshot.exists() ? snapshot.data() : null);
+        renderVersions();
+      },
       (error) => {
+        if (revision !== authRevision || !adminMode) return;
         console.error(error);
         status.textContent = "Não foi possível carregar a retrospectiva.";
         setFeedback("Verifique sua conexão e suas permissões.", "error");
@@ -370,8 +440,12 @@ authModule.onAuthStateChanged(auth, async (user) => {
     const history = firestoreModule.query(
       firestoreModule.collection(db, "retrospectivasEvento", "grob-experience-2026", "versoes"),
       firestoreModule.orderBy("geradoEm", "desc"), firestoreModule.limit(20));
-    firestoreModule.onSnapshot(history,
-      (snapshot) => { versions = snapshot.docs.map((document) => ({id: document.id, data: document.data()})); renderVersions(); },
+    stopHistory = firestoreModule.onSnapshot(history,
+      (snapshot) => {
+        if (revision !== authRevision || !adminMode) return;
+        versions = snapshot.docs.map((document) => ({id: document.id, data: document.data()}));
+        renderVersions();
+      },
       (error) => console.error("Não foi possível carregar as versões da retrospectiva.", error));
   } catch (error) {
     console.error(error);

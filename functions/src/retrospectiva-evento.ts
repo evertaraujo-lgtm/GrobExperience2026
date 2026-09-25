@@ -43,8 +43,60 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+function asList(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
 function text(value: unknown, limit = 160): string {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
+}
+
+function publicRetrospective(summaryValue: unknown, narrativeValue: unknown, generatedAt: unknown) {
+  const summary = asRecord(summaryValue);
+  const activities = asRecord(summary.atividades);
+  const leads = asRecord(summary.leads);
+  const whatsapp = asRecord(summary.whatsapp);
+  const narrative = asRecord(narrativeValue);
+  const themes = (value: unknown) => asList(value).map((raw) => {
+    const item = asRecord(raw);
+    return {tema: text(item.tema, 90), resumo: text(item.resumo, 300),
+      ocorrenciasNaAmostra: Number(item.ocorrenciasNaAmostra) || 0};
+  });
+  const sample = asList(whatsapp.amostraAnalise);
+  return {
+    geradoEm: generatedAt instanceof Timestamp ? generatedAt.toDate().toISOString() : null,
+    resumo: {
+      periodo: summary.periodo,
+      leituras: summary.leituras,
+      atividades: {ranking: asList(activities.ranking).map((raw) => {
+        const item = asRecord(raw);
+        return {nome: text(item.nome), total: Number(item.total) || 0,
+          revisitas: Number(item.revisitas) || 0};
+      })},
+      quatroEventos: summary.quatroEventos,
+      leads: {total: Number(leads.total) || 0, campos: asList(leads.campos)},
+      whatsapp: {
+        enviadas: Number(whatsapp.enviadas) || 0, recebidas: Number(whatsapp.recebidas) || 0,
+        campanhas: Number(whatsapp.campanhas) || 0,
+        notificacoesChegada: Number(whatsapp.notificacoesChegada) || 0,
+        lembretesPresenca: Number(whatsapp.lembretesPresenca) || 0,
+        outrosEnvios: Number(whatsapp.outrosEnvios) || 0,
+        comTexto: Number(whatsapp.comTexto) || 0,
+        amostraTamanho: sample.length,
+        amostraCobertura: sample.reduce<number>((sum, raw) => sum + (Number(asRecord(raw).ocorrencias) || 0), 0),
+      },
+      pesquisa: summary.pesquisa,
+    },
+    narrativa: {
+      titulo: text(narrative.titulo, 120), resumo: text(narrative.resumo, 400),
+      insights: asList(narrative.insights).map((raw) => {
+        const item = asRecord(raw);
+        return {grupo: text(item.grupo, 20), titulo: text(item.titulo, 90), texto: text(item.texto, 360)};
+      }),
+      duvidas: themes(narrative.duvidas), problemas: themes(narrative.problemas),
+      desistencias: themes(narrative.desistencias),
+    },
+  };
 }
 
 function anonymousMessage(value: unknown, profileName: unknown) {
@@ -493,4 +545,13 @@ export const generateEventRetrospective = onCall({
     });
     throw publicError;
   }
+});
+
+export const getPublicEventRetrospective = onCall({region: "us-central1"}, async () => {
+  const snapshot = await getFirestore().collection("retrospectivasEvento").doc(retrospectiveId).get();
+  if (!snapshot.exists || !snapshot.get("resumo") || !snapshot.get("narrativa")) {
+    return {available: false};
+  }
+  return {available: true, ...publicRetrospective(snapshot.get("resumo"),
+    snapshot.get("narrativa"), snapshot.get("geradoEm"))};
 });
