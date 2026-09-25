@@ -137,7 +137,7 @@ async function generateInsights(summary: Awaited<ReturnType<typeof collectSummar
       generationConfig: {
         temperature: 0.6,
         maxOutputTokens: 2048,
-        responseFormat: {text: {mimeType: "application/json", schema: {
+        responseFormat: {text: {mimeType: "APPLICATION_JSON", schema: {
           type: "object",
           properties: {
             titulo: {type: "string"}, resumo: {type: "string"},
@@ -151,7 +151,20 @@ async function generateInsights(summary: Awaited<ReturnType<typeof collectSummar
     }),
     signal: AbortSignal.timeout(90_000),
   });
-  if (!response.ok) throw new Error(`Gemini retornou HTTP ${response.status}.`);
+  if (!response.ok) {
+    const apiError = asRecord(asRecord(await response.json()).error);
+    console.error(`Gemini retornou HTTP ${response.status}:`, text(apiError.message, 500));
+    if (response.status === 402) {
+      throw new HttpsError("failed-precondition", "Os créditos pré-pagos do Gemini acabaram. Adicione créditos ao projeto no Google AI Studio e tente novamente.");
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new HttpsError("failed-precondition", "A chave do Gemini não tem acesso à API. Verifique a chave e o projeto no Google AI Studio.");
+    }
+    if (response.status === 429) {
+      throw new HttpsError("resource-exhausted", "O limite de uso do Gemini foi atingido. Tente novamente mais tarde.");
+    }
+    throw new Error(`Gemini retornou HTTP ${response.status}.`);
+  }
   const payload = asRecord(await response.json());
   const candidate = asRecord(Array.isArray(payload.candidates) ? payload.candidates[0] : null);
   const content = asRecord(candidate.content);
@@ -180,9 +193,9 @@ export const generateEventRetrospective = onCall({
   const refresh = asRecord(request.data).refresh === true;
   const reference = firestore.collection("retrospectivasEvento").doc(retrospectiveId);
   const generationId = randomUUID();
-  const shouldGenerate = await firestore.runTransaction(async (transaction) => {
+  const generation = await firestore.runTransaction(async (transaction) => {
     const current = await transaction.get(reference);
-    if (current.get("status") === "ready" && !refresh) return false;
+    if (current.get("status") === "ready" && !refresh) return {shouldGenerate: false};
     const startedAt = current.get("geracaoIniciadaEm");
     if (current.get("status") === "generating" && startedAt instanceof Timestamp &&
         Date.now() - startedAt.toMillis() < generationLeaseMilliseconds) {
@@ -190,15 +203,27 @@ export const generateEventRetrospective = onCall({
     }
     transaction.set(reference, {
       status: "generating", geracaoId: generationId, geracaoIniciadaEm: Timestamp.now(),
+      narrativa: FieldValue.delete(), erro: FieldValue.delete(),
     }, {merge: true});
-    return true;
+    return {
+      shouldGenerate: true,
+      cachedSummary: !refresh && current.get("status") === "error"
+        ? current.get("resumo") as Awaited<ReturnType<typeof collectSummary>> | undefined : undefined,
+    };
   });
-  if (!shouldGenerate) return {status: "ready"};
+  if (!generation.shouldGenerate) return {status: "ready"};
 
   try {
     const apiKey = geminiApiKey.value();
     if (!apiKey) throw new Error("O segredo GEMINI_API_KEY não está configurado.");
-    const summary = await collectSummary(firestore);
+    const summary = generation.cachedSummary ?? await collectSummary(firestore);
+    if (!generation.cachedSummary) {
+      await firestore.runTransaction(async (transaction) => {
+        const current = await transaction.get(reference);
+        if (current.get("geracaoId") !== generationId) return;
+        transaction.set(reference, {resumo: summary, resumoGeradoEm: Timestamp.now()}, {merge: true});
+      });
+    }
     const narrative = await generateInsights(summary, apiKey);
     await firestore.runTransaction(async (transaction) => {
       const current = await transaction.get(reference);
@@ -211,14 +236,16 @@ export const generateEventRetrospective = onCall({
     return {status: "ready"};
   } catch (error) {
     console.error("Não foi possível gerar a retrospectiva.", error);
+    const publicError = error instanceof HttpsError ? error
+      : new HttpsError("internal", "Não foi possível gerar a retrospectiva. Tente novamente mais tarde.");
     await firestore.runTransaction(async (transaction) => {
       const current = await transaction.get(reference);
       if (current.get("geracaoId") !== generationId) return;
       transaction.set(reference, {
-        status: "error", erro: "Não foi possível gerar a retrospectiva. Confira a configuração do Gemini e tente novamente.",
+        status: "error", erro: publicError.message,
         geracaoId: FieldValue.delete(), geracaoIniciadaEm: FieldValue.delete(),
       }, {merge: true});
     });
-    throw new HttpsError("internal", "Não foi possível gerar a retrospectiva. Confira a configuração do Gemini.");
+    throw publicError;
   }
 });

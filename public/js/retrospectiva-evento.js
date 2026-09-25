@@ -46,10 +46,10 @@ function empty(container, message) {
 }
 
 function renderSummary(summary, narrative, generatedAt) {
-  document.querySelector("[data-story-title]").textContent = narrative.titulo || "O GROB Experience em retrospectiva";
-  document.querySelector("[data-story-summary]").textContent = narrative.resumo || "";
+  document.querySelector("[data-story-title]").textContent = narrative.titulo || "O GROB Experience em números";
+  document.querySelector("[data-story-summary]").textContent = narrative.resumo || "Os números já estão disponíveis. A análise do Gemini ainda não foi gerada.";
   document.querySelector("[data-generated-at]").textContent = generatedAt?.toDate
-    ? `Gerada em ${generatedAt.toDate().toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"})}` : "";
+    ? `${narrative.titulo ? "Gerada" : "Números calculados"} em ${generatedAt.toDate().toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"})}` : "";
   document.querySelector("[data-scans]").textContent = number.format(summary.leituras?.total || 0);
   document.querySelector("[data-codes]").textContent = number.format(summary.leituras?.codigosDistintos || 0);
   document.querySelector("[data-presence]").textContent = number.format(summary.quatroEventos?.presentes || 0);
@@ -115,18 +115,22 @@ function renderSummary(summary, narrative, generatedAt) {
     item.append(title, text);
     insights.append(item);
   });
+  if (!insights.childElementCount) empty(insights, "Os comentários do Gemini aparecerão aqui quando a geração estiver disponível.");
 }
 
 function render(data) {
   currentData = data;
-  const hasRetrospective = Boolean(data?.resumo && data?.narrativa);
-  content.hidden = !hasRetrospective;
-  if (hasRetrospective) renderSummary(data.resumo, data.narrativa, data.geradoEm);
+  const hasSummary = Boolean(data?.resumo);
+  const hasRetrospective = Boolean(hasSummary && data?.narrativa);
+  content.hidden = !hasSummary;
+  if (hasSummary) renderSummary(data.resumo, data.narrativa || {}, data.geradoEm || data.resumoGeradoEm);
   generateButton.textContent = hasRetrospective ? "Gerar novamente" : "Gerar com Gemini";
   generateButton.disabled = generating || data?.status === "generating";
   status.textContent = data?.status === "generating"
     ? "Calculando os números e escrevendo a retrospectiva..."
-    : hasRetrospective ? "Números calculados a partir dos registros do evento." : "A retrospectiva ainda não foi gerada.";
+    : hasRetrospective ? "Números calculados a partir dos registros do evento."
+      : hasSummary ? "Números calculados. Os comentários do Gemini ainda não estão disponíveis."
+        : "A retrospectiva ainda não foi gerada.";
   if (data?.status === "error") setFeedback(data.erro || "Não foi possível gerar a retrospectiva.", "error");
 }
 
