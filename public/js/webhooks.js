@@ -79,7 +79,11 @@ async function loadParticipantContacts(events, db, firestore) {
 
 function sourceLabel(event) {
   if (event.source === "campanhas") {
-    const name = event.campanhaId === "participacao-chegando" ? "Participação chegando" : event.campanhaId;
+    const name = event.campanhaId === "participacao-chegando"
+      ? "Participação chegando"
+      : event.campanhaId === "pesquisa-satisfacao-2026"
+        ? "Pesquisa de satisfação 2026"
+        : event.campanhaId;
     return name ? `Campanha: ${name}` : "Campanha";
   }
   return event.source === "lembretes" ? "Lembrete de presença" : "Eventos gerais";

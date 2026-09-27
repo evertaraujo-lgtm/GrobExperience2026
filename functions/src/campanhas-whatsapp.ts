@@ -56,6 +56,19 @@ const campaigns: Record<string, CampaignDefinition> = {
     variables: ["nome"],
     fixedButtons: [],
   },
+  "pesquisa-satisfacao-2026": {
+    id: "pesquisa-satisfacao-2026",
+    name: "Pesquisa de satisfação 2026",
+    templateName: "grobexp_satisfacao_2026",
+    category: "MARKETING",
+    language: "en",
+    templateSignature: "grobexp_satisfacao_2026|en|body:nome|v1",
+    confirmationCode: "PESQUISA SATISFACAO 2026",
+    dailyLimit: 500,
+    batchSize: 250,
+    variables: ["nome"],
+    fixedButtons: [],
+  },
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -88,6 +101,12 @@ function normalizedNameComplement(value: unknown) {
 
 export function campaignTemplateName(name: string, complement: string) {
   return [name.trim(), normalizedNameComplement(complement)].filter(Boolean).join(" ");
+}
+
+function sentTemplateName(campaign: CampaignDefinition, name: string, complement: string) {
+  return campaign.id === "pesquisa-satisfacao-2026"
+    ? name.trim()
+    : campaignTemplateName(name, complement);
 }
 
 export function nextConsecutiveFailureCount(current: number, failed: boolean) {
@@ -478,7 +497,7 @@ export const sendWhatsAppCampaignTest = onCall(
     }
     const campaignRef = getFirestore().collection(campaignsCollection).doc(campaign.id);
     const campaignDocument = await campaignRef.get();
-    const sentName = campaignTemplateName(nome, normalizedNameComplement(campaignDocument.data()?.complementoNome));
+    const sentName = sentTemplateName(campaign, nome, normalizedNameComplement(campaignDocument.data()?.complementoNome));
     const response = await sendTemplate(campaign, sentName, whatsapp);
     const batchId = `teste_${randomUUID()}`;
     await saveAcceptedMessage(campaign, null, nome, whatsapp, response, sender, {
@@ -582,7 +601,7 @@ export const previewWhatsAppCampaignBatch = onCall({region: "us-central1"}, asyn
   const recipients = selected.map((document) => ({
     id: document.id,
     nome: document.data().nome,
-    nomeEnviado: campaignTemplateName(document.data().nome, nameComplement),
+    nomeEnviado: sentTemplateName(campaign, document.data().nome, nameComplement),
     whatsapp: document.data().whatsapp,
     ordem: document.data().ordem,
   }));
@@ -710,7 +729,7 @@ export const sendWhatsAppCampaignBatch = onCall(
       if (reservation.kind === "quota") { quotaReached = true; break; }
       if (reservation.kind === "skip") { skipped += 1; continue; }
       try {
-        const sentName = campaignTemplateName(reservation.nome, prepared.nameComplement);
+        const sentName = sentTemplateName(prepared.campaign, reservation.nome, prepared.nameComplement);
         const response = await sendTemplate(prepared.campaign, sentName, reservation.whatsapp);
         await saveAcceptedMessage(
           prepared.campaign,
