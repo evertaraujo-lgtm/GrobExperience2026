@@ -104,6 +104,95 @@ function audienceRow(container, day, audience, counts, totalRow = false) {
   container.append(row);
 }
 
+function renderTalks(summary) {
+  const container = document.querySelector("[data-talks]");
+  container.replaceChildren();
+  const talks = Array.isArray(summary.palestras) ? summary.palestras : [];
+  if (!talks.length) {
+    empty(container, "Atualize a análise do Gemini para calcular o movimento das palestras.");
+    return;
+  }
+  [...new Set(talks.map((talk) => talk.dia))].forEach((day) => {
+    const group = document.createElement("section");
+    group.className = "retrospective-talk-day";
+    const heading = document.createElement("h3");
+    heading.textContent = formatDay(day);
+    const stages = document.createElement("div");
+    stages.className = "retrospective-talk-stages";
+    ["Brasil", "Alemanha"].forEach((stage) => {
+      const stageCard = document.createElement("article");
+      stageCard.className = "retrospective-talk-stage";
+      const stageHeading = document.createElement("h4");
+      stageHeading.textContent = `Palco ${stage}`;
+      stageCard.append(stageHeading);
+      talks.filter((talk) => talk.dia === day && talk.palco === stage)
+        .sort((left, right) => left.slotId.localeCompare(right.slotId))
+        .forEach((talk) => {
+          const item = document.createElement("div");
+          item.className = "retrospective-talk-item";
+          const time = document.createElement("small");
+          time.textContent = talk.horario;
+          const title = document.createElement("strong");
+          title.textContent = talk.palestra;
+          const count = document.createElement("span");
+          count.textContent = `${number.format(talk.total || 0)} participante(s) estimado(s)`;
+          const exportButton = document.createElement("button");
+          exportButton.type = "button";
+          exportButton.className = "button button-secondary retrospective-talk-export";
+          exportButton.dataset.exportTalk = "true";
+          exportButton.dataset.day = day;
+          exportButton.dataset.stage = stage;
+          exportButton.dataset.slot = talk.slotId;
+          exportButton.textContent = "Exportar CSV";
+          exportButton.hidden = !adminMode;
+          item.append(time, title, count, exportButton);
+          stageCard.append(item);
+        });
+      stages.append(stageCard);
+    });
+    group.append(heading, stages);
+    container.append(group);
+  });
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+document.querySelector("[data-talks]").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-export-talk]");
+  if (!button || !adminMode || !adminReady) return;
+  button.disabled = true;
+  button.textContent = "Preparando CSV...";
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const exportTalk = functionsModule.httpsCallable(functions, "getStageTalkParticipants", {timeout: 300000});
+    const result = await exportTalk({dia: button.dataset.day, palco: button.dataset.stage, slotId: button.dataset.slot});
+    const participants = Array.isArray(result.data?.participantes) ? result.data.participantes : [];
+    const rows = [["Nome", "Telefone", "E-mail", "Empresa", "Cargo", "QR Code", "Data da coleta", "Hora da coleta"]];
+    participants.forEach((person) => {
+      const collectedAt = person.registradoEm ? new Date(person.registradoEm) : null;
+      rows.push([person.nome, person.telefone, person.email, person.empresa, person.cargo, person.qrcode,
+        collectedAt && !Number.isNaN(collectedAt.getTime()) ? collectedAt.toLocaleDateString("pt-BR", {timeZone: "America/Sao_Paulo"}) : "",
+        collectedAt && !Number.isNaN(collectedAt.getTime()) ? collectedAt.toLocaleTimeString("pt-BR", {timeZone: "America/Sao_Paulo"}) : ""]);
+    });
+    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+    const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `participantes-${button.dataset.stage.toLowerCase()}-${button.dataset.day}-${button.dataset.slot}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setFeedback(`CSV exportado com ${number.format(participants.length)} participante(s).`, "success");
+  } catch (error) {
+    console.error(error);
+    setFeedback(error?.message || "Não foi possível exportar os participantes.", "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Exportar CSV";
+  }
+});
+
 function renderThemes(container, themes, emptyMessage) {
   container.replaceChildren();
   if (!Array.isArray(themes) || !themes.length) {
@@ -164,6 +253,8 @@ function renderSummary(summary, narrative, generatedAt) {
   document.querySelector("[data-audience-note]").textContent = audienceDays.length
     ? `Cada inscrição corresponde a uma categoria de um dia. A taxa usa todas as inscrições como base; “sem informação” não comprova ausência. Presença conforme a última importação da 4Events.${summary.quatroEventos?.foraDoPeriodo?.inscritos ? ` ${number.format(summary.quatroEventos.foraDoPeriodo.inscritos)} registro(s) sem data dos três dias foram separados.` : ""}`
     : "O detalhamento por categoria estará disponível após atualizar esta análise.";
+
+  renderTalks(summary);
 
   const categories = document.querySelector("[data-categories]");
   categories.replaceChildren();
@@ -229,6 +320,19 @@ function renderSummary(summary, narrative, generatedAt) {
     survey.append(item);
   });
   if (!questions.length) empty(survey, "Ainda não há respostas de múltipla escolha para resumir.");
+
+  const satisfactionSample = Array.isArray(summary.pesquisa?.amostraAnalise) ? summary.pesquisa.amostraAnalise : [];
+  const satisfactionCoverage = summary.pesquisa?.amostraCobertura ??
+    satisfactionSample.reduce((sum, item) => sum + (item.ocorrencias || 0), 0);
+  document.querySelector("[data-satisfaction-text-note]").textContent = Array.isArray(summary.pesquisa?.amostraAnalise)
+    ? `${number.format(summary.pesquisa.comTexto || 0)} respostas abertas foram registradas. A análise usa até ${number.format(summary.pesquisa.amostraTamanho ?? satisfactionSample.length)} respostas anonimizadas, representando ${number.format(satisfactionCoverage)} comentário(s).`
+    : "Atualize a análise para avaliar as respostas abertas da pesquisa.";
+  renderThemes(document.querySelector("[data-survey-likes]"), narrative.elogios,
+    "Nenhum elogio recorrente identificado ou análise do Gemini indisponível.");
+  renderThemes(document.querySelector("[data-survey-improvements]"), narrative.melhorias,
+    "Nenhum ponto de melhoria recorrente identificado ou análise do Gemini indisponível.");
+  renderThemes(document.querySelector("[data-survey-next-editions]"), narrative.proximasEdicoes,
+    "Nenhuma sugestão recorrente para próximas edições ou análise do Gemini indisponível.");
 
   const sellers = document.querySelector("[data-sellers]");
   sellers.replaceChildren();
@@ -297,7 +401,7 @@ function renderSummary(summary, narrative, generatedAt) {
     if (insight.grupo) {
       const group = document.createElement("span");
       group.className = "retrospective-insight-group";
-      group.textContent = {atividades: "Atividades", publico: "Público", leads: "Leads", whatsapp: "WhatsApp", pesquisa: "Pesquisa"}[insight.grupo] || insight.grupo;
+      group.textContent = {atividades: "Atividades", palestras: "Palestras", publico: "Público", leads: "Leads", whatsapp: "WhatsApp", pesquisa: "Pesquisa"}[insight.grupo] || insight.grupo;
       item.append(group);
     }
     const title = document.createElement("h3");
@@ -328,6 +432,7 @@ function render(data) {
       : hasSummary ? "Números calculados. Os comentários do Gemini ainda não estão disponíveis."
         : "A retrospectiva ainda não foi gerada.";
   if (adminMode && data?.status === "error") setFeedback(data.erro || "Não foi possível gerar a retrospectiva.", "error");
+  document.querySelectorAll("[data-export-talk]").forEach((button) => { button.hidden = !adminMode; });
 }
 
 function renderVersions() {

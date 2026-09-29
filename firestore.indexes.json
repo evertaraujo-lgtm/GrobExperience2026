@@ -16,6 +16,14 @@
         {"fieldPath": "tipo", "order": "ASCENDING"},
         {"fieldPath": "registradoEm", "order": "DESCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "coletaAtividadesRegistros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "atividadeId", "order": "ASCENDING"},
+        {"fieldPath": "registradoEm", "order": "ASCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []

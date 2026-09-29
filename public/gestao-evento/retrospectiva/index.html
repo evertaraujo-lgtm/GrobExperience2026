@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3" />
     <link rel="stylesheet" href="/css/gestao-evento.css" />
-    <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v3" />
+    <link rel="stylesheet" href="/css/retrospectiva-evento.css?v=retrospective-v5" />
   </head>
   <body data-event-management-page="true">
     <div class="page-shell">
@@ -51,6 +51,8 @@
               <section class="retrospective-panel"><h3>Vozes da pesquisa</h3><div class="retrospective-survey" data-survey></div></section>
               <section class="retrospective-panel" data-private-section hidden><h3>Leads por vendedor</h3><div class="retrospective-bars" data-sellers></div></section>
             </div>
+            <section class="retrospective-section"><div class="management-title"><h2>O que aprendemos com a pesquisa</h2><small>Temas identificados pelo Gemini nas respostas abertas anonimizadas</small></div><p class="retrospective-note" data-satisfaction-text-note></p><div class="retrospective-category-grid"><article><h3>O que mais gostaram</h3><div class="retrospective-themes" data-survey-likes></div></article><article><h3>O que podemos melhorar</h3><div class="retrospective-themes" data-survey-improvements></div></article><article><h3>O que querem ver nas próximas edições</h3><div class="retrospective-themes" data-survey-next-editions></div></article></div></section>
+            <section class="retrospective-section"><div class="management-title"><h2>Movimento nas palestras</h2><small>Estimativa por QR Codes lidos na entrada do palco durante o horário de cada palestra</small></div><p class="retrospective-note">Cada participante é contado uma vez por palestra. A leitura na entrada indica participação estimada, sem confirmar permanência durante toda a sessão.</p><div class="retrospective-talk-days" data-talks></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>Categorias dos três dias</h2><small>Quantidade por categoria, conforme a última importação da 4Events</small></div><div class="retrospective-category-grid" data-categories></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>Oportunidades da coleta de leads</h2><small>Respostas estruturadas; cada pergunta usa seus próprios respondentes</small></div><div class="retrospective-category-grid" data-lead-fields></div></section>
             <section class="retrospective-section"><div class="management-title"><h2>Comunicação por WhatsApp</h2><small>Volumes enviados e recebidos por finalidade</small></div><div class="retrospective-category-grid" data-whatsapp></div></section>
@@ -62,6 +64,6 @@
         </section>
       </main>
     </div>
-    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v4"></script>
+    <script type="module" src="/js/retrospectiva-evento.js?v=retrospective-v6"></script>
   </body>
 </html>

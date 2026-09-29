@@ -46,6 +46,17 @@
 .retrospective-section { display: grid; gap: 14px; }
 .retrospective-section .management-title { margin: 0; }
 .retrospective-section .management-title h2 { margin: 0; }
+.retrospective-talk-days { display: grid; gap: 18px; }
+.retrospective-talk-day { display: grid; gap: 12px; }
+.retrospective-talk-day > h3 { margin: 0; color: #b9f0ff; font: 700 1.3rem Rajdhani, sans-serif; }
+.retrospective-talk-stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.retrospective-talk-stage { padding: 18px; border: 1px solid rgba(125,214,255,.18); border-radius: 16px; background: rgba(4,18,42,.52); }
+.retrospective-talk-stage h4 { margin: 0 0 12px; color: #b9f0ff; font: 700 1.15rem Rajdhani, sans-serif; }
+.retrospective-talk-item { display: grid; gap: 7px; padding: 13px 0; border-top: 1px solid rgba(125,214,255,.12); }
+.retrospective-talk-item small { color: #8bdfff; }
+.retrospective-talk-item strong { line-height: 1.45; }
+.retrospective-talk-item > span { color: var(--muted); font-size: .88rem; }
+.retrospective-talk-export { justify-self: start; margin-top: 4px; }
 .retrospective-table-wrap { overflow-x: auto; border: 1px solid rgba(125,214,255,.18); border-radius: 16px; }
 .retrospective-table { width: 100%; border-collapse: collapse; min-width: 580px; font-size: .82rem; }
 .retrospective-table th, .retrospective-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(125,214,255,.12); }
@@ -73,4 +84,4 @@
 .retrospective-message-list p { margin: 0 0 5px; font-size: .8rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .retrospective-message-list small { color: var(--muted); font-size: .68rem; }
 @media (max-width: 850px) { .retrospective-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .retrospective-grid, .retrospective-insight-list, .retrospective-category-grid { grid-template-columns: 1fr; } .retrospective-intro { padding: 20px; } .retrospective-metrics article { padding: 14px; } }
+@media (max-width: 620px) { .retrospective-grid, .retrospective-insight-list, .retrospective-category-grid, .retrospective-talk-stages { grid-template-columns: 1fr; } .retrospective-intro { padding: 20px; } .retrospective-metrics article { padding: 14px; } }
