@@ -75,6 +75,13 @@ export async function getOfflineParticipant(userId, qrCode) {
   return record?.participant || null;
 }
 
+export async function getOfflineParticipants(userId) {
+  const database = await openDatabase();
+  const transaction = database.transaction(PARTICIPANTS, "readonly");
+  const records = await requestResult(transaction.objectStore(PARTICIPANTS).getAll());
+  return records.filter((record) => record.userId === userId).map((record) => record.participant);
+}
+
 export async function cacheOfflineParticipant(userId, participant) {
   const qrCode = String(participant?.qrCode || "").trim();
   if (!qrCode) return false;

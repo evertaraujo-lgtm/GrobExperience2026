@@ -232,6 +232,52 @@ export const get4EventsParticipantByQrCode = onCall({region: "us-central1"}, asy
   return {participant: {id: participant.id, ...asRecord(serializable(participant.data))}};
 });
 
+function normalizeLeadSearch(value: unknown) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+export const search4EventsParticipantsForLead = onCall({region: "us-central1", timeoutSeconds: 120}, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para buscar participantes.");
+  const {firestore} = await requireLeadAccess(request.auth.uid);
+  const searchTerm = typeof asRecord(request.data).searchTerm === "string" ? String(asRecord(request.data).searchTerm).trim() : "";
+  if (searchTerm.length < 2 || searchTerm.length > 120) {
+    throw new HttpsError("invalid-argument", "Digite pelo menos 2 caracteres para buscar.");
+  }
+  const normalizedTerm = normalizeLeadSearch(searchTerm);
+  const digitsTerm = searchTerm.replace(/\D/g, "");
+  const results: Record<string, string>[] = [];
+  const collection = firestore.collection("participantes4Events");
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  let exhausted = false;
+  while (results.length < 20 && !exhausted) {
+    let query: FirebaseFirestore.Query = collection.orderBy("__name__").limit(400);
+    if (cursor) query = query.startAfter(cursor);
+    const page = await query.get();
+    if (page.empty) break;
+    for (const document of page.docs) {
+      cursor = document;
+      const data = document.data();
+      const qrCode = String(data.qrCode ?? data.qrcode ?? data.qr_code ?? "").trim();
+      if (!qrCode) continue;
+      const source = asRecord(data.dados4Events);
+      const readText = (...keys: string[]) => {
+        const value = keys.map((key) => data[key] ?? source[key])
+          .find((item) => (typeof item === "string" || typeof item === "number") && String(item).trim());
+        return value === undefined ? "" : String(value).trim();
+      };
+      const nome = readText("nome", "name", "full_name", "attendee_name");
+      const empresa = readText("empresa", "company", "organization", "attendee_company");
+      const whatsapp = readText("whatsapp", "phone", "cellphone", "mobile", "attendee_phone");
+      const textMatch = [nome, empresa, qrCode].some((value) => normalizeLeadSearch(value).includes(normalizedTerm));
+      const phoneMatch = digitsTerm.length >= 2 && whatsapp.replace(/\D/g, "").includes(digitsTerm);
+      if (textMatch || phoneMatch) results.push({id: document.id, qrCode, nome, empresa, whatsapp});
+      if (results.length === 20) break;
+    }
+    exhausted = page.size < 400;
+  }
+  return {participants: results};
+});
+
 export const download4EventsParticipantIndex = onCall({region: "us-central1"}, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para preparar a coleta offline.");
   const {firestore} = await requireLeadAccess(request.auth.uid);

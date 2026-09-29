@@ -12,7 +12,7 @@ import {check4EventsPresence, configure4EventsPresenceAutomation, scheduled4Even
 import {consolidateCollectionStaff, createCollectionAssistant, listCollectionStaff, removeCollectionAssistant} from "./gestao-atividades.js";
 import {registerActivityScan} from "./coleta-atividades.js";
 import {generateEventRetrospective, getPublicEventRetrospective} from "./retrospectiva-evento.js";
-import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead} from "./coleta-leads.js";
+import {createLeadSeller, download4EventsParticipantIndex, get4EventsParticipantByQrCode, removeLeadSeller, saveLead, search4EventsParticipantsForLead} from "./coleta-leads.js";
 import {sendWhatsAppTemplate} from "./send-whatsapp-template.js";
 import {import4EventsParticipantComplements, list4EventsParticipants, sync4EventsParticipants} from "./sync-4events-participants.js";
 import {clear4EventsRaffleFinalHistory, clear4EventsRaffleTestHistory, create4EventsRaffleTestSession, draw4EventsRaffle, get4EventsRafflePrizes, get4EventsRaffleState, save4EventsRafflePrize, set4EventsRaffleTestPresence} from "./sorteio-4events.js";
@@ -57,6 +57,7 @@ export {
   registerActivityScan,
   removeLeadSeller,
   saveLead,
+  search4EventsParticipantsForLead,
   save4EventsRafflePrize,
   sendWhatsAppBatch,
   sendWhatsAppCampaignBatch,

@@ -3,6 +3,7 @@ import {
   cacheOfflineParticipant,
   getOfflineMeta,
   getOfflineParticipant,
+  getOfflineParticipants,
   pendingOfflineLeads,
   queueOfflineLead,
   removeOfflineLead,
@@ -33,6 +34,9 @@ const dependentQuestions = document.querySelector("[data-dependent-questions]");
 const fieldsList = document.querySelector("[data-fields-list]");
 const fieldsTotal = document.querySelector("[data-fields-total]");
 const manualQrForm = document.querySelector("[data-manual-qr-form]");
+const manualSearchSubmit = document.querySelector("[data-manual-search-submit]");
+const manualSearchFeedback = document.querySelector("[data-manual-search-feedback]");
+const manualSearchResults = document.querySelector("[data-manual-search-results]");
 const startQrReader = document.querySelector("[data-start-qr-reader]");
 const qrReader = document.querySelector("[data-qr-reader]");
 const participantCard = document.querySelector("[data-participant-card]");
@@ -90,6 +94,10 @@ function setFeedback(element, message, state = "neutral") {
 function setOfflineStatus(message, state = "neutral") {
   offlineStatus.textContent = message;
   offlineStatus.dataset.state = state;
+}
+
+function normalizeParticipantSearch(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
 function showScanSuccess(qrCode) {
@@ -1170,11 +1178,63 @@ sellerForm.addEventListener("submit", async (event) => {
 manualQrForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!isSeller || !manualQrForm.reportValidity()) return;
-  await stopQrReader();
-  await lookupParticipant(new FormData(manualQrForm).get("qrCode"));
-  if (selectedParticipant) {
-    manualSearchModal.close();
-    manualQrForm.reset();
+  manualSearchSubmit.disabled = true;
+  manualSearchSubmit.textContent = "Buscando...";
+  manualSearchResults.replaceChildren();
+  setFeedback(manualSearchFeedback, "Buscando participantes...");
+  try {
+    const searchTerm = String(new FormData(manualQrForm).get("searchTerm") || "").trim();
+    let participants;
+    if (!navigator.onLine) {
+      const normalizedTerm = normalizeParticipantSearch(searchTerm);
+      const digitsTerm = searchTerm.replace(/\D/g, "");
+      participants = (await getOfflineParticipants(userId)).filter((participant) => {
+        const name = participantValue(participant, ["nome", "name", "full_name", "attendee_name"]);
+        const company = participantValue(participant, ["empresa", "company", "organization", "attendee_company"]);
+        const qrCode = participantValue(participant, ["qrCode", "qr_code", "qrcode"]);
+        const phone = participantValue(participant, ["whatsapp", "phone", "cellphone", "mobile", "attendee_phone"]);
+        return [name, company, qrCode].some((value) => normalizeParticipantSearch(value).includes(normalizedTerm)) ||
+          (digitsTerm.length >= 2 && phone.replace(/\D/g, "").includes(digitsTerm));
+      }).slice(0, 20);
+    } else {
+      const {functions, functionsModule} = await getFunctionsServices();
+      const result = await functionsModule.httpsCallable(functions, "search4EventsParticipantsForLead")({searchTerm});
+      participants = Array.isArray(result.data?.participants) ? result.data.participants : [];
+    }
+    if (!participants.length) {
+      setFeedback(manualSearchFeedback, navigator.onLine
+        ? "Nenhum participante encontrado. Tente outro nome, empresa ou telefone."
+        : "Nenhum participante encontrado na base offline. Conecte-se para pesquisar toda a lista.");
+      return;
+    }
+    participants.forEach((participant) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lead-search-result";
+      const name = document.createElement("strong");
+      name.textContent = participant.nome || "Nome não informado";
+      const details = document.createElement("span");
+      details.textContent = [participant.empresa, participant.whatsapp].filter(Boolean).join(" · ") || "Sem empresa ou telefone informado";
+      button.append(name, details);
+      button.addEventListener("click", async () => {
+        await stopQrReader();
+        await lookupParticipant(participant.qrCode);
+        if (selectedParticipant) {
+          manualSearchModal.close();
+          manualQrForm.reset();
+          manualSearchResults.replaceChildren();
+          setFeedback(manualSearchFeedback, "");
+        }
+      });
+      manualSearchResults.append(button);
+    });
+    setFeedback(manualSearchFeedback, `${participants.length} participante(s) encontrado(s). Selecione a pessoa correta.`, "success");
+  } catch (error) {
+    console.error(error);
+    setFeedback(manualSearchFeedback, error.message || "Não foi possível buscar participantes.", "error");
+  } finally {
+    manualSearchSubmit.disabled = false;
+    manualSearchSubmit.textContent = "Buscar";
   }
 });
 
@@ -1182,8 +1242,11 @@ startQrReader.addEventListener("click", startQrReaderFromCamera);
 downloadOffline.addEventListener("click", downloadOfflineParticipants);
 syncOffline.addEventListener("click", () => { void synchronizeOfflineLeads(); });
 openManualSearch.addEventListener("click", () => {
+  manualQrForm.reset();
+  manualSearchResults.replaceChildren();
+  setFeedback(manualSearchFeedback, "");
   manualSearchModal.showModal();
-  window.setTimeout(() => manualQrForm.elements.qrCode.focus(), 0);
+  window.setTimeout(() => manualQrForm.elements.searchTerm.focus(), 0);
 });
 document.querySelectorAll("[data-manual-search-close]").forEach((button) => button.addEventListener("click", () => manualSearchModal.close()));
 openOwnLeads.addEventListener("click", () => {

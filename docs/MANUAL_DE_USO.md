@@ -253,7 +253,7 @@ A coleta de leads é destinada à equipe comercial. Ela pode continuar funcionan
 
 1. Entre com a conta de vendedor.
 2. Abra **Coleta de leads**.
-3. Leia o QR Code do participante ou localize-o conforme o fluxo disponível.
+3. Leia o QR Code ou use a busca manual por nome, empresa, telefone ou QR Code. Selecione o participante correto na lista.
 4. Preencha os campos definidos pela administração.
 5. Salve o registro.
 6. Confira a confirmação na tela.
