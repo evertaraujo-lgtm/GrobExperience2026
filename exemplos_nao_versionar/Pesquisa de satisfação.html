@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Satisfação - GROB Experience</title>
+
+<style>
+
+:root{
+    --bg:#071827;
+    --card:#0d2236;
+    --card-hover:#122b43;
+    --primary:#1f7ae0;
+    --success:#22c55e;
+    --text:#ffffff;
+    --text-light:#b8c5d1;
+    --border:#1d3b57;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:var(--bg);
+    color:var(--text);
+    padding:30px;
+}
+
+.container{
+    max-width:1400px;
+    margin:auto;
+}
+
+.header{
+    margin-bottom:30px;
+}
+
+.header h1{
+    font-size:34px;
+    margin-bottom:8px;
+}
+
+.header p{
+    color:var(--text-light);
+}
+
+.kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+    margin-bottom:30px;
+}
+
+.kpi{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px;
+}
+
+.kpi-label{
+    color:var(--text-light);
+    font-size:14px;
+}
+
+.kpi-value{
+    font-size:42px;
+    font-weight:700;
+    color:#fff;
+    margin-top:10px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:20px;
+}
+
+.card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px;
+}
+
+.card h3{
+    margin-bottom:20px;
+    color:white;
+}
+
+.bar-item{
+    margin-bottom:18px;
+}
+
+.bar-header{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:8px;
+    color:var(--text-light);
+}
+
+.progress{
+    width:100%;
+    height:10px;
+    background:#1d3b57;
+    border-radius:99px;
+    overflow:hidden;
+}
+
+.progress-bar{
+    height:100%;
+    background:linear-gradient(
+        90deg,
+        #1f7ae0,
+        #49a3ff
+    );
+}
+
+.insights{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px;
+    margin-bottom:20px;
+}
+
+.insights h3{
+    margin-bottom:15px;
+}
+
+.insights ul{
+    margin-left:20px;
+}
+
+.insights li{
+    margin-bottom:10px;
+    color:var(--text-light);
+}
+
+.table-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    overflow:hidden;
+}
+
+.table-title{
+    padding:20px;
+    font-weight:600;
+    border-bottom:1px solid var(--border);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+thead{
+    background:#10263d;
+}
+
+th{
+    text-align:left;
+    padding:14px;
+    color:white;
+}
+
+td{
+    padding:14px;
+    border-top:1px solid var(--border);
+    color:var(--text-light);
+}
+
+tbody tr:hover{
+    background:var(--card-hover);
+}
+
+.badge{
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+}
+
+.excellent{
+    background:#14532d;
+    color:#86efac;
+}
+
+.regular{
+    background:#78350f;
+    color:#fde68a;
+}
+
+@media(max-width:900px){
+
+    .grid{
+        grid-template-columns:1fr;
+    }
+
+    table{
+        display:block;
+        overflow:auto;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>📊 Pesquisa de Satisfação</h1>
+        <p>GROB Experience 2026</p>
+    </div>
+
+    <div class="kpis">
+
+        <div class="kpi">
+            <div class="kpi-label">Respostas</div>
+            <div class="kpi-value">14</div>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-label">Conteúdo Excelente</div>
+            <div class="kpi-value">86%</div>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-label">Recomendariam</div>
+            <div class="kpi-value">93%</div>
+        </div>
+
+        <div class="kpi">
+            <div class="kpi-label">NPS Percebido</div>
+            <div class="kpi-value">Alto</div>
+        </div>
+
+    </div>
+
+    <div class="grid">
+
+        <div class="card">
+
+            <h3>Como conheceram o evento</h3>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>Convite direto GROB</span>
+                    <span>6</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:43%"></div>
+                </div>
+            </div>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>Redes Sociais</span>
+                    <span>3</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:21%"></div>
+                </div>
+            </div>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>E-mail</span>
+                    <span>2</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:14%"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <h3>Motivação para Participar</h3>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>Networking</span>
+                    <span>4</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:29%"></div>
+                </div>
+            </div>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>Conhecer a Empresa</span>
+                    <span>4</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:29%"></div>
+                </div>
+            </div>
+
+            <div class="bar-item">
+                <div class="bar-header">
+                    <span>Tecnologia dos Expositores</span>
+                    <span>3</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width:21%"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="insights">
+
+        <h3>🎯 Principais Insights</h3>
+
+        <ul>
+            <li>O evento recebeu avaliações extremamente positivas.</li>
+            <li>Networking e relacionamento continuam sendo os maiores atrativos.</li>
+            <li>Visitas à fábrica e demonstrações práticas aparecem diversas vezes nos comentários.</li>
+            <li>Pedidos recorrentes: mais palestras, cases de sucesso e mais conteúdos técnicos.</li>
+            <li>Pontos de melhoria citados: banheiros, área de alimentação e mais assentos.</li>
+        </ul>
+
+    </div>
+
+    <div class="table-card">
+
+        <div class="table-title">
+            Resumo das Avaliações
+        </div>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Indicador</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            <tr>
+                <td>Qualidade do Conteúdo</td>
+                <td><span class="badge excellent">Excelente</span></td>
+            </tr>
+
+            <tr>
+                <td>Infraestrutura</td>
+                <td><span class="badge excellent">Excelente</span></td>
+            </tr>
+
+            <tr>
+                <td>Palestras</td>
+                <td><span class="badge excellent">Excelente</span></td>
+            </tr>
+
+            <tr>
+                <td>Demonstrações ao Vivo</td>
+                <td><span class="badge excellent">Excelente</span></td>
+            </tr>
+
+            <tr>
+                <td>Alimentação</td>
+                <td><span class="badge excellent">Excelente</span></td>
+            </tr>
+
+            <tr>
+                <td>Probabilidade de Recomendação</td>
+                <td><span class="badge excellent">Muito Provável</span></td>
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

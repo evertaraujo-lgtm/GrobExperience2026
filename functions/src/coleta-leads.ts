@@ -3,6 +3,7 @@ import {FieldValue, Timestamp, getFirestore} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/https";
 
 import {find4EventsParticipantByQrCode, normalize4EventsQrCode} from "./participantes-4events.js";
+import {enrichWithSpreadsheetComplements} from "./sync-4events-participants.js";
 
 type LeadField = {
   id: string;
@@ -229,7 +230,8 @@ export const get4EventsParticipantByQrCode = onCall({region: "us-central1"}, asy
   if (!qrCode || qrCode.length > 500) throw new HttpsError("invalid-argument", "Leia um QR Code válido.");
   const participant = await find4EventsParticipantByQrCode(firestore, qrCode);
   if (!participant) throw new HttpsError("not-found", "Participante não encontrado na base da 4 Events.");
-  return {participant: {id: participant.id, ...asRecord(serializable(participant.data))}};
+  const [enriched] = await enrichWithSpreadsheetComplements(firestore, [participant.data]);
+  return {participant: {id: participant.id, ...asRecord(serializable(enriched))}};
 });
 
 function normalizeLeadSearch(value: unknown) {

@@ -20,6 +20,7 @@ const readingsModal = document.querySelector("[data-readings-modal]");
 const readingsActivity = document.querySelector("[data-readings-activity]");
 const readingsList = document.querySelector("[data-readings-list]");
 const readingsFeedback = document.querySelector("[data-readings-feedback]");
+const exportActivityReadings = document.querySelector("[data-export-activity-readings]");
 const leadCollectionLink = document.createElement("a");
 leadCollectionLink.className = "back-link";
 leadCollectionLink.href = "/coleta-leads/";
@@ -30,6 +31,8 @@ document.querySelector(".toolbar-actions").append(leadCollectionLink);
 let assistants = [];
 let activities = [];
 let editingActivityId = null;
+let selectedReadingsActivity = null;
+let selectedActivityReadings = [];
 
 function setFeedback(message, state = "neutral") {
   feedback.textContent = message;
@@ -55,7 +58,118 @@ function formatReadingDate(timestamp) {
   return timestamp.toDate().toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"});
 }
 
+function participantFields(value, prefix = "", fields = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fields;
+  Object.entries(value).forEach(([key, item]) => {
+    const field = prefix ? `${prefix}.${key}` : key;
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      participantFields(item, field, fields);
+    } else {
+      fields[field] = Array.isArray(item) ? JSON.stringify(item) : item ?? "";
+    }
+  });
+  return fields;
+}
+
+function csvCell(value) {
+  let text = value === null || value === undefined ? "" : String(value);
+  if (/^[=+@\-\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function readingDateParts(timestamp) {
+  const date = timestamp?.toDate?.();
+  if (!date || Number.isNaN(date.getTime())) return {date: "", time: ""};
+  return {
+    date: new Intl.DateTimeFormat("pt-BR", {timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric"}).format(date),
+    time: new Intl.DateTimeFormat("pt-BR", {timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"}).format(date),
+  };
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(csvCell).join(";")).join("\r\n");
+  const url = URL.createObjectURL(new Blob(["\uFEFF", csv], {type: "text/csv;charset=utf-8"}));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportActivityReadingsCsv() {
+  if (!selectedReadingsActivity || !selectedActivityReadings.length) {
+    readingsFeedback.textContent = "Esta atividade ainda não tem coletas para exportar.";
+    readingsFeedback.dataset.state = "neutral";
+    return;
+  }
+  exportActivityReadings.disabled = true;
+  const qrCodes = [...new Set(selectedActivityReadings.map((reading) => String(reading.qrcode || "").trim()).filter(Boolean))];
+  const participantsByQr = new Map();
+  const unmatchedQrCodes = new Set();
+  let nextIndex = 0;
+  let completed = 0;
+  readingsFeedback.textContent = `Buscando dados dos participantes: 0/${qrCodes.length}...`;
+  readingsFeedback.dataset.state = "neutral";
+  try {
+    const {functions, functionsModule} = await getFunctionsServices();
+    const lookup = functionsModule.httpsCallable(functions, "get4EventsParticipantByQrCode");
+    const workers = Array.from({length: Math.min(8, qrCodes.length)}, async () => {
+      while (nextIndex < qrCodes.length) {
+        const qrCode = qrCodes[nextIndex++];
+        try {
+          const result = await lookup({qrCode});
+          participantsByQr.set(qrCode, participantFields(result.data?.participant));
+        } catch (error) {
+          if (error.code === "functions/not-found" || error.code === "not-found") {
+            participantsByQr.set(qrCode, {});
+            unmatchedQrCodes.add(qrCode);
+          } else {
+            throw error;
+          }
+        }
+        completed += 1;
+        readingsFeedback.textContent = `Buscando dados dos participantes: ${completed}/${qrCodes.length}...`;
+      }
+    });
+    const settled = await Promise.allSettled(workers);
+    const failure = settled.find((result) => result.status === "rejected");
+    if (failure) throw failure.reason;
+
+    const participantColumns = [...new Set([...participantsByQr.values()].flatMap((fields) => Object.keys(fields)))].sort((first, second) => first.localeCompare(second, "pt-BR"));
+    const fixedColumns = ["Data da coleta", "Hora da coleta (America/Sao_Paulo)", "Atividade", "ID da coleta", "QR Code", "Assistente responsável"];
+    const rows = [[...fixedColumns, ...participantColumns.map((field) => `Participante | ${field.replaceAll(".", " / ")}`)]];
+    selectedActivityReadings.forEach((reading) => {
+      const qrCode = String(reading.qrcode || "").trim();
+      const dateParts = readingDateParts(reading.registradoEm);
+      const participant = participantsByQr.get(qrCode) || {};
+      rows.push([
+        dateParts.date,
+        dateParts.time,
+        selectedReadingsActivity.nome || "",
+        reading.id || "",
+        qrCode,
+        assistantName(reading.assistenteId),
+        ...participantColumns.map((field) => participant[field] ?? ""),
+      ]);
+    });
+    const slug = String(selectedReadingsActivity.nome || "atividade").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "atividade";
+    downloadCsv(`coletas-${slug}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    const unmatchedMessage = unmatchedQrCodes.size ? ` ${unmatchedQrCodes.size} QR Code(s) sem participante localizado; essas linhas mantêm data, hora e QR Code.` : " Todos os participantes foram localizados.";
+    readingsFeedback.textContent = `${selectedActivityReadings.length} coleta(s) exportada(s).${unmatchedMessage}`;
+    readingsFeedback.dataset.state = "success";
+  } catch (error) {
+    console.error(error);
+    readingsFeedback.textContent = error.message || "Não foi possível buscar os dados dos participantes para exportar.";
+    readingsFeedback.dataset.state = "error";
+  } finally {
+    exportActivityReadings.disabled = false;
+  }
+}
+
 async function showReadings(activity) {
+  selectedReadingsActivity = activity;
+  selectedActivityReadings = [];
+  exportActivityReadings.disabled = true;
   readingsActivity.textContent = "Atividade: " + activity.nome;
   readingsFeedback.textContent = "Carregando leituras...";
   readingsFeedback.dataset.state = "neutral";
@@ -70,6 +184,8 @@ async function showReadings(activity) {
     const readings = snapshot.docs
       .map((document) => ({id: document.id, ...document.data()}))
       .sort((first, second) => (second.registradoEm?.toMillis?.() || 0) - (first.registradoEm?.toMillis?.() || 0));
+    selectedActivityReadings = readings;
+    exportActivityReadings.disabled = !readings.length;
     readingsFeedback.textContent = readings.length + " QR Code(s) lido(s).";
     if (!readings.length) {
       readingsList.innerHTML = '<p class="empty-management">Nenhum QR Code foi lido nesta atividade.</p>';
@@ -307,6 +423,7 @@ document.querySelector("[data-add-assistant]").addEventListener("click", () => {
 });
 document.querySelectorAll("[data-assistant-cancel]").forEach((button) => button.addEventListener("click", () => assistantModal.close()));
 document.querySelectorAll("[data-readings-cancel]").forEach((button) => button.addEventListener("click", () => readingsModal.close()));
+exportActivityReadings.addEventListener("click", () => { void exportActivityReadingsCsv(); });
 
 assistantForm.addEventListener("submit", async (event) => {
   event.preventDefault();

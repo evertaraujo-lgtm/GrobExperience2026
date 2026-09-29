@@ -232,6 +232,11 @@ A gestão de atividades permite associar responsáveis e registrar participaçã
 5. Confira a confirmação exibida na tela.
 6. Se necessário, sincronize quando a conexão voltar.
 
+### Exportar relatório de coletas — administrador
+
+1. Em **Gestão do evento**, abra **Ver leituras** na atividade desejada.
+2. Clique em **Exportar relatório CSV**. O arquivo inclui a data e a hora da coleta, o assistente e os dados disponíveis do participante associado ao QR Code.
+
 > **[PRINT 15 — Leitura de QR Code]**
 >
 > Cole aqui um print da tela `/coleta-atividades/`.

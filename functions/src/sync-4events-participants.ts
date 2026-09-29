@@ -115,7 +115,7 @@ function timestampMillis(value: unknown) {
   return value instanceof Timestamp ? value.toMillis() : 0;
 }
 
-async function enrichWithSpreadsheetComplements(
+export async function enrichWithSpreadsheetComplements(
   firestore: FirebaseFirestore.Firestore,
   participants: Record<string, unknown>[],
 ) {
