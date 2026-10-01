@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/app.css?v=admin-icons-v5" />
     <link rel="stylesheet" href="/css/pre-inscritos.css?v=admin-icons-v3" />
     <link rel="stylesheet" href="/css/gestao-evento.css" />
-    <link rel="stylesheet" href="/css/pesquisa-satisfacao.css" />
+    <link rel="stylesheet" href="/css/pesquisa-satisfacao.css?v=multiple-surveys-v1" />
   </head>
   <body data-auth-page="protected" data-event-management-page="true">
     <div class="page-shell">
@@ -21,8 +21,13 @@
       <main class="event-management-page satisfaction-admin-page">
         <section class="dashboard-heading"><p class="eyebrow">Administração</p><h1>Pesquisa de satisfação</h1><p>Configure as perguntas, compartilhe o acesso e acompanhe respostas anônimas.</p></section>
 
+        <section class="pre-inscritos-card survey-library-card" aria-labelledby="survey-library-title">
+          <div class="dashboard-toolbar"><div><strong id="survey-library-title">Pesquisas salvas</strong><small>Abra uma pesquisa para editar, copiar o link ou consultar as respostas.</small></div><button class="button" type="button" data-new-survey>+ Nova pesquisa</button></div>
+          <div class="survey-library-list" data-survey-list><p class="empty-management">Carregando pesquisas...</p></div>
+        </section>
+
         <section class="pre-inscritos-card satisfaction-editor-card" aria-labelledby="survey-editor-title">
-          <div class="dashboard-toolbar"><div><strong id="survey-editor-title">Configuração da pesquisa</strong><small class="survey-status" data-survey-status>Carregando...</small></div><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
+          <div class="dashboard-toolbar"><div><strong id="survey-editor-title" data-survey-editor-title>Configuração da pesquisa</strong><small class="survey-status" data-survey-status>Carregando...</small></div><div class="toolbar-actions"><a class="back-link" href="/gestao-evento/">Voltar à gestão</a><button class="back-link" type="button" data-reload>Atualizar</button></div></div>
           <form class="satisfaction-editor" data-survey-form>
             <div class="survey-meta-fields">
               <label class="management-field">Título<input name="titulo" required maxlength="120" /></label>
@@ -55,6 +60,6 @@
       </main>
     </div>
     <script type="module" src="/js/auth.js?v=satisfaction-link-corrected-v1"></script>
-    <script type="module" src="/js/pesquisa-satisfacao-admin.js"></script>
+    <script type="module" src="/js/pesquisa-satisfacao-admin.js?v=multiple-surveys-v1"></script>
   </body>
 </html>

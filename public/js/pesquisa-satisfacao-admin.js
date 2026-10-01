@@ -18,6 +18,8 @@ const responsesTotal = document.querySelector("[data-responses-total]");
 const responseList = document.querySelector("[data-response-list]");
 const responsesFeedback = document.querySelector("[data-responses-feedback]");
 const exportResponsesButton = document.querySelector("[data-export-responses]");
+const surveyList = document.querySelector("[data-survey-list]");
+const newSurveyButton = document.querySelector("[data-new-survey]");
 
 const DEFAULT_QUESTIONS = [
   {texto: "De modo geral, como você avalia sua experiência no GROB Experience?", tipo: "alternativa", obrigatoria: true, opcoes: ["1 — Muito ruim", "2 — Ruim", "3 — Regular", "4 — Boa", "5 — Excelente"]},
@@ -31,6 +33,7 @@ const DEFAULT_QUESTIONS = [
 let surveyId = null;
 let surveyQuestions = [];
 let responses = [];
+let savedSurveys = [];
 
 function newId() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -217,6 +220,68 @@ function publicSurveyUrl() {
   return `${window.location.origin}/pesquisa-satisfacao/?id=${encodeURIComponent(surveyId)}`;
 }
 
+function surveySortTime(survey) {
+  return survey.criadoEm?.toMillis?.() || survey.atualizadoEm?.toMillis?.() || 0;
+}
+
+function renderSurveyList() {
+  surveyList.replaceChildren();
+  if (!savedSurveys.length) {
+    surveyList.innerHTML = '<p class="empty-management">Ainda não há pesquisas salvas. Crie uma para gerar o primeiro link.</p>';
+    return;
+  }
+  savedSurveys.forEach((survey) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "survey-library-item";
+    if (survey.id === surveyId) button.classList.add("is-selected");
+    button.setAttribute("aria-current", survey.id === surveyId ? "true" : "false");
+    button.addEventListener("click", () => loadSurvey(survey.id));
+    const details = document.createElement("span");
+    details.className = "survey-library-item-details";
+    const title = document.createElement("strong");
+    title.textContent = survey.titulo || "Pesquisa sem título";
+    const metadata = document.createElement("small");
+    const count = Number.isInteger(survey.perguntas?.length) ? `${survey.perguntas.length} pergunta(s)` : "Pesquisa salva";
+    const state = survey.ativa === false ? "Pausada" : "Recebendo respostas";
+    metadata.textContent = `${state} · ${count}`;
+    details.append(title, metadata);
+    const action = document.createElement("span");
+    action.className = "survey-library-item-action";
+    action.textContent = survey.id === surveyId ? "Aberta" : "Abrir";
+    button.append(details, action);
+    surveyList.append(button);
+  });
+}
+
+async function loadSurveyList() {
+  const {db, firestoreModule} = await getFirestoreServices();
+  const snapshot = await firestoreModule.getDocs(firestoreModule.collection(db, "pesquisasSatisfacao"));
+  savedSurveys = snapshot.docs
+    .map((document) => ({id: document.id, ...document.data()}))
+    .sort((first, second) => surveySortTime(second) - surveySortTime(first));
+  renderSurveyList();
+}
+
+function startNewSurvey() {
+  surveyId = null;
+  responses = [];
+  surveyQuestions = DEFAULT_QUESTIONS.map((question) => ({id: newId(), ...question}));
+  surveyForm.elements.titulo.value = "Pesquisa de satisfação — GROB Experience";
+  surveyForm.elements.descricao.value = "Conte como foi sua experiência. Suas respostas são anônimas e nos ajudam a tornar o evento cada vez melhor.";
+  surveyForm.elements.ativa.checked = true;
+  surveyStatus.textContent = "Nova pesquisa ainda não salva";
+  renderQuestions(surveyQuestions);
+  renderSurveyList();
+  setMessage(editorFeedback, "Personalize as perguntas e salve para gerar um link exclusivo.");
+  shareSection.hidden = true;
+  responsesSection.hidden = true;
+  setMessage(shareFeedback, "");
+  setMessage(responsesFeedback, "");
+  document.querySelector("[data-survey-editor-title]").textContent = "Configuração da nova pesquisa";
+  surveyForm.scrollIntoView({behavior: "smooth", block: "start"});
+}
+
 async function renderShare() {
   if (!surveyId) return;
   const url = publicSurveyUrl();
@@ -299,41 +364,35 @@ async function loadResponses() {
   }
 }
 
-async function loadSurvey() {
+async function loadSurvey(id = null) {
   setMessage(editorFeedback, "Carregando configuração...");
   try {
     const {db, firestoreModule} = await getFirestoreServices();
-    const snapshot = await firestoreModule.getDocs(firestoreModule.query(
-      firestoreModule.collection(db, "pesquisasSatisfacao"),
-      firestoreModule.limit(1),
-    ));
-    if (snapshot.empty) {
-      surveyId = null;
-      surveyQuestions = DEFAULT_QUESTIONS.map((question) => ({id: newId(), ...question}));
-      surveyForm.elements.titulo.value = "Pesquisa de satisfação — GROB Experience";
-      surveyForm.elements.descricao.value = "Conte como foi sua experiência. Suas respostas são anônimas e nos ajudam a tornar o evento cada vez melhor.";
-      surveyForm.elements.ativa.checked = true;
-      surveyStatus.textContent = "Ainda não publicada";
-      renderQuestions(surveyQuestions);
+    await loadSurveyList();
+    if (!savedSurveys.length) {
+      startNewSurvey();
       setMessage(editorFeedback, "Revise as perguntas e salve para gerar o link e o QR Code.");
-      shareSection.hidden = true;
-      responsesSection.hidden = true;
       return;
     }
-    const document = snapshot.docs[0];
-    const data = document.data();
-    surveyId = document.id;
+    const selectedSurvey = id ? savedSurveys.find((survey) => survey.id === id) : savedSurveys[0];
+    if (!selectedSurvey) throw new Error("Essa pesquisa não está mais disponível.");
+    const surveyDocument = await firestoreModule.getDoc(firestoreModule.doc(db, "pesquisasSatisfacao", selectedSurvey.id));
+    if (!surveyDocument.exists()) throw new Error("Essa pesquisa não está mais disponível.");
+    const data = surveyDocument.data();
+    surveyId = surveyDocument.id;
     surveyQuestions = Array.isArray(data.perguntas) ? data.perguntas : [];
     surveyForm.elements.titulo.value = data.titulo || "Pesquisa de satisfação — GROB Experience";
     surveyForm.elements.descricao.value = data.descricao || "";
     surveyForm.elements.ativa.checked = data.ativa !== false;
     surveyStatus.textContent = data.ativa !== false ? "Publicada e recebendo respostas" : "Publicada, mas pausada";
+    document.querySelector("[data-survey-editor-title]").textContent = "Configuração da pesquisa";
     renderQuestions(surveyQuestions.length ? surveyQuestions : DEFAULT_QUESTIONS.map((question) => ({id: newId(), ...question})));
+    renderSurveyList();
     setMessage(editorFeedback, "");
     await Promise.all([renderShare(), loadResponses()]);
   } catch (error) {
     console.error(error);
-    setMessage(editorFeedback, "Não foi possível carregar a pesquisa.", "error");
+    setMessage(editorFeedback, error.message || "Não foi possível carregar a pesquisa.", "error");
   }
 }
 
@@ -364,8 +423,9 @@ surveyForm.addEventListener("submit", async (event) => {
     writeCompleted = true;
     surveyQuestions = questions;
     surveyStatus.textContent = data.ativa ? "Publicada e recebendo respostas" : "Publicada, mas pausada";
+    document.querySelector("[data-survey-editor-title]").textContent = "Configuração da pesquisa";
     setMessage(editorFeedback, "Pesquisa salva com sucesso.", "success");
-    await Promise.all([renderShare(), loadResponses()]);
+    await Promise.all([loadSurveyList(), renderShare(), loadResponses()]);
   } catch (error) {
     console.error(error);
     if (creating && !writeCompleted) surveyId = null;
@@ -379,6 +439,7 @@ surveyForm.addEventListener("submit", async (event) => {
 document.querySelector("[data-add-text]").addEventListener("click", () => addQuestion("texto"));
 document.querySelector("[data-add-choice]").addEventListener("click", () => addQuestion("alternativa"));
 document.querySelector("[data-reload]").addEventListener("click", loadSurvey);
+newSurveyButton.addEventListener("click", startNewSurvey);
 document.querySelector("[data-reload-responses]").addEventListener("click", loadResponses);
 
 copyLinkButton.addEventListener("click", async () => {
