@@ -83,6 +83,10 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--home-blue); out
 .hero-link { display: inline-flex; align-items: center; gap: 17px; margin-top: 31px; color: white; font-size: .67rem; font-weight: 600; letter-spacing: .16em; text-decoration: none; text-transform: uppercase; }
 .hero-link span { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(255,255,255,.56); border-radius: 50%; color: var(--home-blue); font-size: 1rem; transition: transform .2s ease; }
 .hero-link:hover span { transform: translateY(4px); }
+.hero-link.hero-exhibitor-link { min-height: 48px; gap: 14px; margin-top: 31px; padding: 0 18px; border: 1px solid rgba(114,216,255,.65); border-radius: 3px; background: rgba(7,24,38,.58); font-size: .76rem; letter-spacing: .08em; text-transform: none; transition: color .2s ease, border-color .2s ease, background .2s ease; }
+.hero-link.hero-exhibitor-link span { display: inline; width: auto; height: auto; border: 0; border-radius: 0; color: var(--home-blue); }
+.hero-link.hero-exhibitor-link:hover { border-color: var(--home-blue); color: #06101d; background: var(--home-blue); }
+.hero-link.hero-exhibitor-link:hover span { color: #06101d; transform: translate(2px,-2px); }
 .hero-footer { position: absolute; right: clamp(24px, 5.5vw, 92px); bottom: 45px; left: clamp(24px, 5.5vw, 92px); display: flex; align-items: center; justify-content: space-between; color: rgba(225,236,246,.7); font-size: .6rem; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
 .video-controls { align-items: center; gap: 12px; }
 .video-controls:not([hidden]) { display: flex; }
@@ -230,6 +234,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--home-blue); out
   .hero h1 { max-width: 450px; font-size: clamp(2.65rem, 10.6vw, 3.55rem); letter-spacing: -.075em; line-height: 1.08; }
   .hero-copy { max-width: 360px; margin-top: 21px; font-size: .76rem; }
   .hero-link { margin-top: 25px; font-size: .58rem; }
+  .hero-link.hero-exhibitor-link { min-height: 46px; margin-top: 25px; padding: 0 15px; }
   .hero-footer { right: 20px; bottom: 24px; left: 20px; align-items: end; font-size: .48rem; letter-spacing: .1em; }
   .hero-footer > span:first-child { display: none; }
   .scroll-cue { display: none; }
