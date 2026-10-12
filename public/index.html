@@ -3,21 +3,180 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GROB Experience" />
-    <title>GROB Experience</title>
+    <meta name="theme-color" content="#06101d" />
+    <meta name="description" content="Conheça o GROB Experience, open house de tecnologia, engenharia e inovação industrial da B. GROB do Brasil." />
+    <title>GROB Experience | Engenharia que move o futuro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
-    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/landing.css" />
+    <script type="module" src="/js/landing.js"></script>
   </head>
-  <body>
-    <script>window.location.replace("/login/");</script>
-    <main class="landing-shell">
-      <section class="landing-card">
-        <p>Redirecionando para o acesso...</p>
-        <a class="button" href="/login/">Ir para o login</a>
+  <body class="home-page">
+    <header class="home-header">
+      <a class="home-brand" href="#inicio" aria-label="GROB Experience, início">
+        <img src="/img/logo_transparentehd.png" alt="GROB Experience" />
+      </a>
+      <nav class="home-nav" aria-label="Navegação principal">
+        <a href="#experiencia">A experiência</a>
+        <a href="#trajetoria">Nossa trajetória</a>
+      </nav>
+      <a class="home-login" href="/login/">Acesso ao sistema <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="hero" id="inicio" aria-labelledby="hero-title">
+        <div class="hero-media" aria-hidden="true">
+          <video class="hero-video" data-hero-video autoplay muted loop playsinline poster="/img/fundo.jpg"></video>
+          <div class="hero-vignette"></div>
+          <div class="hero-grain"></div>
+        </div>
+        <div class="hero-content">
+          <p class="hero-kicker"><span class="live-mark"></span> excellence and sustainable technology</p>
+          <p class="hero-anniversary">Open house · workshops · demonstrações <span></span> São Bernardo do Campo</p>
+          <h1 id="hero-title">Bem-vindo ao<br /><em>futuro da indústria.</em></h1>
+          <p class="hero-copy">Acesse o ambiente do GROB Experience com o e-mail e a senha cadastrados. Uma experiência imersiva onde engenharia, tecnologia e pessoas se encontram para mover a indústria adiante.</p>
+          <a class="hero-link" href="#experiencia">Explore a experiência <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-footer" aria-label="Destaques do evento">
+          <span>Precisão em movimento</span>
+          <span>São Bernardo do Campo · Brasil</span>
+          <div class="video-controls" data-video-controls hidden>
+            <button type="button" data-video-prev aria-label="Vídeo anterior">←</button>
+            <span data-video-count></span>
+            <button type="button" data-video-next aria-label="Próximo vídeo">→</button>
+          </div>
+        </div>
+        <a class="scroll-cue" href="#experiencia" aria-label="Role para conhecer o evento"><span></span></a>
+      </section>
+
+      <section class="experience-section" id="experiencia" aria-labelledby="experience-title">
+        <div class="section-heading">
+          <p class="section-kicker">A experiência</p>
+          <h2 id="experience-title"><span>Uma vitrine de</span><em>inovação industrial</em></h2>
+          <p>O <strong>GROB Experience</strong> é um evento tecnológico e imersivo promovido pela B. GROB do Brasil, no formato open house e workshop bienal, realizado diretamente na planta industrial da empresa.</p>
+          <p>O objetivo é conectar fornecedores, parceiros e clientes do setor metalmecânico e de manufatura, oferecendo tecnologia, conteúdo, networking e experiências práticas para profissionais da indústria.</p>
+        </div>
+        <div class="experience-image" role="img" aria-label="Visitantes acompanham uma demonstração industrial no GROB Experience">
+          <img src="/img/3PJK8dABF0457.png" alt="Visitantes acompanham uma demonstração de máquina durante o GROB Experience" loading="lazy" />
+          <span class="image-caption">Tecnologia em ação · GROB Experience</span>
+        </div>
+        <div class="experience-rail" aria-label="Pilares da experiência">
+          <article><span>01</span><h3>Engenharia</h3><p>Demonstrações ao vivo de máquinas GROB de 4 e 5 eixos.</p></article>
+          <article><span>02</span><h3>Conhecimento</h3><p>Palestras, minicursos e painéis com especialistas do setor.</p></article>
+          <article><span>03</span><h3>Conexões</h3><p>Encontros entre clientes, fornecedores e parceiros da manufatura.</p></article>
+        </div>
+      </section>
+
+      <section class="film-section" aria-labelledby="film-title">
+        <div class="film-heading">
+          <div>
+            <p class="section-kicker">Por dentro do GROB Experience</p>
+            <h2 id="film-title"><span>Tecnologia em</span><em>movimento.</em></h2>
+          </div>
+          <a class="film-youtube-link" href="https://www.youtube.com/watch?v=l0XhV6-WfFk" target="_blank" rel="noopener noreferrer">Assistir no YouTube <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="film-frame">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/l0XhV6-WfFk"
+            title="GROB Experience — vídeo do evento"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <p class="film-caption">Demonstrações, tecnologia e encontros na planta da GROB.</p>
+      </section>
+
+      <section class="history-section" id="trajetoria" aria-labelledby="history-title">
+        <div class="history-heading">
+          <div>
+            <p class="section-kicker">Uma história em movimento</p>
+            <h2 id="history-title"><span>Uma história</span><em>em movimento.</em></h2>
+          </div>
+          <p>Da chegada ao Brasil à manufatura avançada: marcos de uma trajetória construída com engenharia e inovação.</p>
+        </div>
+        <div class="history-carousel" data-history-carousel aria-roledescription="carrossel" aria-label="Marcos da trajetória da GROB no Brasil">
+          <div class="history-visual">
+            <img data-history-image src="/img/821I6cABF0469.png" alt="" />
+            <span class="history-image-index" data-history-year>1956</span>
+          </div>
+          <div class="history-story" aria-live="polite">
+            <p class="history-counter"><span data-history-current>01</span><span class="counter-line"></span><span data-history-total>08</span></p>
+            <p class="section-kicker" data-history-label>O início</p>
+            <h3 data-history-title>Uma história começa no Brasil.</h3>
+            <p class="history-copy" data-history-copy>A chegada da GROB ao país dá início a uma trajetória construída com engenharia e visão de futuro.</p>
+            <div class="history-actions">
+              <button type="button" data-history-prev aria-label="Marco anterior">←</button>
+              <button type="button" data-history-next aria-label="Próximo marco">→</button>
+              <div class="history-dots" data-history-dots aria-label="Escolha um marco histórico"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="visit-section" id="local" aria-labelledby="visit-title">
+        <div class="visit-copy">
+          <p class="section-kicker">Onde a indústria acontece</p>
+          <h2 id="visit-title"><span>Dentro da</span><em>GROB do Brasil.</em></h2>
+          <p>O GROB Experience acontece na própria planta industrial da GROB, em São Bernardo do Campo, no ABC Paulista.</p>
+          <address>Av. Caminho do Mar, 1811<br />Vila Mussolini · São Bernardo do Campo — SP<br />09609-000 · Brasil</address>
+          <a class="map-link" href="https://maps.google.com/?q=Av.+Caminho+do+Mar,+1811,+Vila+Mussolini,+S%C3%A3o+Bernardo+do+Campo,+SP,+09609-000" target="_blank" rel="noopener noreferrer">Como chegar <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="visit-image">
+          <img src="/img/821I6cABF0469.png" alt="Vista aérea da planta industrial da GROB em São Bernardo do Campo" loading="lazy" />
+          <a class="visit-map-pin" href="https://maps.google.com/?q=Av.+Caminho+do+Mar,+1811,+Vila+Mussolini,+S%C3%A3o+Bernardo+do+Campo,+SP,+09609-000" target="_blank" rel="noopener noreferrer" aria-label="Ver a GROB do Brasil no Google Maps">
+            <svg viewBox="0 0 32 40" aria-hidden="true"><path d="M16 39S2 23.2 2 15.2a14 14 0 1 1 28 0C30 23.2 16 39 16 39Z"/><circle cx="16" cy="15" r="5"/></svg>
+            <span>GROB do Brasil</span>
+          </a>
+          <span>São Bernardo do Campo · Brasil</span>
+        </div>
+      </section>
+
+      <section class="closing-section">
+        <div class="closing-card">
+          <p class="section-kicker">Próxima edição · data a anunciar</p>
+          <h2><span>Fique por dentro</span><em>do próximo encontro.</em></h2>
+          <p class="closing-copy">A data da próxima edição será divulgada pelos canais oficiais do GROB Experience.</p>
+          <a class="event-cta-button" href="https://www.grobexperience.com/" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h16v3a2.5 2.5 0 0 0 0 5v3H4v-3a2.5 2.5 0 0 0 0-5v-3Z"/><path d="M12 8v1.5m0 2V13m0 2v1"/></svg>
+            Acompanhar novidades
+          </a>
+          <p class="closing-note"><span aria-hidden="true">⌖</span> Data do próximo encontro: a anunciar</p>
+        </div>
       </section>
     </main>
+
+    <footer class="home-footer">
+      <div class="footer-main">
+        <section class="footer-about" aria-label="Sobre a GROB Experience">
+          <a class="footer-brand" href="#inicio" aria-label="GROB Experience, início"><img src="/img/logo_transparentehd.png" alt="GROB Experience" loading="lazy" /></a>
+          <p>Open house, tecnologia e encontros que aproximam pessoas das possibilidades da indústria.</p>
+          <nav class="footer-socials" aria-label="Redes sociais">
+            <a href="https://www.instagram.com/bgrobdobrasil/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da B. GROB do Brasil"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="4"/><circle class="social-dot" cx="17.6" cy="6.7" r=".9"/></svg></a>
+            <a href="https://www.youtube.com/watch?v=l0XhV6-WfFk" target="_blank" rel="noopener noreferrer" aria-label="YouTube do GROB Experience"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path class="social-fill" d="m10 9 5 3-5 3z"/></svg></a>
+            <a href="https://br.linkedin.com/company/bgrobdobrasil" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn da B. GROB do Brasil"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="social-fill" d="M5.1 8.4a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6ZM3.6 10h3v10h-3zm5 0h2.9v1.4h.1a3.2 3.2 0 0 1 2.9-1.6c3.1 0 3.7 2 3.7 4.6V20h-3v-5c0-1.2 0-2.7-1.7-2.7s-1.9 1.3-1.9 2.6V20h-3z"/></svg></a>
+          </nav>
+        </section>
+        <nav class="footer-column" aria-label="Navegação">
+          <h2>Navegação</h2>
+          <a href="#inicio">Início</a><a href="#experiencia">A experiência</a><a href="#trajetoria">Nossa trajetória</a><a href="#local">Local</a>
+        </nav>
+        <nav class="footer-column" aria-label="Evento">
+          <h2>Evento</h2>
+          <a href="https://www.grobexperience.com/" target="_blank" rel="noopener noreferrer">Site oficial</a>
+          <a href="https://www.youtube.com/watch?v=l0XhV6-WfFk" target="_blank" rel="noopener noreferrer">Vídeo no YouTube</a>
+          <a href="/login/">Acesso ao sistema</a>
+        </nav>
+        <section class="footer-column footer-contact" aria-label="Contato e endereço">
+          <h2>Contato</h2>
+          <p><span aria-hidden="true">⌖</span><span>Av. Caminho do Mar, 1811<br />São Bernardo do Campo — SP<br />09609-000 · Brasil</span></p>
+          <a href="mailto:marketing@grob.com.br"><span aria-hidden="true">✉</span>marketing@grob.com.br</a>
+        </section>
+      </div>
+      <div class="footer-bottom"><span>© B. GROB do Brasil S.A.</span><a href="https://www.grobgroup.com/pt/" target="_blank" rel="noopener noreferrer">GROB Group</a><a href="/privacidade/">Privacidade</a></div>
+    </footer>
   </body>
 </html>

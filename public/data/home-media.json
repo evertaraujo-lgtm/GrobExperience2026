@@ -1,0 +1,83 @@
+{
+  "heroVideos": [
+    {
+      "src": "/img/landingvideo.mp4",
+      "label": "GROB Experience · indústria em movimento",
+      "poster": "/img/fundo.jpg"
+    }
+  ],
+  "historySlides": [
+    {
+      "year": "1956",
+      "label": "O início",
+      "title": "Uma história começa no Brasil.",
+      "copy": "A chegada da GROB ao país dá início a uma trajetória construída com engenharia e visão de futuro.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/e47f3c175bf98ffd1059bcea229fbe36024e30d3.png",
+      "fallback": "/img/821I6cABF0469.png",
+      "alt": "Instalações industriais da GROB"
+    },
+    {
+      "year": "1961",
+      "label": "Via Anchieta",
+      "title": "Uma nova casa para a indústria.",
+      "copy": "A inauguração da fábrica na Via Anchieta marca uma nova etapa da presença da GROB no Brasil.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/c08c4c40c92ad74003af4ec0d680f404bd781bb5.png",
+      "fallback": "/img/3PJK8dABF0457.png",
+      "alt": "Fábrica GROB na Via Anchieta"
+    },
+    {
+      "year": "1971",
+      "label": "Indústria brasileira",
+      "title": "A primeira máquina transfer brasileira.",
+      "copy": "Engenharia local amplia as possibilidades da manufatura e fortalece a indústria brasileira.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/ed5701d013d1ea19f560e1b4daa97e16863183ec.png",
+      "fallback": "/img/3PJK8dABF0457.png",
+      "alt": "Máquina industrial GROB"
+    },
+    {
+      "year": "1972",
+      "label": "Formação técnica",
+      "title": "Conhecimento compartilhado.",
+      "copy": "Começa a parceria entre o SENAI e a escola técnica, aproximando formação profissional e indústria.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/09de4a1f1995de0dc4dc4b19ed5de605601ab679.png",
+      "fallback": "/img/Vjss5aABF0415.png",
+      "alt": "Profissionais compartilham conhecimento industrial"
+    },
+    {
+      "year": "1996",
+      "label": "Conexões globais",
+      "title": "A engenharia brasileira ganha o mundo.",
+      "copy": "O primeiro projeto de exportação global corporativo abre novas rotas para a atuação da GROB no Brasil.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/29387a4448c9da0d29ebfdbcfc81db6552a9cca4.png",
+      "fallback": "/img/821I6cABF0469.png",
+      "alt": "Complexo industrial da GROB"
+    },
+    {
+      "year": "2003",
+      "label": "Expansão",
+      "title": "Mais espaço para fazer acontecer.",
+      "copy": "A expansão da planta industrial acompanha novos desafios e uma indústria em constante transformação.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/a2cdb3182434ea9d13a58069254991fb0f91308d.png",
+      "fallback": "/img/821I6cABF0469.png",
+      "alt": "Vista aérea de uma planta industrial"
+    },
+    {
+      "year": "2022",
+      "label": "Eletromobilidade",
+      "title": "Novos caminhos para a mobilidade.",
+      "copy": "A eletromobilidade amplia o campo de inovação e prepara a manufatura para uma nova geração de produtos.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/3fce372afc8026ae75cb4d5146864073a8d538bb.png",
+      "fallback": "/img/mxpR71ABF0419.png",
+      "alt": "Tecnologia de manufatura para eletromobilidade"
+    },
+    {
+      "year": "Hoje",
+      "label": "O futuro da manufatura",
+      "title": "O próximo capítulo já está em movimento.",
+      "copy": "Engenharia, tecnologia e conexões abrem caminho para os próximos desafios da indústria.",
+      "image": "https://4eventsfiles.nyc3.digitaloceanspaces.com/site_ia_image/252703/2/805655333710fcea66887d831b1cda40779968f4.png",
+      "fallback": "/img/ZLi88dABF0494.png",
+      "alt": "Palestra durante o GROB Experience"
+    }
+  ]
+}
