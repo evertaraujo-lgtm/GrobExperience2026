@@ -29,7 +29,8 @@ const ADMIN_NAVIGATION = [
       {label: "Participação", description: "Presença nas atividades", href: "/gestao-evento/participacao/", icon: '<path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/><path d="M2 21h20"/>'},
       {label: "Coleta de leads", description: "Equipe e leads coletados", href: "/coleta-leads/", icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 5V3h8v2m-5 6h2m-7 4h12"/>'},
       {label: "Perguntas dos leads", description: "Roteiro da coleta comercial", href: "/coleta-leads/perguntas/", icon: '<path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/>'},
-      {label: "Pesquisa de satisfação", description: "Formulário, QR Code e respostas", href: "/gestao-evento/pesquisa-satisfacao/", icon: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="m12 7 1.2 2.4 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4Z"/>'},
+      {label: "Pesquisa de satisfação", description: "Formulário, QR Code e respostas", href: "/gestao-evento/pesquisa-satisfacao/", icon: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="m12 7 1.2 2.4 2.8.4-2 2 .5 2.8-2.5-1.3.5-2.8-2-2 2.8-.4Z"/>'},
+      {label: "Formulários de inscrição", description: "Crie formulários para diferentes finalidades", href: "/gestao-evento/formularios-inscricao/", icon: '<path d="M8 4h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z"/><path d="M8 2v4m8-4v4M3 10h18M7 14h10m-10 4h7"/>'},
     ],
   },
   {

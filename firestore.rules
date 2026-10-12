@@ -281,6 +281,64 @@ service cloud.firestore {
       allow create, update: if isAdmin();
     }
 
+    // Formulários públicos têm IDs aleatórios; somente a leitura individual
+    // da configuração é pública. As respostas podem conter dados pessoais e
+    // ficam restritas a administradores.
+    match /formulariosInscricao/{formularioId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "titulo", "descricao", "ativa", "campos", "criadoEm", "atualizadoEm"
+        ])
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() > 0
+        && request.resource.data.titulo.size() <= 120
+        && request.resource.data.descricao is string
+        && request.resource.data.descricao.size() <= 700
+        && request.resource.data.ativa is bool
+        && request.resource.data.campos is list
+        && request.resource.data.campos.size() > 0
+        && request.resource.data.campos.size() <= 40
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.atualizadoEm == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "titulo", "descricao", "ativa", "campos", "criadoEm", "atualizadoEm"
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "titulo", "descricao", "ativa", "campos", "atualizadoEm"
+        ])
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() > 0
+        && request.resource.data.titulo.size() <= 120
+        && request.resource.data.descricao is string
+        && request.resource.data.descricao.size() <= 700
+        && request.resource.data.ativa is bool
+        && request.resource.data.campos is list
+        && request.resource.data.campos.size() > 0
+        && request.resource.data.campos.size() <= 40
+        && request.resource.data.atualizadoEm == request.time;
+      allow delete: if isAdmin();
+    }
+
+    match /respostasFormulariosInscricao/{respostaId} {
+      allow read, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly([
+          "formularioId", "respostas", "enviadoEm"
+        ])
+        && request.resource.data.formularioId is string
+        && request.resource.data.formularioId.size() == 48
+        && request.resource.data.respostas is list
+        && request.resource.data.respostas.size() > 0
+        && request.resource.data.respostas.size() <= 40
+        && request.resource.data.enviadoEm == request.time
+        && exists(/databases/$(database)/documents/formulariosInscricao/$(request.resource.data.formularioId))
+        && get(/databases/$(database)/documents/formulariosInscricao/$(request.resource.data.formularioId)).data.ativa == true
+        && request.resource.data.respostas.size() == get(/databases/$(database)/documents/formulariosInscricao/$(request.resource.data.formularioId)).data.campos.size();
+      allow update: if false;
+    }
+
     // Fluxo independente da pesquisa de satisfação. O ID da pesquisa é um
     // token aleatório presente apenas no link compartilhado com visitantes.
     match /pesquisasSatisfacao/{pesquisaId} {

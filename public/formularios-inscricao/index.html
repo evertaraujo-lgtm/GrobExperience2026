@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Formulário de inscrição GROB Experience" />
+    <title>Inscrição | GROB Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/img/LogoPNG.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/pesquisa-satisfacao.css" />
+    <link rel="stylesheet" href="/css/formularios-inscricao.css" />
+  </head>
+  <body data-registration-public-page="true">
+    <div class="page-shell">
+      <div class="glow glow-one"></div><div class="glow glow-two"></div>
+      <header class="topbar"><a class="brand" href="/"><strong>GROB</strong><span>Experience</span></a></header>
+      <main class="survey-public-layout registration-public-layout">
+        <section class="survey-public-card" data-form-loading><p class="eyebrow">Formulário de inscrição</p><h1>Carregando...</h1><p class="survey-public-intro">Aguarde um instante.</p></section>
+        <section class="survey-public-card" data-form-content hidden>
+          <p class="eyebrow">Inscrição</p>
+          <h1 data-form-title></h1>
+          <p class="survey-public-intro" data-form-description></p>
+          <form class="survey-public-form" data-registration-form>
+            <div data-public-fields></div>
+            <p class="registration-data-note">Envie apenas as informações necessárias para a finalidade indicada neste formulário.</p>
+            <button class="button" type="submit" data-submit-form>Enviar inscrição</button>
+            <p class="feedback" data-public-feedback></p>
+          </form>
+        </section>
+        <section class="survey-public-card survey-thanks" data-form-thanks hidden>
+          <span aria-hidden="true">✓</span><p class="eyebrow">Inscrição recebida</p><h1>Obrigado!</h1><p>Sua inscrição foi registrada com sucesso.</p>
+        </section>
+        <section class="survey-public-card" data-form-error hidden><p class="eyebrow">Formulário de inscrição</p><h1>Link indisponível</h1><p class="survey-public-intro" data-error-message>Confira o endereço recebido ou tente novamente mais tarde.</p></section>
+      </main>
+    </div>
+    <script type="module" src="/js/formularios-inscricao-publico.js?v=registration-forms-v1"></script>
+  </body>
+</html>
