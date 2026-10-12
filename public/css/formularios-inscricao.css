@@ -1,3 +1,234 @@
-.registration-admin-page{display:grid;gap:22px}.registration-admin-page .dashboard-heading{margin-bottom:0}.registration-admin-page .survey-library-card,.registration-admin-page .satisfaction-editor-card,.registration-admin-page .survey-share-card,.registration-admin-page .survey-responses-card{margin:0}.registration-admin-page .dashboard-toolbar>div:first-child{display:grid;gap:4px}.registration-meta-fields{grid-template-columns:minmax(260px,.8fr) minmax(320px,1.2fr)}.registration-field-card .survey-question-settings{grid-template-columns:minmax(200px,320px) 1fr}.registration-field-card .survey-options-area[hidden]{display:none}.registration-public-layout{padding-bottom:32px}.registration-public-layout .survey-public-card h1{max-width:none}.registration-public-layout .survey-public-question select{width:100%;min-height:48px;padding:11px 13px;border:1px solid rgba(125,214,255,.25);border-radius:11px;color:var(--ink);background:#071a3b;font:400 1rem Sora,sans-serif}.registration-public-layout .survey-public-question select:focus{outline:0;border-color:rgba(125,214,255,.65);box-shadow:0 0 0 4px rgba(65,180,255,.11)}.registration-public-layout .survey-public-question input:not([type=checkbox]){width:100%;min-height:48px;padding:11px 13px;border:1px solid rgba(125,214,255,.25);border-radius:11px;color:var(--ink);background:#071a3b;font:400 1rem Sora,sans-serif}.registration-public-layout .survey-public-question input:not([type=checkbox]):focus{outline:0;border-color:rgba(125,214,255,.65);box-shadow:0 0 0 4px rgba(65,180,255,.11)}.registration-public-layout .registration-confirmation{display:flex;align-items:flex-start;gap:11px;cursor:pointer}.registration-public-layout .registration-confirmation input{flex:0 0 auto;width:20px;height:20px;margin:3px 0 0;accent-color:#58caff}.registration-data-note{margin:0;color:var(--muted);font-size:.75rem;line-height:1.6}.registration-public-layout .survey-public-form>.feedback{min-height:0}
-@media(max-width:760px){.registration-admin-page .survey-meta-fields,.registration-admin-page .survey-question-settings{grid-template-columns:1fr}.registration-admin-page .survey-questions-heading{display:grid;align-items:start}.registration-admin-page .survey-questions-heading>[data-add-field]{width:100%;min-height:46px}.registration-admin-page .survey-save-row{display:grid}.registration-admin-page .survey-save-row .button{width:100%}.registration-public-layout .survey-public-form>.button{width:100%}}
-.registration-public-layout .survey-public-question input[type=checkbox]{flex:0 0 auto;width:19px;height:19px;margin:1px 0 0;accent-color:#58caff}
+/* Formulário público */
+body[data-registration-public-page="true"] {
+  --ink: #f5f8fc;
+  --muted: #a9b7c6;
+  --cyan: #72d8ff;
+  --panel: rgba(9, 20, 31, .94);
+  --line: rgba(183, 217, 239, .19);
+  color-scheme: dark;
+  background: #06101d;
+}
+
+body[data-registration-public-page="true"]::before {
+  opacity: .22;
+  background-size: 96px 96px;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+}
+
+.registration-public-layout {
+  width: min(760px, 100%);
+  padding: 18px 0 46px;
+}
+
+.registration-public-header {
+  min-height: 72px;
+  margin-bottom: 12px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid rgba(183,217,239,.13);
+}
+
+.registration-brand { display: inline-flex; width: min(190px, 48vw); align-items: center; }
+.registration-brand img { display: block; width: 100%; height: auto; filter: grayscale(1) brightness(0) invert(1); }
+.registration-header-label { color: #b9c6d2; font-size: .63rem; font-weight: 500; letter-spacing: .15em; text-transform: uppercase; }
+
+.registration-public-layout .survey-public-card {
+  padding: clamp(24px, 5vw, 46px);
+  border: 1px solid rgba(183,217,239,.18);
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(114,216,255,.055), transparent 45%), rgba(8,19,30,.96);
+  box-shadow: 0 28px 80px rgba(0,0,0,.34);
+  backdrop-filter: blur(18px);
+}
+
+.registration-public-layout .eyebrow {
+  margin-bottom: 8px;
+  font-family: Sora, Arial, sans-serif;
+  font-size: .64rem;
+  letter-spacing: .17em;
+}
+
+.registration-public-layout .survey-public-card h1 {
+  max-width: 17ch;
+  font-size: clamp(2.45rem, 6vw, 3.8rem);
+  font-weight: 600;
+  letter-spacing: -.025em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.registration-public-layout .survey-public-intro {
+  max-width: 62ch;
+  margin: 13px 0 28px;
+  color: #b4c0cc;
+  font-size: .83rem;
+  line-height: 1.8;
+}
+
+.registration-public-layout .survey-public-form { gap: 19px; }
+.registration-public-layout .survey-public-form > div { gap: 11px; }
+
+.registration-public-layout .survey-public-question {
+  gap: 10px;
+  padding: 17px 18px;
+  border: 1px solid rgba(183,217,239,.13);
+  border-radius: 3px;
+  background: rgba(12,27,40,.82);
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.registration-public-layout .survey-public-question:focus-within {
+  border-color: rgba(114,216,255,.48);
+  background: rgba(14,32,47,.94);
+}
+
+.registration-public-layout .survey-public-question > small {
+  color: var(--cyan);
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .13em;
+}
+
+.registration-public-layout .survey-public-question > label,
+.registration-public-layout .survey-public-question legend {
+  color: #f2f6fa;
+  font-family: Sora, Arial, sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.registration-public-layout .survey-public-question > label { gap: 9px; }
+
+.registration-public-layout .survey-public-question input:not([type="checkbox"]):not([type="radio"]),
+.registration-public-layout .survey-public-question select,
+.registration-public-layout .survey-public-question textarea {
+  width: 100%;
+  min-height: 49px;
+  padding: 12px 14px;
+  border: 1px solid rgba(183,217,239,.22);
+  border-radius: 2px;
+  color: #f5f8fc;
+  background: #091723;
+  font: 400 .84rem Sora, Arial, sans-serif;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.registration-public-layout .survey-public-question textarea { min-height: 116px; line-height: 1.65; resize: vertical; }
+.registration-public-layout .survey-public-question input::placeholder,
+.registration-public-layout .survey-public-question textarea::placeholder { color: #8293a1; }
+.registration-public-layout .survey-public-question select option { color: #f5f8fc; background: #091723; }
+.registration-public-layout .survey-public-question input:focus,
+.registration-public-layout .survey-public-question select:focus,
+.registration-public-layout .survey-public-question textarea:focus { outline: 0; border-color: var(--cyan); background: #0b1c2b; box-shadow: 0 0 0 3px rgba(114,216,255,.12); }
+
+.registration-public-layout .survey-public-question fieldset { gap: 7px; }
+.registration-public-layout .survey-public-question fieldset label {
+  min-height: 42px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(183,217,239,.13);
+  border-radius: 2px;
+  color: #d7e0e8;
+  background: rgba(5,15,24,.55);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+.registration-public-layout .survey-public-question fieldset label:has(input:checked) { border-color: rgba(114,216,255,.6); color: white; background: rgba(47,111,145,.18); }
+.registration-public-layout .survey-public-question input[type="checkbox"],
+.registration-public-layout .survey-public-question input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #72d8ff; }
+.registration-public-layout .registration-confirmation { display: flex; align-items: flex-start; gap: 11px; cursor: pointer; }
+.registration-public-layout .registration-confirmation input { margin-top: 2px; }
+
+.registration-data-note {
+  margin: 0;
+  padding-top: 3px;
+  color: #91a2af;
+  font-size: .68rem;
+  line-height: 1.7;
+}
+
+.registration-public-layout .survey-public-form > .button {
+  min-height: 50px;
+  justify-self: start;
+  margin: 0;
+  border: 1px solid var(--cyan);
+  border-radius: 2px;
+  padding: 0 24px;
+  color: #06101d;
+  background: var(--cyan);
+  box-shadow: none;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: color .18s ease, background .18s ease, transform .18s ease;
+}
+.registration-public-layout .survey-public-form > .button:hover { transform: translateY(-1px); color: var(--cyan); background: transparent; }
+.registration-public-layout .survey-public-form > .button:disabled { transform: none; }
+.registration-public-layout .survey-public-form > .feedback { min-height: 0; margin: 0; border-radius: 2px; background: rgba(5,15,24,.68); font-size: .76rem; }
+.registration-public-layout .survey-thanks { text-align: center; }
+.registration-public-layout .survey-thanks h1 { max-width: 100%; margin: 0 auto; }
+.registration-public-layout .survey-thanks p:last-child { color: #b4c0cc; line-height: 1.7; }
+.registration-public-layout .survey-thanks > span { border-radius: 50%; }
+
+/* Administração de formulários */
+.registration-admin-page { display: grid; gap: 19px; }
+.registration-admin-page .dashboard-heading { margin: 22px 0 0; }
+.registration-admin-page .dashboard-heading h1 { font-size: clamp(2.8rem, 6vw, 4.25rem); font-weight: 600; letter-spacing: -.025em; line-height: 1; }
+.registration-admin-page .dashboard-heading p { max-width: 68ch; color: #a9b7c6; font-size: .8rem; line-height: 1.8; }
+.registration-admin-page .survey-library-card,
+.registration-admin-page .satisfaction-editor-card,
+.registration-admin-page .survey-share-card,
+.registration-admin-page .survey-responses-card { margin: 0; }
+.registration-admin-page .pre-inscritos-card {
+  border-color: rgba(183,217,239,.16);
+  border-radius: 4px;
+  background: rgba(8,19,30,.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,.2);
+}
+.registration-admin-page .dashboard-toolbar { border-color: rgba(183,217,239,.15); }
+.registration-admin-page .dashboard-toolbar strong,
+.registration-admin-page .management-title h2 { color: #f5f8fc; font-family: Rajdhani, "Arial Narrow", sans-serif; }
+.registration-admin-page .dashboard-toolbar small,
+.registration-admin-page .management-title small,
+.registration-admin-page .survey-status { color: #a9b7c6; }
+.registration-admin-page .survey-library-item,
+.registration-admin-page .survey-question-card,
+.registration-admin-page .survey-response-item { border-color: rgba(183,217,239,.15); border-radius: 3px; background: rgba(12,27,40,.78); }
+.registration-admin-page .survey-library-item:hover,
+.registration-admin-page .survey-library-item.is-selected { border-color: rgba(114,216,255,.55); background: rgba(48,119,153,.16); }
+.registration-admin-page .survey-question-card { padding: 18px; }
+.registration-admin-page .survey-option-row input,
+.registration-admin-page .management-field input,
+.registration-admin-page .management-field textarea,
+.registration-admin-page .survey-link-panel input { border-color: rgba(183,217,239,.2); border-radius: 2px; color: #f5f8fc; background: #091723; }
+.registration-admin-page .survey-option-row input:focus,
+.registration-admin-page .management-field input:focus,
+.registration-admin-page .management-field textarea:focus,
+.registration-admin-page .survey-link-panel input:focus { outline: 0; border-color: #72d8ff; box-shadow: 0 0 0 3px rgba(114,216,255,.12); }
+.registration-admin-page .back-link { border-radius: 2px; border-color: rgba(183,217,239,.28); color: #e5edf4; background: rgba(9,23,35,.8); }
+.registration-admin-page .back-link:hover { border-color: rgba(114,216,255,.6); background: rgba(28,58,75,.8); }
+.registration-admin-page .button { border-radius: 2px; color: #06101d; background: #72d8ff; box-shadow: none; }
+.registration-admin-page .survey-active,
+.registration-admin-page .survey-required { color: #c0ccd5; }
+.registration-admin-page .survey-questions-heading { border-color: rgba(183,217,239,.16); }
+.registration-admin-page .survey-question-heading > strong { color: #72d8ff; }
+.registration-admin-page .survey-question-controls .survey-icon-button { border-radius: 2px; }
+.registration-admin-page .survey-options-area { border-left-color: rgba(114,216,255,.5); border-radius: 0; background: rgba(6,16,26,.65); }
+.registration-admin-page .survey-response-item summary strong { color: #f5f8fc; }
+.registration-admin-page .survey-response-answers > div { border-radius: 2px; background: rgba(6,16,26,.65); }
+.registration-admin-page :focus-visible { outline: 2px solid #72d8ff; outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .registration-public-layout { padding: 5px 0 30px; }
+  .registration-public-header { min-height: 59px; margin-bottom: 9px; }
+  .registration-brand { width: min(158px, 49vw); }
+  .registration-header-label { max-width: 130px; font-size: .51rem; letter-spacing: .1em; text-align: right; }
+  .registration-public-layout .survey-public-card { padding: 24px 19px; border-radius: 3px; }
+  .registration-public-layout .survey-public-card h1 { font-size: clamp(2.35rem, 10vw, 3.25rem); }
+  .registration-public-layout .survey-public-question { padding: 14px; }
+  .registration-public-layout .survey-public-form > .button { width: 100%; }
+  .registration-admin-page { gap: 14px; }
+  .registration-admin-page .dashboard-heading { margin-top: 14px; }
+  .registration-admin-page .dashboard-heading h1 { font-size: clamp(2.45rem, 12vw, 3.4rem); }
+}
